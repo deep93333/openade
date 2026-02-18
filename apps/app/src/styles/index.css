@@ -1,0 +1,216 @@
+@import "tailwindcss";
+@import "@agentide/ui/theme.css";
+@source "../../../../packages/ui/**/*.{js,ts,jsx,tsx}";
+@source "../**/*.{js,ts,jsx,tsx}";
+
+@font-face {
+  font-family: "Inter var";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("../assets/fonts/InterVariable.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Geist Mono";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("../assets/fonts/GeistMono-Regular.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Open Runde";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("../assets/fonts/OpenRunde-Medium.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Open Runde";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("../assets/fonts/OpenRunde-Semibold.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Bespoke Serif";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("../assets/fonts/BespokeSerif-Variable.woff2") format("woff2");
+}
+
+@utility no-scrollbar {
+  ::-webkit-scrollbar {
+    display: none;
+  }
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+body {
+  @apply overflow-hidden no-scrollbar antialiased;
+  background: var(--color-base-background);
+  color: var(--color-foreground);
+  font-family: "Inter var", sans-serif;
+  --font-settings: "cv01", "ss03";
+  font-feature-settings: var(--font-settings);
+  --font-variations: "opsz" auto;
+  font-variation-settings: var(--font-variations);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+html {
+  @apply bg-transparent overflow-hidden no-scrollbar;
+}
+
+.overflow-y-auto,
+.overflow-y-auto * {
+  @apply no-scrollbar;
+}
+
+.overflow-x-auto,
+.overflow-x-auto * {
+  @apply no-scrollbar;
+}
+
+p {
+  margin: 0 !important;
+}
+
+*:focus {
+  outline: none !important;
+}
+
+*:focus-visible {
+  outline: 2px solid oklch(var(--oklch-accent)) !important;
+  outline-offset: 2px !important;
+}
+
+::selection {
+  background-color: oklch(var(--oklch-accent) / 0.3);
+  color: oklch(var(--oklch-foreground) / 0.8);
+}
+
+::-moz-selection {
+  background-color: oklch(var(--oklch-accent) / 0.3);
+  color: oklch(var(--oklch-foreground) / 0.8);
+}
+
+.draggable {
+  -webkit-app-region: drag;
+}
+
+.drag-disabled,
+.not-draggable,
+button {
+  -webkit-app-region: no-drag;
+}
+
+.shiki-file-viewer {
+  --pierre-bg: #ffffff;
+  --pierre-fg: #070707;
+  --pierre-line-number: #84848a;
+  --pierre-selection: #dfebff;
+  --pierre-gutter-border: #eeeeef;
+  --pierre-gutter-width: 4rem;
+  font-family: "Geist Mono", "SF Mono", Monaco, Consolas, "Ubuntu Mono", "Liberation Mono", "Courier New", monospace;
+  font-size: 13px;
+  line-height: 20px;
+  tab-size: 2;
+  background: var(--pierre-bg);
+  color: var(--pierre-fg);
+}
+
+.shiki-file-viewer pre,
+.shiki-file-viewer code {
+  margin: 0;
+  padding: 0;
+  display: block;
+  outline: none;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  background-color: var(--pierre-bg) !important;
+  color: var(--pierre-fg);
+  gap: 0;
+}
+
+.shiki-file-viewer code {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0 !important;
+}
+
+.shiki-file-viewer pre {
+  overflow: auto;
+  min-height: 100%;
+  counter-reset: line;
+  padding-block: 8px;
+  padding-left: var(--pierre-gutter-width);
+}
+
+.shiki-file-viewer pre::selection,
+.shiki-file-viewer code::selection,
+.shiki-file-viewer .line::selection,
+.shiki-file-viewer .line span::selection {
+  background: var(--pierre-selection);
+}
+
+.shiki-file-viewer .line {
+  display: block;
+  position: relative;
+  counter-increment: line;
+  margin-left: calc(-1 * var(--pierre-gutter-width));
+  padding-left: calc(var(--pierre-gutter-width) + 1ch);
+  white-space: pre;
+  height: 20px;
+}
+
+.shiki-file-viewer .line:hover {
+  background: color-mix(in srgb, var(--pierre-fg) 5%, transparent);
+}
+
+.shiki-file-viewer .line::before {
+  content: counter(line);
+  position: absolute;
+  left: 0;
+  width: var(--pierre-gutter-width);
+  height: 100%;
+  box-sizing: border-box;
+  padding-right: 1ch;
+  text-align: right;
+  color: var(--pierre-line-number);
+  border-right: 1px solid var(--pierre-gutter-border);
+  user-select: none;
+  pointer-events: none;
+}
+
+.ProseMirror,
+.tiptap .ProseMirror {
+  caret-color: var(--color-foreground, #18181b);
+  cursor: text;
+}
+
+.ProseMirror:focus,
+.ProseMirror:focus-visible,
+.tiptap .ProseMirror:focus,
+.tiptap .ProseMirror:focus-visible {
+  outline: none !important;
+  outline-offset: 0 !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

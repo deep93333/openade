@@ -1,0 +1,47 @@
+{
+  "name": "@agentide/app",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 3010",
+    "build": "vite build",
+    "build:prod": "NODE_ENV=production vite build",
+    "clean": "rm -rf dist",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@agentide/shared": "workspace:*",
+    "@agentide/ui": "workspace:*",
+    "@pierre/diffs": "^1.0.11",
+    "@radix-ui/react-context-menu": "^2.2.4",
+    "@radix-ui/react-dialog": "^1.0.5",
+    "@radix-ui/react-separator": "^1.0.3",
+    "@radix-ui/react-tooltip": "^1.0.7",
+    "@tailwindcss/typography": "^0.5.15",
+    "@tailwindcss/vite": "^4.1.13",
+    "@tanstack/react-router": "^1.131.10",
+    "@tiptap/extension-mention": "^3.20.0",
+    "@tiptap/extension-placeholder": "^3.20.0",
+    "@tiptap/react": "^3.20.0",
+    "@tiptap/starter-kit": "^3.20.0",
+    "@tiptap/suggestion": "^3.20.0",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
+    "shiki": "^3.22.0",
+    "tailwind-merge": "^2.2.1",
+    "tailwindcss": "^4.1.13",
+    "zustand": "^5.0.6"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@vitejs/plugin-react": "^4.6.0",
+    "typescript": "~5.8.3",
+    "vite": "^7.0.4"
+  }
+}

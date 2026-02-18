@@ -1,0 +1,23 @@
+{
+  "name": "@agentide/desktop",
+  "version": "1.0.0",
+  "main": "dist/main.js",
+  "description": "AgentIDE - Open source agent-first IDE powered by Claude Code",
+  "author": "AgentIDE Contributors",
+  "scripts": {
+    "dev": "tsup && NODE_ENV=development electron .",
+    "build": "tsup",
+    "build:prod": "NODE_ENV=production tsup",
+    "clean": "rm -rf dist release"
+  },
+  "devDependencies": {
+    "electron": "^37.4.0",
+    "tsup": "^8.5.0",
+    "typescript": "~5.8.3"
+  },
+  "dependencies": {
+    "@agentide/shared": "workspace:*",
+    "@anthropic-ai/claude-agent-sdk": "^0.2.31",
+    "ulid": "^3.0.1"
+  }
+}

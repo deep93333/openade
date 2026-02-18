@@ -1,0 +1,17 @@
+{
+  "name": "@agentide/shared",
+  "version": "1.0.0",
+  "description": "Shared types and utilities for AgentIDE",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "typescript": "~5.8.3"
+  },
+  "files": ["dist"]
+}

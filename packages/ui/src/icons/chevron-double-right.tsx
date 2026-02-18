@@ -1,0 +1,20 @@
+import { cn } from "../lib/utils";
+
+export const ChevronDoubleRightIcon = ({ className }: { className?: string }) => {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      className={cn("size-4", className)}
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M7.00015 6.58569L12.4144 11.9999L7.00015 17.4141L5.58594 15.9999L9.58594 11.9999L5.58594 7.99991L7.00015 6.58569ZM14.0002 6.58569L19.4144 11.9999L14.0002 17.4141L12.5859 15.9999L16.5859 11.9999L12.5859 7.99991L14.0002 6.58569Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+};

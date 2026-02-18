@@ -1,0 +1,12 @@
+node_modules/
+dist/
+build/
+release/
+release-dev/
+*.log
+.DS_Store
+.env
+.env.local
+.vscode/
+*.tsbuildinfo
+bun.lockb

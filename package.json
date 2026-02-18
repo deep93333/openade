@@ -1,0 +1,28 @@
+{
+  "name": "agentide",
+  "private": true,
+  "workspaces": ["packages/*", "apps/*"],
+  "scripts": {
+    "dev": "concurrently \"bun run dev:app\" \"bun run dev:desktop\"",
+    "dev:app": "bun run --filter @agentide/app dev",
+    "dev:desktop": "bun run --filter @agentide/desktop dev",
+    "build": "bun run --filter @agentide/shared build && bun run --filter @agentide/app build && bun run --filter @agentide/desktop build",
+    "build:shared": "bun run --filter @agentide/shared build",
+    "build:app": "bun run --filter @agentide/app build",
+    "build:desktop": "bun run --filter @agentide/desktop build",
+    "build:prod": "npm run build:shared && npm run build:app && npm run build:desktop",
+    "clean": "rm -rf apps/app/dist apps/desktop/dist packages/shared/dist",
+    "format": "biome format --write .",
+    "format:check": "biome format ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "concurrently": "^9.2.0",
+    "typescript": "~5.8.3"
+  },
+  "dependencies": {
+    "zustand": "^5.0.6"
+  }
+}
