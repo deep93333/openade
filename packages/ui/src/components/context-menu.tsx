@@ -64,7 +64,7 @@ const ContextMenuSubContent = React.forwardRef<
       <ContextMenuPrimitive.SubContent
         ref={ref}
         className={cn(
-          "min-w-48 max-h-[var(--radix-context-menu-content-available-height)] mx-2 p-1 shadow-popover overflow-y-auto overflow-x-hidden rounded-xl bg-background/95 dark:bg-tertiary/95 backdrop-blur-xl text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-[--radix-context-menu-content-transform-origin]",
+          "min-w-48 max-h-[var(--radix-context-menu-content-available-height)] mx-2 p-1 shadow-popover overflow-y-auto overflow-x-hidden rounded-xl bg-background/95 dark:bg-secondary/95 backdrop-blur-xl text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-[--radix-context-menu-content-transform-origin]",
           modal ? "z-modal-dropdown" : "z-dropdown",
           className
         )}
@@ -88,7 +88,7 @@ const ContextMenuContent = React.forwardRef<
       <ContextMenuPrimitive.Content
         ref={ref}
         className={cn(
-          "min-w-48 max-h-[var(--radix-context-menu-content-available-height)] p-1 shadow-popover overflow-y-auto overflow-x-hidden rounded-xl bg-background/95 dark:bg-tertiary/95 backdrop-blur-xl text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-[--radix-context-menu-content-transform-origin]",
+          "min-w-48 max-h-[var(--radix-context-menu-content-available-height)] p-1 shadow-popover overflow-y-auto overflow-x-hidden rounded-xl bg-background/95 dark:bg-secondary/95 backdrop-blur-xl text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-[--radix-context-menu-content-transform-origin]",
           modal ? "z-modal-dropdown" : "z-dropdown",
           className
         )}
@@ -147,17 +147,18 @@ const ContextMenuRadioItem = React.forwardRef<
   <ContextMenuPrimitive.RadioItem
     ref={ref}
     className={cn(
-      "relative flex cursor-pointer antialiased font-medium select-none items-center gap-2 rounded-lg px-3 py-1.5 h-8 pl-8 text-sm outline-none transition-colors focus:bg-foreground/10 focus:text-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-muted-foreground",
+      "relative flex cursor-pointer antialiased font-medium select-none items-center gap-2 rounded-lg px-3 py-1.5 h-8 text-sm outline-none transition-colors focus:bg-foreground/10 focus:text-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-muted-foreground",
       className
     )}
     {...props}
   >
-    <span className="absolute left-3 flex h-3.5 w-3.5 items-center justify-center">
+
+    {children}
+    <span className="absolute right-3 flex h-3.5 w-3.5 items-center justify-center">
       <ContextMenuPrimitive.ItemIndicator>
-        <Circle className="h-2 w-2 fill-current" />
+        <Check className="h-2 w-2" />
       </ContextMenuPrimitive.ItemIndicator>
     </span>
-    {children}
   </ContextMenuPrimitive.RadioItem>
 ));
 ContextMenuRadioItem.displayName = ContextMenuPrimitive.RadioItem.displayName;

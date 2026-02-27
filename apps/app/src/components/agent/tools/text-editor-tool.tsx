@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { PatchDiff } from "@pierre/diffs/react";
-import { FileIcon } from "@agentide/ui";
+import { FileText } from "lucide-react";
 import { cn } from "@/lib/cn";
 import type { ToolComponentProps } from "./types";
+import { ToolContainer } from "./tool-container";
+import { buildUnifiedPatch } from "@/utils/build-unified-patch";
 
 const commandLabels: Record<string, { label: string; className: string }> = {
   create: { label: "Create", className: "text-success bg-success/10" },
@@ -23,37 +25,42 @@ export const TextEditorTool = ({ toolInput }: ToolComponentProps) => {
 
   const [expanded, setExpanded] = useState(false);
   const filename = path.split("/").pop() ?? path;
-  const meta = commandLabels[command] ?? { label: command, className: "text-muted-foreground bg-secondary" };
+  const meta =
+    commandLabels[command] ?? {
+      label: command,
+      className: "text-muted-foreground bg-secondary",
+    };
 
   const hasDiff = command === "str_replace" && oldStr && newStr;
   const hasContent = command === "create" || command === "write" ? fileText : "";
 
-  const patch = hasDiff
-    ? [
-        `--- a/${path}`,
-        `+++ b/${path}`,
-        "@@ -1,1 +1,1 @@",
-        ...oldStr.split("\n").map((l) => `-${l}`),
-        ...newStr.split("\n").map((l) => `+${l}`),
-      ].join("\n")
-    : null;
+  const patch = hasDiff ? buildUnifiedPatch(path || "file", oldStr, newStr) : null;
 
   return (
-    <div className="flex flex-col gap-1.5 rounded-lg bg-background p-2 ring-1 ring-foreground/10">
-      <p className="flex w-full items-center gap-2 border-b border-foreground/10 pb-2 text-xs font-medium text-muted-foreground">
-        <FileIcon className="size-3.5" />
-        <span className={cn("inline-flex h-5 items-center rounded px-1.5 text-[10px] font-bold uppercase tracking-wider", meta.className)}>
-          {meta.label}
-        </span>
-        <span className="font-mono">{filename}</span>
-      </p>
+    <ToolContainer
+      icon={<FileText className="size-3.5" strokeWidth={1.5} />}
+      title={
+        <>
+          <span
+            className={cn(
+              "inline-flex h-5 items-center rounded px-1.5 text-[10px] font-bold uppercase tracking-wider",
+              meta.className
+            )}
+          >
+            {meta.label}
+          </span>
+          <span className="font-mono">{filename}</span>
+        </>
+      }
+      toolInput={toolInput}
+    >
 
       {patch && (
-        <div className="overflow-hidden rounded-md border border-border">
+        <div className="overflow-hidden rounded-md border border-border mx-2 mb-2">
           <PatchDiff
             patch={patch}
             options={{
-              theme: "pierre-light",
+              theme: { dark: "agentide-dark", light: "agentide-dark" },
               diffStyle: "unified",
               diffIndicators: "bars",
               disableFileHeader: true,
@@ -63,7 +70,7 @@ export const TextEditorTool = ({ toolInput }: ToolComponentProps) => {
       )}
 
       {command === "insert" && newStr && (
-        <div className="overflow-hidden rounded-md border border-border bg-success/10">
+        <div className="overflow-hidden rounded-md border border-border bg-success/10 mx-2 mb-2">
           <div className="flex items-center gap-2 border-b border-border px-3 py-1.5 text-[10px] text-muted-foreground">
             Insert at line {insertLine}
           </div>
@@ -74,7 +81,7 @@ export const TextEditorTool = ({ toolInput }: ToolComponentProps) => {
       )}
 
       {hasContent && (
-        <div className="overflow-hidden rounded-md border border-border">
+        <div className="overflow-hidden rounded-md border border-border mx-2 mb-2">
           <button
             type="button"
             onClick={() => setExpanded(!expanded)}
@@ -92,10 +99,10 @@ export const TextEditorTool = ({ toolInput }: ToolComponentProps) => {
       )}
 
       {command === "view" && (
-        <div className="rounded-md border border-border bg-secondary px-3 py-2 text-xs text-muted-foreground">
+        <div className="rounded-md border border-border bg-secondary px-3 py-2 text-xs text-muted-foreground mx-2 mb-2">
           Viewing file contents
         </div>
       )}
-    </div>
+    </ToolContainer>
   );
 };

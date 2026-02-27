@@ -1,14 +1,14 @@
 import { createHighlighter, type Highlighter } from "shiki";
-import pierreLight from "./themes/pierre-light.json";
+import darkPlus from "./themes/dark-plus.json";
 
-const THEME = "pierre-light";
+const THEME = "dark-plus";
 
 let highlighterPromise: Promise<Highlighter> | null = null;
 
 function getHighlighter(): Promise<Highlighter> {
   if (!highlighterPromise) {
     highlighterPromise = createHighlighter({
-      themes: [pierreLight as Parameters<typeof createHighlighter>[0]["themes"][number]],
+      themes: [darkPlus as Parameters<typeof createHighlighter>[0]["themes"][number]],
       langs: [
         "typescript",
         "tsx",

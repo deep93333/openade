@@ -43,9 +43,9 @@ export const CreateWorkspaceDialog = ({ isOpen, onClose }: CreateWorkspaceDialog
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="w-[440px] rounded-2xl border border-zinc-300 bg-white">
-        <DialogTitle className="text-lg font-semibold text-zinc-900">New Workspace</DialogTitle>
-        <DialogDescription className="mt-1 text-sm text-zinc-600">
+      <DialogContent className="w-[440px] p-4">
+        <DialogTitle>New Workspace</DialogTitle>
+        <DialogDescription>
           Add a directory to work with the agent.
         </DialogDescription>
 
@@ -59,7 +59,6 @@ export const CreateWorkspaceDialog = ({ isOpen, onClose }: CreateWorkspaceDialog
                 onChange={(e) => setName(e.target.value)}
                 placeholder="my-project"
                 autoFocus
-                className="bg-white border-zinc-300"
               />
             </div>
 
@@ -75,7 +74,6 @@ export const CreateWorkspaceDialog = ({ isOpen, onClose }: CreateWorkspaceDialog
                       ? "Select a folder or paste path"
                       : "/Users/you/projects/my-project"
                   }
-                  className="flex-1 bg-white border-zinc-300"
                 />
                 {hasFolderPicker && (
                   <Button type="button" variant="secondary" onClick={handleSelectFolder}>

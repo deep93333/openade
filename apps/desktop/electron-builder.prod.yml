@@ -1,0 +1,67 @@
+appId: com.agentide.app
+productName: AgentIDE
+buildVersion: ${env.BUILD_NUMBER}
+
+asar: true
+asarUnpack:
+  - "**/node_modules/electron-updater/**/*"
+  - "**/node_modules/node-pty/**/*"
+
+files:
+  - "../app/dist/**/*"
+  - "dist/**/*"
+  - "package.json"
+  - "node_modules/node-pty/**/*"
+
+extraResources:
+  - from: "../app/dist"
+    to: "dist"
+    filter:
+      - "**/*"
+
+nodeGypRebuild: false
+npmRebuild: true
+
+directories:
+  output: release
+
+mac:
+  target:
+    - target: zip
+      arch:
+        - arm64
+        - x64
+    - target: dmg
+      arch:
+        - arm64
+        - x64
+  artifactName: "${productName}-${version}-${arch}.${ext}"
+  type: distribution
+  icon: src/icons/agentide.icns
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: entitlements.plist
+  entitlementsInherit: entitlements.plist
+  category: public.app-category.developer-tools
+
+dmg:
+  contents:
+    - x: 130
+      y: 220
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
+
+linux:
+  target:
+    - AppImage
+    - deb
+  category: Development
+  icon: src/icons
+
+win:
+  target:
+    - nsis
+    - portable
+  icon: src/icons/agentide.ico

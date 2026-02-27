@@ -1,6 +1,38 @@
 import { useState } from "react";
 import type { FileTreeNode } from "@agentide/shared";
-import { ChevronRightIcon, ChevronDownIcon, FolderIcon, FileIcon, cn } from "@agentide/ui";
+import {
+  Button,
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+  cn,
+} from "@agentide/ui";
+import { getElectronAPI } from "@/lib/electron";
+import { useFileContextStore } from "@/store/file-context.store";
+import { useWorkspaceStore } from "@/store/workspace.store";
+import { FolderIcon, getFileTypeIcon } from "./file-icons";
+
+function ChevronIcon({ open }: { open: boolean }) {
+  return (
+    <svg
+      className="size-2.5 shrink-0 text-foreground/80 transition-transform duration-100"
+      viewBox="0 0 12 12"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      style={{ transform: open ? "rotate(90deg)" : "rotate(0deg)" }}
+    >
+      <path
+        d="M4 2.5l4 3.5-4 3.5"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
 
 type FileTreeItemProps = {
   node: FileTreeNode;
@@ -15,6 +47,27 @@ export const FileTreeItem = ({ node, depth, onSelect, onFileSelect, selectedPath
   const isDirectory = node.type === "directory";
   const hasChildren = isDirectory && node.children && node.children.length > 0;
   const isSelected = selectedPath === node.path;
+  const mentionFileInChat = useFileContextStore((s) => s.mentionFileInChat);
+  const workspacePath = useWorkspaceStore((s) =>
+    s.workspaces.find((workspace) => workspace.id === s.activeWorkspaceId)?.path ?? null
+  );
+  const canMentionFile =
+    Boolean(mentionFileInChat) && (node.type === "file" || node.type === "directory");
+
+  const handleOpenInEditor = () => {
+    const electronAPI = getElectronAPI();
+    if (!electronAPI?.editor?.openFile) {
+      return;
+    }
+    electronAPI.editor.openFile(node.path).catch((error) => {
+      console.error("Failed to open file in external editor", error);
+    });
+  };
+
+  const handleMentionInChat = () => {
+    mentionFileInChat?.({ filePath: node.path, workspacePath });
+    handleOpenInEditor();
+  };
 
   const handleClick = () => {
     if (isDirectory) {
@@ -33,43 +86,72 @@ export const FileTreeItem = ({ node, depth, onSelect, onFileSelect, selectedPath
     }
   };
 
-  return (
-    <div>
-      <div
-        className={cn(
-          "flex items-center py-1 px-2 text-sm cursor-pointer hover:bg-zinc-100 select-none",
-          isSelected && "bg-blue-100 text-blue-900",
-          "group"
+  const row = (
+    <div
+      className={cn(
+        "flex items-center py-1 px-2 text-sm cursor-pointer rounded-lg hover:bg-foreground/10 select-none",
+        isSelected && "bg-accent/30 text-foreground/90",
+        "group"
+      )}
+      style={{ paddingLeft: `${depth * 16 + 8}px` }}
+      onClick={handleClick}
+    >
+      <div className="flex items-center min-w-0 flex-1">
+        {hasChildren ? (
+          <Button
+            size="icon-xs"
+            variant="ghost"
+            onClick={handleToggle}
+            className="flex items-center justify-center w-4 h-4 mr-1 hover:bg-zinc-200"
+          >
+            <ChevronIcon open={isExpanded} />
+          </Button>
+        ) : (
+          <div className="w-5" />
         )}
-        style={{ paddingLeft: `${depth * 16 + 8}px` }}
-        onClick={handleClick}
-      >
-        <div className="flex items-center min-w-0 flex-1">
-          {hasChildren ? (
-            <button
-              onClick={handleToggle}
-              className="flex items-center justify-center w-4 h-4 mr-1 hover:bg-zinc-200 rounded"
-            >
-              {isExpanded ? (
-                <ChevronDownIcon className="w-3 h-3" />
-              ) : (
-                <ChevronRightIcon className="w-3 h-3" />
-              )}
-            </button>
-          ) : (
-            <div className="w-5" />
-          )}
 
-          <div className="flex items-center min-w-0">
-            {isDirectory ? (
-              <FolderIcon className="w-4 h-4 mr-2 text-blue-500 flex-shrink-0" />
-            ) : (
-              <FileIcon className="w-4 h-4 mr-2 text-zinc-500 flex-shrink-0" />
-            )}
-            <span className="truncate text-zinc-700">{node.name}</span>
-          </div>
+        <div className="flex items-center min-w-0">
+          {isDirectory ? (
+            <FolderIcon name={node.name} open={isExpanded} />
+          ) : (
+            getFileTypeIcon(node.name)
+          )}
+          <span className="truncate text-muted-foreground">{node.name}</span>
         </div>
       </div>
+    </div>
+  );
+
+  return (
+    <div>
+      {canMentionFile ? (
+        <ContextMenu>
+          <ContextMenuTrigger asChild>{row}</ContextMenuTrigger>
+          <ContextMenuContent className="w-44">
+            <ContextMenuItem
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                handleMentionInChat();
+              }}
+            >
+              Mention in chat
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+            <ContextMenuItem
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                handleOpenInEditor();
+              }}
+            >
+              Open in editor
+            </ContextMenuItem>
+          </ContextMenuContent>
+        </ContextMenu>
+      ) : (
+        row
+      )}
 
       {isDirectory && hasChildren && isExpanded && (
         <div>

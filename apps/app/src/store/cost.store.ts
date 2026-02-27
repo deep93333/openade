@@ -2,7 +2,7 @@ import { create } from "zustand";
 
 const COST_STORAGE_KEY = "agentide-total-cost";
 
-const loadFromLocalStorage = (): number => {
+const loadCostFromStorage = (): number => {
   try {
     const raw = localStorage.getItem(COST_STORAGE_KEY);
     return raw ? parseFloat(raw) || 0 : 0;
@@ -11,7 +11,7 @@ const loadFromLocalStorage = (): number => {
   }
 };
 
-const saveToLocalStorage = (totalCost: number): void => {
+const saveCostToStorage = (totalCost: number): void => {
   try {
     localStorage.setItem(COST_STORAGE_KEY, totalCost.toString());
   } catch {
@@ -33,17 +33,17 @@ export const useCostStore = create<CostStoreState>()((set, get) => ({
     if (cost > 0) {
       const newTotal = get().totalCostUsd + cost;
       set({ totalCostUsd: newTotal });
-      saveToLocalStorage(newTotal);
+      saveCostToStorage(newTotal);
     }
   },
 
   resetCost: () => {
     set({ totalCostUsd: 0 });
-    saveToLocalStorage(0);
+    saveCostToStorage(0);
   },
 
   loadCost: () => {
-    const totalCost = loadFromLocalStorage();
+    const totalCost = loadCostFromStorage();
     set({ totalCostUsd: totalCost });
   },
 }));

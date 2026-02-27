@@ -1,19 +1,23 @@
-import { SearchIcon } from "@agentide/ui";
+import { Search } from "lucide-react";
 import type { ToolComponentProps } from "./types";
+import { ToolContainer } from "./tool-container";
 
 export const SearchTool = ({ toolInput }: ToolComponentProps) => {
-  const query = (toolInput.query ?? toolInput.pattern ?? toolInput.search_term ?? "") as string;
+  const query = (toolInput.query ??
+    toolInput.pattern ??
+    toolInput.search_term ??
+    "") as string;
   const path = (toolInput.path ?? toolInput.directory ?? "") as string;
 
   return (
-    <div className="flex flex-col gap-1.5 rounded-lg bg-background p-2 ring-1 ring-foreground/10">
-      <p className="flex w-full items-center gap-2 border-b border-foreground/10 pb-2 text-xs font-medium text-muted-foreground">
-        <SearchIcon className="size-3.5" />
-        Search
-      </p>
-      <div className="overflow-hidden rounded-md border border-border bg-secondary">
+    <ToolContainer
+      icon={<Search className="size-3.5" strokeWidth={1.5} />}
+      title="Search"
+      toolInput={toolInput}
+    >
+      <div className="overflow-hidden rounded-md border border-border bg-secondary mx-2 mb-2">
         <div className="flex items-center gap-2 px-3 py-2">
-          <SearchIcon className="size-3 text-muted-foreground" />
+          <Search className="size-3 text-muted-foreground" strokeWidth={1.5} />
           <span className="font-mono text-xs text-foreground">{query}</span>
         </div>
         {path && (
@@ -22,6 +26,6 @@ export const SearchTool = ({ toolInput }: ToolComponentProps) => {
           </div>
         )}
       </div>
-    </div>
+    </ToolContainer>
   );
 };

@@ -6,18 +6,35 @@
   "author": "AgentIDE Contributors",
   "scripts": {
     "dev": "tsup && NODE_ENV=development electron .",
+    "dev:static": "tsup && USE_STATIC_APP=1 NODE_ENV=development electron .",
     "build": "tsup",
+    "build:dev": "NODE_ENV=development tsup",
     "build:prod": "NODE_ENV=production tsup",
-    "clean": "rm -rf dist release"
+    "clean": "rm -rf dist release release-dev",
+    "clean:dev": "rm -rf release-dev dist",
+    "clean:prod": "rm -rf release dist",
+    "package:dev": "cd ../app && ELECTRON=true bun run build && cd ../desktop && bun run clean:dev && NODE_ENV=development bun run build:dev && bun x electron-builder --config electron-builder.dev.yml --publish never && open ./release-dev",
+    "package:prod": "cd ../app && ELECTRON=true bun run build && cd ../desktop && bun run clean:prod && NODE_ENV=production bun run build:prod && bun x electron-builder --config electron-builder.prod.yml --publish never && open ./release",
+    "package": "bun run package:prod",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "devDependencies": {
     "electron": "^37.4.0",
+    "electron-builder": "^26.0.12",
     "tsup": "^8.5.0",
-    "typescript": "~5.8.3"
+    "typescript": "~5.8.3",
+    "vitest": "^3.0.0"
   },
   "dependencies": {
     "@agentide/shared": "workspace:*",
-    "@anthropic-ai/claude-agent-sdk": "^0.2.31",
-    "ulid": "^3.0.1"
+    "@ai-sdk/anthropic": "^3.0.47",
+    "@ai-sdk/openai": "^3.0.35",
+    "ai": "^6.0.103",
+    "fix-path": "^5.0.0",
+    "node-pty": "^1.0.0",
+    "simple-git": "^3.32.1",
+    "ulid": "^3.0.1",
+    "zod": "^4.3.6"
   }
 }

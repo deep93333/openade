@@ -2,9 +2,11 @@ export const IPC = {
   AGENT_START: "agent:start",
   AGENT_STOP: "agent:stop",
   AGENT_STATUS: "agent:status",
+  AGENT_GET_MODELS: "agent:get-models",
   AGENT_MESSAGE: "agent:message",
   AGENT_RESULT: "agent:result",
   AGENT_ERROR: "agent:error",
+  AGENT_SDK_SESSION_ID: "agent:sdk-session-id",
   AGENT_TOOL_APPROVAL_REQUEST: "agent:tool-approval-request",
   AGENT_TOOL_APPROVAL_RESPONSE: "agent:tool-approval-response",
 
@@ -16,6 +18,16 @@ export const IPC = {
   WORKSPACE_GIT_BRANCHES: "workspace:git-branches",
   WORKSPACE_GIT_SWITCH_BRANCH: "workspace:git-switch-branch",
   WORKSPACE_GIT_CREATE_BRANCH: "workspace:git-create-branch",
+  WORKSPACE_GIT_UNSTAGED_CHANGES: "workspace:git-unstaged-changes",
+  WORKSPACE_GET_FILE_DIFF: "workspace:get-file-diff",
+  WORKSPACE_REVERT_FILE_CHANGE: "workspace:revert-file-change",
+  WORKSPACE_GIT_STAGED_CHANGES: "workspace:git-staged-changes",
+  WORKSPACE_GIT_STAGE_FILE: "workspace:git-stage-file",
+  WORKSPACE_GIT_UNSTAGE_FILE: "workspace:git-unstage-file",
+  WORKSPACE_GIT_COMMIT: "workspace:git-commit",
+  WORKSPACE_GIT_PUSH: "workspace:git-push",
+  WORKSPACE_FILES_CHANGED: "workspace:files-changed",
+  WORKSPACE_GIT_CHANGED: "workspace:git-changed",
 
   DIALOG_SELECT_FOLDER: "dialog:select-folder",
 
@@ -24,9 +36,40 @@ export const IPC = {
 
   CHAT_LOAD: "chat:load",
   CHAT_SAVE: "chat:save",
+  CHAT_DELETE_THREAD: "chat:delete-thread",
+
+  CONFIG_GET_ACTIVE_WORKSPACE: "config:get-active-workspace",
+  CONFIG_SET_ACTIVE_WORKSPACE: "config:set-active-workspace",
+
+  TERMINAL_CREATE: "terminal:create",
+  TERMINAL_WRITE: "terminal:write",
+  TERMINAL_RESIZE: "terminal:resize",
+  TERMINAL_DESTROY: "terminal:destroy",
+  TERMINAL_DATA: "terminal:data",
+
+  API_KEY_GET: "api-key:get",
+  API_KEY_SET: "api-key:set",
+  API_KEY_HAS: "api-key:has",
+  CODEX_API_KEY_GET: "codex-api-key:get",
+  CODEX_API_KEY_SET: "codex-api-key:set",
+  CODEX_API_KEY_HAS: "codex-api-key:has",
+  AUTH_STATUS: "auth:status",
+  AUTH_SET_METHOD: "auth:set-method",
+  AUTH_LOGIN: "auth:login",
 
   APP_READY: "app:ready",
   APP_QUIT: "app:quit",
+  AGENT_LOG_GET_PATH: "agent-log:get-path",
+  AGENT_LOG_READ: "agent-log:read",
+  AGENT_LOG_OPEN_FOLDER: "agent-log:open-folder",
+  EDITOR_OPEN_FILE: "editor:open-file",
+
+  SKILLS_LIST: "skills:list",
+  SKILLS_GET_CONTENT: "skills:get-content",
+
+  CHECKPOINT_CREATE: "checkpoint:create",
+  CHECKPOINT_RESTORE: "checkpoint:restore",
+  CHECKPOINT_FINALIZE: "checkpoint:finalize",
 } as const;
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC];

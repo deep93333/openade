@@ -1,17 +1,120 @@
 import type {
   AgentMessage,
+  AgentMode,
+  AgentProvider,
   AgentResult,
   AgentStatus,
   ChatData,
   ChatThread,
+  Checkpoint,
+  ImageAttachment,
+  TaskStatus,
   ToolApprovalRequest,
 } from "@agentide/shared";
 import { create } from "zustand";
 import { getElectronAPI } from "@/lib/electron";
+import { normalizeUserMessageContentToText } from "@/utils/normalize-user-message";
 import { useCostStore } from "./cost.store";
 
 const CHAT_STORAGE_KEY = "agentide-chat";
+const MODEL_STORAGE_KEY = "agentide-selected-model";
+const PROVIDER_STORAGE_KEY = "agentide-selected-provider";
 const DEFAULT_MODEL = "claude-sonnet-4-20250514";
+
+type ThreadRuntime = {
+  status: AgentStatus;
+  error: string | null;
+  streamingText: string;
+  streamingCommittedPrefix: string;
+  sessionId: string | null;
+};
+
+const EMPTY_RUNTIME: ThreadRuntime = {
+  status: "idle",
+  error: null,
+  streamingText: "",
+  streamingCommittedPrefix: "",
+  sessionId: null,
+};
+
+type WorkspaceAgentState = {
+  threads: ChatThread[];
+  activeThreadId: string;
+  threadRuntime: Record<string, ThreadRuntime>;
+  sessionToThread: Record<string, string>;
+};
+
+const EMPTY_WORKSPACE_STATE: WorkspaceAgentState = {
+  threads: [],
+  activeThreadId: "",
+  threadRuntime: {},
+  sessionToThread: {},
+};
+
+type AgentStoreState = {
+  workspaces: Record<string, WorkspaceAgentState>;
+  selectedModel: string;
+  selectedProvider: AgentProvider;
+  selectedMode: AgentMode;
+  requireApproval: boolean;
+  pendingToolApprovals: Record<string, ToolApprovalRequest | null>;
+  sessionAllowedTools: Set<string>;
+  listenersInitialized: boolean;
+  listenersCleanup: (() => void) | null;
+
+  loadWorkspace: (workspaceId: string) => Promise<void>;
+  unloadWorkspace: (workspaceId: string) => void;
+  persistWorkspace: (workspaceId: string) => Promise<void>;
+
+  startNewThread: (workspaceId: string) => Promise<void>;
+  createTaskThread: (workspaceId: string, content: string, displayContent?: string) => Promise<string | null>;
+  switchThread: (workspaceId: string, threadId: string) => void;
+  deleteThread: (workspaceId: string, threadId: string) => Promise<void>;
+  updateThreadTaskStatus: (workspaceId: string, threadId: string, taskStatus: TaskStatus) => Promise<void>;
+
+  startAgent: (
+    workspaceId: string,
+    prompt: string,
+    options?: { displayContent?: string; imageAttachments?: ImageAttachment[]; provider?: AgentProvider }
+  ) => Promise<void>;
+  stopAgent: (workspaceId: string) => Promise<void>;
+
+  addMessage: (message: AgentMessage) => void;
+  setResult: (result: AgentResult) => void;
+  setError: (payload: { sessionId: string; error: string; workspaceId?: string }) => void;
+
+  setPendingToolApproval: (workspaceId: string, request: ToolApprovalRequest | null) => void;
+  respondToolApproval: (
+    workspaceId: string,
+    allow: boolean,
+    message?: string,
+    updatedInput?: unknown
+  ) => Promise<void>;
+  allowToolForSession: (workspaceId: string, toolName: string) => Promise<void>;
+  clearSessionAllowedTools: () => void;
+  clearError: (workspaceId: string) => void;
+
+  setSelectedModel: (model: string) => void;
+  setSelectedProvider: (provider: AgentProvider) => void;
+  setSelectedMode: (mode: AgentMode) => void;
+  setRequireApproval: (value: boolean) => void;
+
+  createCheckpoint: (workspaceId: string) => Promise<Checkpoint | null>;
+  rewindToCheckpoint: (
+    workspaceId: string,
+    checkpointId: string,
+    mode: "both" | "conversation" | "code"
+  ) => Promise<void>;
+
+  getWorkspaceState: (workspaceId: string) => WorkspaceAgentState;
+  getActiveThread: (workspaceId: string) => ChatThread | null;
+  getActiveRuntime: (workspaceId: string) => ThreadRuntime;
+  getThreadRuntime: (workspaceId: string, threadId: string) => ThreadRuntime;
+  getPendingToolApproval: (workspaceId: string) => ToolApprovalRequest | null;
+
+  initListeners: () => void;
+  teardownListeners: () => void;
+};
 
 function migrateLegacy(data: {
   messages?: AgentMessage[];
@@ -47,170 +150,102 @@ const saveToLocalStorage = (workspaceId: string, data: ChatData): void => {
       JSON.stringify({ threads: data.threads, activeThreadId: data.activeThreadId })
     );
   } catch {
-    // ignore
+    //
   }
 };
 
-type AgentStoreState = {
-  status: AgentStatus;
-  sessionId: string | null;
-  messages: AgentMessage[];
-  threads: ChatThread[];
-  activeThreadId: string;
-  streamingText: string;
-  totalCostUsd: number;
-  error: string | null;
-  selectedModel: string;
-  requireApproval: boolean;
-  pendingToolApproval: ToolApprovalRequest | null;
-
-  startAgent: (prompt: string, workspaceId: string, options?: { displayContent?: string }) => Promise<void>;
-  stopAgent: () => Promise<void>;
-  addMessage: (message: AgentMessage) => void;
-  setResult: (result: AgentResult) => void;
-  setError: (error: string) => void;
-  setSelectedModel: (model: string) => void;
-  setRequireApproval: (value: boolean) => void;
-  setPendingToolApproval: (request: ToolApprovalRequest | null) => void;
-  respondToolApproval: (allow: boolean, message?: string) => Promise<void>;
-  setMessages: (messages: AgentMessage[]) => void;
-  clearMessages: () => void;
-  loadHistory: (workspaceId: string) => void | Promise<void>;
-  persistHistory: (workspaceId: string) => void | Promise<void>;
-  startNewThread: (workspaceId: string) => void | Promise<void>;
-  switchThread: (threadId: string) => void;
-  initListeners: () => () => void;
+const loadSelectedModel = (): string => {
+  try {
+    const model = localStorage.getItem(MODEL_STORAGE_KEY);
+    return model && model.trim().length > 0 ? model : DEFAULT_MODEL;
+  } catch {
+    return DEFAULT_MODEL;
+  }
 };
 
+const saveSelectedModel = (model: string): void => {
+  try {
+    localStorage.setItem(MODEL_STORAGE_KEY, model);
+  } catch {
+    //
+  }
+};
+
+const loadSelectedProvider = (): AgentProvider => {
+  try {
+    const p = localStorage.getItem(PROVIDER_STORAGE_KEY);
+    return p === "codex" ? "codex" : "claude";
+  } catch {
+    return "claude";
+  }
+};
+
+const saveSelectedProvider = (provider: AgentProvider): void => {
+  try {
+    localStorage.setItem(PROVIDER_STORAGE_KEY, provider);
+  } catch {
+    //
+  }
+};
+
+function findWorkspaceForSession(
+  workspaces: Record<string, WorkspaceAgentState>,
+  sessionId?: string
+): string | null {
+  if (!sessionId) return null;
+  for (const [wsId, ws] of Object.entries(workspaces)) {
+    if (ws.sessionToThread[sessionId]) return wsId;
+  }
+  return null;
+}
+
+function findWorkspaceForThread(
+  workspaces: Record<string, WorkspaceAgentState>,
+  threadId: string
+): string | null {
+  for (const [wsId, ws] of Object.entries(workspaces)) {
+    if (ws.threads.some((t) => t.id === threadId)) return wsId;
+  }
+  return null;
+}
+
 export const useAgentStore = create<AgentStoreState>()((set, get) => ({
-  status: "idle",
-  sessionId: null,
-  messages: [],
-  threads: [],
-  activeThreadId: "",
-  streamingText: "",
-  totalCostUsd: 0,
-  error: null,
-  selectedModel: DEFAULT_MODEL,
+  workspaces: {},
+  selectedModel: loadSelectedModel(),
+  selectedProvider: loadSelectedProvider(),
+  selectedMode: "agent",
   requireApproval: true,
-  pendingToolApproval: null,
+  pendingToolApprovals: {},
+  sessionAllowedTools: new Set<string>(),
+  listenersInitialized: false,
+  listenersCleanup: null,
 
-  startAgent: async (prompt: string, workspaceId: string, options?: { displayContent?: string }) => {
-    const api = getElectronAPI();
-    if (!api) return;
+  getWorkspaceState: (workspaceId) =>
+    get().workspaces[workspaceId] ?? EMPTY_WORKSPACE_STATE,
 
-    const { selectedModel, requireApproval, activeThreadId } = get();
-    set({ status: "running", error: null, streamingText: "" });
-
-    const userMessage: AgentMessage = {
-      id: crypto.randomUUID(),
-      role: "user",
-      content: options?.displayContent ?? prompt,
-      timestamp: Date.now(),
-    };
-    set((state) => {
-      const nextMessages = [...state.messages, userMessage];
-      const nextThreads = state.threads.map((t) =>
-        t.id === activeThreadId ? { ...t, messages: nextMessages } : t
-      );
-      return { messages: nextMessages, threads: nextThreads };
-    });
-
-    const result = await api.agent.start({
-      prompt,
-      workspaceId,
-      activeThreadId: activeThreadId || undefined,
-      model: selectedModel,
-      requireApproval,
-    });
-    if (result.success && result.data) {
-      set({ sessionId: result.data.sessionId });
-    } else {
-      set({ status: "error", error: result.error || "Failed to start agent" });
-    }
+  getActiveThread: (workspaceId) => {
+    const ws = get().workspaces[workspaceId];
+    if (!ws) return null;
+    return ws.threads.find((t) => t.id === ws.activeThreadId) ?? null;
   },
 
-  setSelectedModel: (model: string) => set({ selectedModel: model }),
-
-  setRequireApproval: (value: boolean) => set({ requireApproval: value }),
-
-  setPendingToolApproval: (request: ToolApprovalRequest | null) =>
-    set({ pendingToolApproval: request }),
-
-  respondToolApproval: async (allow: boolean, message?: string) => {
-    const api = getElectronAPI();
-    const { pendingToolApproval } = get();
-    if (!api || !pendingToolApproval) return;
-    await api.agent.respondToolApproval({
-      requestId: pendingToolApproval.requestId,
-      allow,
-      message: allow ? undefined : message ?? "Denied by user",
-    });
-    set({ pendingToolApproval: null });
+  getActiveRuntime: (workspaceId) => {
+    const ws = get().workspaces[workspaceId];
+    if (!ws) return EMPTY_RUNTIME;
+    return ws.threadRuntime[ws.activeThreadId] ?? EMPTY_RUNTIME;
   },
 
-  stopAgent: async () => {
-    const api = getElectronAPI();
-    const { sessionId } = get();
-    if (!api || !sessionId) return;
-
-    await api.agent.stop(sessionId);
-    set({ status: "stopped" });
+  getThreadRuntime: (workspaceId, threadId) => {
+    const ws = get().workspaces[workspaceId];
+    return ws?.threadRuntime[threadId] ?? EMPTY_RUNTIME;
   },
 
-  addMessage: (message: AgentMessage) => {
-    if (message.isPartial) {
-      set((state) => ({ streamingText: state.streamingText + message.content }));
-      return;
-    }
+  getPendingToolApproval: (workspaceId) =>
+    get().pendingToolApprovals[workspaceId] ?? null,
 
-    set((state) => {
-      const finalContent = state.streamingText || message.content;
-      const nextMessages = [
-        ...state.messages,
-        { ...message, content: finalContent },
-      ];
-      const nextThreads = state.threads.map((t) =>
-        t.id === state.activeThreadId ? { ...t, messages: nextMessages } : t
-      );
-      return {
-        messages: nextMessages,
-        threads: nextThreads,
-        streamingText: "",
-      };
-    });
-  },
+  loadWorkspace: async (workspaceId) => {
+    if (get().workspaces[workspaceId]) return;
 
-  setResult: (result: AgentResult) => {
-    if (result.totalCostUsd && result.totalCostUsd > 0) {
-      useCostStore.getState().addCost(result.totalCostUsd);
-    }
-    set({
-      status: result.success ? "idle" : "error",
-      totalCostUsd: result.totalCostUsd || 0,
-      error: result.error || null,
-      streamingText: "",
-    });
-  },
-
-  setError: (error: string) => {
-    set({ status: "error", error, streamingText: "" });
-  },
-
-  setMessages: (messages: AgentMessage[]) => {
-    set((state) => {
-      const nextThreads = state.threads.map((t) =>
-        t.id === state.activeThreadId ? { ...t, messages } : t
-      );
-      return { messages, threads: nextThreads, streamingText: "" };
-    });
-  },
-
-  clearMessages: () => {
-    set({ messages: [], streamingText: "", error: null, totalCostUsd: 0 });
-  },
-
-  loadHistory: async (workspaceId: string) => {
     const api = getElectronAPI();
     let threads: ChatThread[] = [];
     let activeThreadId = "";
@@ -233,22 +268,46 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
       activeThreadId = threadId;
     }
 
-    const active = threads.find((t) => t.id === activeThreadId) ?? threads[0];
-    set({
-      threads,
-      activeThreadId: active?.id ?? "",
-      messages: active?.messages ?? [],
-      streamingText: "",
-      error: null,
+    const resolved = threads.find((t) => t.id === activeThreadId) ?? threads[0];
+    const resolvedId = resolved?.id ?? "";
+
+    const threadRuntime: Record<string, ThreadRuntime> = {};
+    for (const t of threads) {
+      threadRuntime[t.id] = { ...EMPTY_RUNTIME };
+    }
+
+    set((s) => ({
+      workspaces: {
+        ...s.workspaces,
+        [workspaceId]: {
+          threads,
+          activeThreadId: resolvedId,
+          threadRuntime,
+          sessionToThread: {},
+        },
+      },
+    }));
+  },
+
+  unloadWorkspace: (workspaceId) => {
+    set((s) => {
+      const next = { ...s.workspaces };
+      delete next[workspaceId];
+      const nextApprovals = { ...s.pendingToolApprovals };
+      delete nextApprovals[workspaceId];
+      return { workspaces: next, pendingToolApprovals: nextApprovals };
     });
   },
 
-  persistHistory: async (workspaceId: string) => {
-    const { threads, activeThreadId, messages } = get();
-    const nextThreads = threads.map((t) =>
-      t.id === activeThreadId ? { ...t, messages } : t
-    );
-    const data: ChatData = { threads: nextThreads, activeThreadId };
+  persistWorkspace: async (workspaceId) => {
+    const ws = get().workspaces[workspaceId];
+    if (!ws || (ws.threads.length === 0 && !ws.activeThreadId)) return;
+
+    const data: ChatData = {
+      threads: ws.threads,
+      activeThreadId: ws.activeThreadId,
+    };
+
     const api = getElectronAPI();
     if (api?.chat) {
       await api.chat.save(workspaceId, data);
@@ -257,40 +316,741 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
     saveToLocalStorage(workspaceId, data);
   },
 
-  startNewThread: async (workspaceId: string) => {
-    const { persistHistory } = get();
+  startNewThread: async (workspaceId) => {
     const threadId = crypto.randomUUID();
     const newThread: ChatThread = {
       id: threadId,
       messages: [],
       createdAt: Date.now(),
+      taskStatus: "backlog",
     };
-    set((state) => ({
-      threads: [...state.threads, newThread],
-      activeThreadId: threadId,
-      messages: [],
-      streamingText: "",
-      error: null,
-      totalCostUsd: 0,
-    }));
-    await persistHistory(workspaceId);
+
+    set((s) => {
+      const ws = s.workspaces[workspaceId] ?? EMPTY_WORKSPACE_STATE;
+      return {
+        workspaces: {
+          ...s.workspaces,
+          [workspaceId]: {
+            ...ws,
+            threads: [...ws.threads, newThread],
+            activeThreadId: threadId,
+            threadRuntime: { ...ws.threadRuntime, [threadId]: { ...EMPTY_RUNTIME } },
+          },
+        },
+      };
+    });
+
+    await get().persistWorkspace(workspaceId);
   },
 
-  switchThread: (threadId: string) => {
-    const { threads } = get();
-    const thread = threads.find((t) => t.id === threadId);
-    if (!thread) return;
-    set({
-      activeThreadId: threadId,
-      messages: thread.messages,
-      streamingText: "",
-      error: null,
+  createTaskThread: async (workspaceId, content, displayContent) => {
+    const trimmed = content.trim();
+    if (!trimmed) return null;
+
+    const threadId = crypto.randomUUID();
+    const userMessage: AgentMessage = {
+      id: crypto.randomUUID(),
+      role: "user",
+      content: displayContent ? normalizeUserMessageContentToText(displayContent) : trimmed,
+      timestamp: Date.now(),
+    };
+
+    set((s) => {
+      const ws = s.workspaces[workspaceId] ?? EMPTY_WORKSPACE_STATE;
+      const newThread: ChatThread = {
+        id: threadId,
+        messages: [userMessage],
+        createdAt: Date.now(),
+        taskStatus: "backlog",
+      };
+
+      return {
+        workspaces: {
+          ...s.workspaces,
+          [workspaceId]: {
+            ...ws,
+            threads: [...ws.threads, newThread],
+            activeThreadId: threadId,
+            threadRuntime: { ...ws.threadRuntime, [threadId]: { ...EMPTY_RUNTIME } },
+          },
+        },
+      };
+    });
+
+    await get().persistWorkspace(workspaceId);
+    return threadId;
+  },
+
+  switchThread: (workspaceId, threadId) => {
+    set((s) => {
+      const ws = s.workspaces[workspaceId];
+      if (!ws) return s;
+      const thread = ws.threads.find((t) => t.id === threadId);
+      if (!thread) return s;
+      const runtime = ws.threadRuntime[threadId] ?? { ...EMPTY_RUNTIME };
+      const provider = thread.provider ?? s.selectedProvider;
+      return {
+        workspaces: {
+          ...s.workspaces,
+          [workspaceId]: {
+            ...ws,
+            activeThreadId: threadId,
+            threadRuntime: { ...ws.threadRuntime, [threadId]: runtime },
+          },
+        },
+        selectedProvider: provider,
+      };
     });
   },
 
-  initListeners: () => {
+  deleteThread: async (workspaceId, threadId) => {
+    const ws = get().workspaces[workspaceId];
+    if (!ws || ws.threads.length <= 1) return;
+
+    const updatedThreads = ws.threads.filter((t) => t.id !== threadId);
+    const newActiveId =
+      ws.activeThreadId === threadId
+        ? updatedThreads[0]?.id ?? ""
+        : ws.activeThreadId;
+
+    const { [threadId]: _removed, ...remainingRuntime } = ws.threadRuntime;
+
+    set((s) => ({
+      workspaces: {
+        ...s.workspaces,
+        [workspaceId]: {
+          ...ws,
+          threads: updatedThreads,
+          activeThreadId: newActiveId,
+          threadRuntime: remainingRuntime,
+        },
+      },
+    }));
+
     const api = getElectronAPI();
-    if (!api) return () => {};
+    if (api?.chat) {
+      await api.chat.deleteThread(workspaceId, threadId).catch(console.error);
+    } else {
+      saveToLocalStorage(workspaceId, { threads: updatedThreads, activeThreadId: newActiveId });
+    }
+  },
+
+  updateThreadTaskStatus: async (workspaceId, threadId, taskStatus) => {
+    set((s) => {
+      const ws = s.workspaces[workspaceId];
+      if (!ws) return s;
+
+      const updatedThreads = ws.threads.map((thread) =>
+        thread.id === threadId ? { ...thread, taskStatus } : thread
+      );
+
+      return {
+        ...s,
+        workspaces: {
+          ...s.workspaces,
+          [workspaceId]: {
+            ...ws,
+            threads: updatedThreads,
+          },
+        },
+      };
+    });
+
+    // Persist the change
+    const updatedData = get().workspaces[workspaceId];
+    if (updatedData) {
+      const api = getElectronAPI();
+      if (api?.chat) {
+        await api.chat.save(workspaceId, {
+          threads: updatedData.threads,
+          activeThreadId: updatedData.activeThreadId,
+        }).catch(console.error);
+      } else {
+        saveToLocalStorage(workspaceId, {
+          threads: updatedData.threads,
+          activeThreadId: updatedData.activeThreadId,
+        });
+      }
+    }
+  },
+
+  startAgent: async (workspaceId, prompt, options) => {
+    const api = getElectronAPI();
+    if (!api) return;
+
+    const { selectedModel, selectedMode, requireApproval, createCheckpoint } = get();
+    const ws = get().workspaces[workspaceId];
+    if (!ws) return;
+
+    const tid = ws.activeThreadId;
+    await createCheckpoint(workspaceId);
+
+    const images = options?.imageAttachments?.length ? options.imageAttachments : undefined;
+    const userMessage: AgentMessage = {
+      id: crypto.randomUUID(),
+      role: "user",
+      content: options?.displayContent
+        ? normalizeUserMessageContentToText(options.displayContent)
+        : prompt,
+      timestamp: Date.now(),
+      imageAttachments: images,
+    };
+
+    set((s) => {
+      const ws = s.workspaces[workspaceId];
+      if (!ws) return s;
+      const thread = ws.threads.find((t) => t.id === tid);
+      if (!thread) return s;
+      const updatedThread = { ...thread, messages: [...thread.messages, userMessage] };
+      return {
+        workspaces: {
+          ...s.workspaces,
+          [workspaceId]: {
+            ...ws,
+            threads: ws.threads.map((t) => (t.id === tid ? updatedThread : t)),
+            threadRuntime: {
+              ...ws.threadRuntime,
+              [tid]: { ...EMPTY_RUNTIME, status: "running" },
+            },
+          },
+        },
+      };
+    });
+
+    const activeThread = get().workspaces[workspaceId]?.threads.find((t) => t.id === tid);
+    const resumeSessionId = activeThread?.sdkSessionId;
+    const provider = options?.provider ?? activeThread?.provider ?? get().selectedProvider;
+
+    const existingMessages = activeThread ? activeThread.messages.slice(0, -1) : [];
+    const result = await api.agent.start({
+      prompt,
+      workspaceId,
+      activeThreadId: tid || undefined,
+      existingMessages,
+      model: selectedModel,
+      mode: selectedMode,
+      provider,
+      requireApproval,
+      resumeSessionId,
+      imageAttachments: images,
+    });
+
+    if (result.success && result.data) {
+      const sessionId = result.data.sessionId;
+      set((s) => {
+        const ws = s.workspaces[workspaceId];
+        if (!ws) return s;
+        return {
+          workspaces: {
+            ...s.workspaces,
+            [workspaceId]: {
+              ...ws,
+              sessionToThread: { ...ws.sessionToThread, [sessionId]: tid },
+              threadRuntime: {
+                ...ws.threadRuntime,
+                [tid]: { ...(ws.threadRuntime[tid] ?? EMPTY_RUNTIME), sessionId },
+              },
+            },
+          },
+        };
+      });
+    } else {
+      set((s) => {
+        const ws = s.workspaces[workspaceId];
+        if (!ws) return s;
+        return {
+          workspaces: {
+            ...s.workspaces,
+            [workspaceId]: {
+              ...ws,
+              threadRuntime: {
+                ...ws.threadRuntime,
+                [tid]: {
+                  ...EMPTY_RUNTIME,
+                  status: "error",
+                  error: result.error || "Failed to start agent",
+                },
+              },
+            },
+          },
+        };
+      });
+    }
+  },
+
+  stopAgent: async (workspaceId) => {
+    const api = getElectronAPI();
+    const ws = get().workspaces[workspaceId];
+    if (!api || !ws) return;
+
+    const activeRuntime = ws.threadRuntime[ws.activeThreadId];
+    const activeIsRunning = activeRuntime?.status === "running" && !!activeRuntime.sessionId;
+    const fallback = Object.entries(ws.threadRuntime).find(
+      ([, runtime]) => runtime.status === "running" && !!runtime.sessionId
+    );
+
+    const targetThreadId = activeIsRunning ? ws.activeThreadId : (fallback?.[0] ?? null);
+    const sessionId = activeIsRunning
+      ? activeRuntime?.sessionId ?? null
+      : (fallback?.[1].sessionId ?? null);
+    if (!targetThreadId || !sessionId) return;
+
+    await api.agent.stop(sessionId);
+
+    set((s) => {
+      const ws = s.workspaces[workspaceId];
+      if (!ws) return s;
+      const nextSessionToThread = { ...ws.sessionToThread };
+      delete nextSessionToThread[sessionId];
+      return {
+        workspaces: {
+          ...s.workspaces,
+          [workspaceId]: {
+            ...ws,
+            sessionToThread: nextSessionToThread,
+            threadRuntime: {
+              ...ws.threadRuntime,
+              [targetThreadId]: { ...EMPTY_RUNTIME, status: "stopped" },
+            },
+          },
+        },
+      };
+    });
+  },
+
+  addMessage: (message) => {
+    const { workspaces } = get();
+
+    let targetWorkspaceId: string | null = null;
+    let targetThreadId: string | null = null;
+
+    if (message.sessionId) {
+      targetWorkspaceId = findWorkspaceForSession(workspaces, message.sessionId);
+      targetThreadId = targetWorkspaceId
+        ? workspaces[targetWorkspaceId].sessionToThread[message.sessionId]
+        : null;
+    } else {
+      for (const [wsId, wsState] of Object.entries(workspaces)) {
+        targetWorkspaceId = wsId;
+        targetThreadId = wsState.activeThreadId;
+        break;
+      }
+    }
+
+    if (!targetWorkspaceId || !targetThreadId) return;
+    const wsId = targetWorkspaceId;
+    const threadId = targetThreadId;
+
+    if (message.isPartial) {
+      set((s) => {
+        const ws = s.workspaces[wsId];
+        if (!ws) return s;
+        const runtime = ws.threadRuntime[threadId] ?? EMPTY_RUNTIME;
+        const raw = typeof message.content === "string" ? message.content : String(message.content ?? "");
+        const prefix = runtime.streamingCommittedPrefix;
+        const text = prefix && raw.startsWith(prefix) ? raw.slice(prefix.length) : raw;
+        return {
+          workspaces: {
+            ...s.workspaces,
+            [wsId]: {
+              ...ws,
+              threadRuntime: {
+                ...ws.threadRuntime,
+                [threadId]: {
+                  ...runtime,
+                  streamingText: text,
+                },
+              },
+            },
+          },
+        };
+      });
+      return;
+    }
+
+    set((s) => {
+      const ws = s.workspaces[wsId];
+      if (!ws) return s;
+      const runtime = ws.threadRuntime[threadId] ?? EMPTY_RUNTIME;
+
+      let messagesToAdd: AgentMessage[] = [];
+      let streamingTextToClear = runtime.streamingText;
+      let streamingCommittedPrefixUpdate: string | null = null;
+
+      if (message.role === "tool") {
+        if (runtime.streamingText) {
+          messagesToAdd.push({
+            id: `${message.id}-assistant-before`,
+            role: "assistant",
+            content: runtime.streamingText,
+            timestamp: message.timestamp - 1,
+          });
+        }
+        messagesToAdd.push({ ...message, content: message.content });
+        streamingTextToClear = "";
+        streamingCommittedPrefixUpdate = runtime.streamingCommittedPrefix + runtime.streamingText;
+      } else if (message.role === "assistant") {
+        const finalContent = runtime.streamingText || message.content;
+        messagesToAdd.push({ ...message, content: finalContent });
+        streamingTextToClear = "";
+        streamingCommittedPrefixUpdate = runtime.streamingCommittedPrefix + finalContent;
+      } else {
+        messagesToAdd.push({ ...message, content: message.content });
+        if (message.role === "system") {
+          streamingTextToClear = "";
+          streamingCommittedPrefixUpdate = "";
+        }
+      }
+
+      const updatedThreads = ws.threads.map((t) =>
+        t.id === threadId
+          ? { ...t, messages: [...t.messages, ...messagesToAdd] }
+          : t
+      );
+      const shouldCleanupSession =
+        !!message.sessionId &&
+        runtime.status !== "running" &&
+        runtime.sessionId === message.sessionId;
+      const nextSessionToThread = shouldCleanupSession
+        ? (() => {
+            const next = { ...ws.sessionToThread };
+            delete next[message.sessionId!];
+            return next;
+          })()
+        : ws.sessionToThread;
+      return {
+        workspaces: {
+          ...s.workspaces,
+          [wsId]: {
+            ...ws,
+            threads: updatedThreads,
+            sessionToThread: nextSessionToThread,
+            threadRuntime: {
+              ...ws.threadRuntime,
+              [threadId]: {
+                ...runtime,
+                streamingText: streamingTextToClear,
+                streamingCommittedPrefix:
+                  streamingCommittedPrefixUpdate ?? runtime.streamingCommittedPrefix,
+                ...(shouldCleanupSession ? { sessionId: null, streamingCommittedPrefix: "" } : {}),
+              },
+            },
+          },
+        },
+      };
+    });
+  },
+
+  setResult: (result) => {
+    if (result.totalCostUsd && result.totalCostUsd > 0) {
+      useCostStore.getState().addCost(result.totalCostUsd);
+    }
+
+    const { workspaces } = get();
+    const targetWorkspaceId = findWorkspaceForSession(workspaces, result.sessionId);
+    if (!targetWorkspaceId) return;
+    const wsId = targetWorkspaceId;
+    const threadId = workspaces[wsId].sessionToThread[result.sessionId];
+
+    const inputTokens = result.inputTokens ?? 0;
+    const outputTokens = result.outputTokens ?? 0;
+    const costUsd = result.totalCostUsd ?? 0;
+    const hasUsage = inputTokens > 0 || outputTokens > 0 || costUsd > 0;
+
+    set((s) => {
+      const ws = s.workspaces[wsId];
+      if (!ws) return s;
+      const prevRuntime = ws.threadRuntime[threadId] ?? EMPTY_RUNTIME;
+      const prevThread = ws.threads.find((t) => t.id === threadId);
+      const threadTokenUpdate =
+        inputTokens > 0 || outputTokens > 0
+          ? {
+              inputTokens: (prevThread?.inputTokens ?? 0) + inputTokens,
+              outputTokens: (prevThread?.outputTokens ?? 0) + outputTokens,
+              lastRunInputTokens: inputTokens,
+              lastRunOutputTokens: outputTokens,
+            }
+          : {};
+      return {
+        workspaces: {
+          ...s.workspaces,
+          [wsId]: {
+            ...ws,
+            threads: ws.threads.map((t) =>
+              t.id === threadId
+                ? {
+                    ...t,
+                    ...threadTokenUpdate,
+                    ...(hasUsage && t.messages.length > 0
+                      ? {
+                          messages: t.messages.map((msg, i) =>
+                            i === t.messages.length - 1
+                              ? {
+                                  ...msg,
+                                  inputTokens: (msg.inputTokens ?? 0) + inputTokens,
+                                  outputTokens: (msg.outputTokens ?? 0) + outputTokens,
+                                  costUsd: (msg.costUsd ?? 0) + costUsd,
+                                }
+                              : msg
+                          ),
+                        }
+                      : {}),
+                  }
+                : t
+            ),
+            threadRuntime: {
+              ...ws.threadRuntime,
+              [threadId]: {
+                ...prevRuntime,
+                status: result.success ? "idle" : "error",
+                error: result.error || null,
+              },
+            },
+          },
+        },
+      };
+    });
+
+    get().persistWorkspace(wsId).catch(() => {});
+
+    const api = getElectronAPI();
+    if (api?.checkpoint && result.success) {
+      api.checkpoint.finalize({ workspaceId: wsId, threadId }).then((res) => {
+        if (!res.success || !res.data) return;
+        const { checkpointId, modifiedFiles, createdFiles } = res.data;
+        set((s) => {
+          const ws = s.workspaces[wsId];
+          if (!ws) return s;
+          return {
+            workspaces: {
+              ...s.workspaces,
+              [wsId]: {
+                ...ws,
+                threads: ws.threads.map((t) =>
+                  t.id === threadId
+                    ? {
+                        ...t,
+                        checkpoints: (t.checkpoints ?? []).map((c) =>
+                          c.id === checkpointId
+                            ? { ...c, modifiedFiles, createdFiles }
+                            : c
+                        ),
+                      }
+                    : t
+                ),
+              },
+            },
+          };
+        });
+      }).catch(() => {});
+    }
+  },
+
+  setError: (payload) => {
+    const { workspaces } = get();
+    let wsId: string | null = null;
+    let threadId: string | null = null;
+
+    if (payload.workspaceId) {
+      wsId = payload.workspaceId;
+      const ws = workspaces[wsId];
+      threadId = ws?.activeThreadId ?? null;
+    } else if (payload.sessionId) {
+      wsId = findWorkspaceForSession(workspaces, payload.sessionId);
+      threadId = wsId ? workspaces[wsId].sessionToThread[payload.sessionId] : null;
+    }
+
+    if (!wsId || !threadId) return;
+    const resolvedWorkspaceId = wsId;
+    const resolvedThreadId = threadId;
+
+    set((s) => {
+      const ws = s.workspaces[resolvedWorkspaceId];
+      if (!ws) return s;
+      let nextSessionToThread = ws.sessionToThread;
+      if (payload.sessionId && ws.sessionToThread[payload.sessionId]) {
+        nextSessionToThread = { ...ws.sessionToThread };
+        delete nextSessionToThread[payload.sessionId];
+      }
+      return {
+        workspaces: {
+          ...s.workspaces,
+          [resolvedWorkspaceId]: {
+            ...ws,
+            sessionToThread: nextSessionToThread,
+            threadRuntime: {
+              ...ws.threadRuntime,
+              [resolvedThreadId]: {
+                ...(ws.threadRuntime[resolvedThreadId] ?? EMPTY_RUNTIME),
+                status: "error",
+                error: payload.error,
+              },
+            },
+          },
+        },
+      };
+    });
+  },
+
+  clearError: (workspaceId) => {
+    set((s) => {
+      const ws = s.workspaces[workspaceId];
+      if (!ws) return s;
+      const runtime = ws.threadRuntime[ws.activeThreadId] ?? EMPTY_RUNTIME;
+      return {
+        workspaces: {
+          ...s.workspaces,
+          [workspaceId]: {
+            ...ws,
+            threadRuntime: {
+              ...ws.threadRuntime,
+              [ws.activeThreadId]: { ...runtime, error: null },
+            },
+          },
+        },
+      };
+    });
+  },
+
+  setPendingToolApproval: (workspaceId, request) => {
+    set((s) => ({
+      pendingToolApprovals: { ...s.pendingToolApprovals, [workspaceId]: request },
+    }));
+  },
+
+  respondToolApproval: async (workspaceId, allow, message, updatedInput) => {
+    const api = getElectronAPI();
+    const request = get().pendingToolApprovals[workspaceId];
+    if (!api || !request) return;
+    await api.agent.respondToolApproval({
+      requestId: request.requestId,
+      allow,
+      updatedInput: allow ? updatedInput : undefined,
+      message: allow ? undefined : message ?? "Denied by user",
+    });
+    set((s) => ({
+      pendingToolApprovals: { ...s.pendingToolApprovals, [workspaceId]: null },
+    }));
+  },
+
+  allowToolForSession: async (workspaceId, toolName) => {
+    set((s) => ({
+      sessionAllowedTools: new Set([...s.sessionAllowedTools, toolName]),
+    }));
+    await get().respondToolApproval(workspaceId, true);
+  },
+
+  clearSessionAllowedTools: () => set({ sessionAllowedTools: new Set() }),
+
+  setSelectedModel: (model) => {
+    saveSelectedModel(model);
+    set({ selectedModel: model });
+  },
+  setSelectedProvider: (provider) => {
+    saveSelectedProvider(provider);
+    set({ selectedProvider: provider });
+  },
+  setSelectedMode: (mode) => set({ selectedMode: mode }),
+  setRequireApproval: (value) => set({ requireApproval: value }),
+
+  createCheckpoint: async (workspaceId) => {
+    const api = getElectronAPI();
+    if (!api?.checkpoint) return null;
+    const ws = get().workspaces[workspaceId];
+    if (!ws?.activeThreadId) return null;
+
+    const thread = ws.threads.find((t) => t.id === ws.activeThreadId);
+    const messageIndex = thread?.messages.length ?? 0;
+
+    const result = await api.checkpoint.create({
+      workspaceId,
+      activeThreadId: ws.activeThreadId,
+      messageIndex,
+    });
+    if (!result.success || !result.data) return null;
+
+    const { checkpoint, finalizedPrev } = result.data;
+    if (!checkpoint) return null;
+    set((s) => {
+      const ws = s.workspaces[workspaceId];
+      if (!ws) return s;
+      return {
+        workspaces: {
+          ...s.workspaces,
+          [workspaceId]: {
+            ...ws,
+            threads: ws.threads.map((t) => {
+              if (t.id !== ws.activeThreadId) return t;
+              const updatedCheckpoints = (t.checkpoints ?? []).map((c) =>
+                finalizedPrev && c.id === finalizedPrev.id ? finalizedPrev : c
+              );
+              return { ...t, checkpoints: [...updatedCheckpoints, checkpoint] };
+            }),
+          },
+        },
+      };
+    });
+    return checkpoint;
+  },
+
+  rewindToCheckpoint: async (workspaceId, checkpointId, mode) => {
+    const api = getElectronAPI();
+    const ws = get().workspaces[workspaceId];
+    if (!ws) return;
+
+    const thread = ws.threads.find((t) => t.id === ws.activeThreadId);
+    const checkpoint = thread?.checkpoints?.find((c) => c.id === checkpointId);
+    if (!checkpoint) return;
+
+    const doConversation = mode === "conversation" || mode === "both";
+    const doCode = mode === "code" || mode === "both";
+
+    if (doCode && api?.checkpoint) {
+      const result = await api.checkpoint.restore({
+        workspaceId,
+        stashRef: checkpoint.gitStashRef ?? null,
+        modifiedFiles: checkpoint.modifiedFiles,
+        createdFiles: checkpoint.createdFiles,
+      });
+      if (!result.success) {
+        get().setError({
+          sessionId: "",
+          error: result.error ?? "Failed to restore code",
+          workspaceId,
+        });
+        if (mode === "both") return;
+      }
+    }
+
+    if (doConversation) {
+      const truncated = (thread?.messages ?? []).slice(0, checkpoint.messageIndex);
+      set((s) => {
+        const ws = s.workspaces[workspaceId];
+        if (!ws) return s;
+        return {
+          workspaces: {
+            ...s.workspaces,
+            [workspaceId]: {
+              ...ws,
+              threads: ws.threads.map((t) =>
+                t.id === ws.activeThreadId ? { ...t, messages: truncated } : t
+              ),
+              threadRuntime: {
+                ...ws.threadRuntime,
+                [ws.activeThreadId]: { ...EMPTY_RUNTIME },
+              },
+            },
+          },
+        };
+      });
+      await get().persistWorkspace(workspaceId);
+    }
+  },
+
+  initListeners: () => {
+    if (get().listenersInitialized) return;
+    const api = getElectronAPI();
+    if (!api) return;
 
     const removeMessage = api.agent.onMessage((message) => {
       get().addMessage(message);
@@ -300,19 +1060,61 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
       get().setResult(result);
     });
 
-    const removeError = api.agent.onError((error) => {
-      get().setError(error);
+    const removeError = api.agent.onError((payload: { sessionId: string; error: string }) => {
+      get().setError(payload);
     });
 
-    const removeToolApproval = api.agent.onToolApprovalRequest?.((request: ToolApprovalRequest) => {
-      get().setPendingToolApproval(request);
-    });
+    const removeToolApproval = api.agent.onToolApprovalRequest?.(
+      (request: ToolApprovalRequest & { workspaceId?: string }) => {
+        const workspaceId =
+          request.workspaceId ?? findWorkspaceForSession(get().workspaces, request.sessionId);
+        if (!workspaceId) return;
+        if (get().sessionAllowedTools.has(request.toolName)) {
+          get().respondToolApproval(workspaceId, true);
+          return;
+        }
+        get().setPendingToolApproval(workspaceId, request);
+      }
+    );
 
-    return () => {
+    const removeSdkSessionId = api.agent.onSdkSessionId?.(
+      (payload: { sdkSessionId: string; threadId: string; workspaceId?: string; provider?: import("@agentide/shared").AgentProvider }) => {
+        const workspaceId =
+          payload.workspaceId ?? findWorkspaceForThread(get().workspaces, payload.threadId);
+        if (!workspaceId) return;
+        set((s) => {
+          const ws = s.workspaces[workspaceId];
+          if (!ws) return s;
+          return {
+            workspaces: {
+              ...s.workspaces,
+              [workspaceId]: {
+                ...ws,
+                threads: ws.threads.map((t) =>
+                  t.id === payload.threadId
+                    ? { ...t, sdkSessionId: payload.sdkSessionId, ...(payload.provider != null && { provider: payload.provider }) }
+                    : t
+                ),
+              },
+            },
+          };
+        });
+      }
+    );
+
+    const cleanup = () => {
       removeMessage();
       removeResult();
       removeError();
       removeToolApproval?.();
+      removeSdkSessionId?.();
     };
+    set({ listenersInitialized: true, listenersCleanup: cleanup });
+  },
+
+  teardownListeners: () => {
+    const cleanup = get().listenersCleanup;
+    cleanup?.();
+    set({ listenersInitialized: false, listenersCleanup: null });
   },
 }));

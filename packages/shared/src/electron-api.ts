@@ -1,29 +1,59 @@
 import type {
+  AgentErrorPayload,
   AgentMessage,
+  AgentModelOption,
   AgentResult,
+  AgentSkillItem,
   AgentStartParams,
   AgentStatus,
   ChatData,
+  Checkpoint,
+  FileDiffContent,
   FileTreeNode,
   GitBranch,
+  GitStagedChange,
+  GitUnstagedChange,
   IpcResult,
+  SdkSessionIdPayload,
   ToolApprovalRequest,
   ToolApprovalResponse,
   Workspace,
 } from "./types.js";
 
 export type ElectronAPI = {
+  config: {
+    getActiveWorkspaceId: () => Promise<IpcResult<string | null>>;
+    setActiveWorkspaceId: (workspaceId: string | null) => Promise<IpcResult>;
+  };
+  apiKey: {
+    get: () => Promise<IpcResult<string | null>>;
+    set: (apiKey: string | null) => Promise<IpcResult>;
+    has: () => Promise<IpcResult<boolean>>;
+  };
+  codexApiKey: {
+    get: () => Promise<IpcResult<string | null>>;
+    set: (apiKey: string | null) => Promise<IpcResult>;
+    has: () => Promise<IpcResult<boolean>>;
+  };
+  auth: {
+    status: () => Promise<IpcResult<import("./types.js").AuthStatus>>;
+    setMethod: (method: import("./types.js").AuthMethod) => Promise<IpcResult>;
+    login: () => Promise<IpcResult<{ email?: string }>>;
+  };
   chat: {
     load: (workspaceId: string) => Promise<IpcResult<ChatData>>;
     save: (workspaceId: string, data: ChatData) => Promise<IpcResult>;
+    deleteThread: (workspaceId: string, threadId: string) => Promise<IpcResult>;
   };
   agent: {
     start: (params: AgentStartParams) => Promise<IpcResult<{ sessionId: string }>>;
     stop: (sessionId: string) => Promise<IpcResult>;
     status: () => Promise<IpcResult<{ status: AgentStatus; sessionId?: string }>>;
+    getModels: () => Promise<IpcResult<AgentModelOption[]>>;
     onMessage: (callback: (message: AgentMessage) => void) => () => void;
     onResult: (callback: (result: AgentResult) => void) => () => void;
-    onError: (callback: (error: string) => void) => () => void;
+    onError: (callback: (payload: AgentErrorPayload) => void) => () => void;
+    onSdkSessionId: (callback: (payload: SdkSessionIdPayload) => void) => () => void;
     onToolApprovalRequest: (callback: (request: ToolApprovalRequest) => void) => () => void;
     respondToolApproval: (response: ToolApprovalResponse) => Promise<void>;
   };
@@ -36,6 +66,16 @@ export type ElectronAPI = {
     getBranches: (id: string) => Promise<IpcResult<GitBranch[]>>;
     switchBranch: (id: string, branchName: string) => Promise<IpcResult<Workspace>>;
     createBranch: (id: string, branchName: string) => Promise<IpcResult<Workspace>>;
+    getUnstagedChanges: (id: string) => Promise<IpcResult<GitUnstagedChange[]>>;
+    getStagedChanges: (id: string) => Promise<IpcResult<GitStagedChange[]>>;
+    getFileDiffContent: (workspaceId: string, path: string, staged?: boolean) => Promise<IpcResult<FileDiffContent>>;
+    revertFileChange: (workspaceId: string, path: string) => Promise<IpcResult>;
+    stageFile: (workspaceId: string, path: string) => Promise<IpcResult>;
+    unstageFile: (workspaceId: string, path: string) => Promise<IpcResult>;
+    commit: (workspaceId: string, message: string) => Promise<IpcResult>;
+    push: (workspaceId: string) => Promise<IpcResult>;
+    onFilesChanged: (callback: (payload: { workspaceId: string }) => void) => () => void;
+    onGitChanged: (callback: (payload: { workspaceId: string }) => void) => () => void;
   };
   filesystem: {
     readDirectoryTree: (path: string) => Promise<IpcResult<FileTreeNode>>;
@@ -43,6 +83,42 @@ export type ElectronAPI = {
   };
   dialog: {
     selectFolder: () => Promise<IpcResult<string | null>>;
+  };
+  terminal: {
+    create: (params: { cwd?: string; cols?: number; rows?: number }) => Promise<IpcResult<{ terminalId: string }>>;
+    write: (terminalId: string, data: string) => Promise<IpcResult>;
+    resize: (terminalId: string, cols: number, rows: number) => Promise<IpcResult>;
+    destroy: (terminalId: string) => Promise<IpcResult>;
+    onData: (callback: (payload: { terminalId: string; data: string }) => void) => () => void;
+  };
+  skills: {
+    list: () => Promise<IpcResult<AgentSkillItem[]>>;
+    getContent: (skillId: string) => Promise<IpcResult<string>>;
+  };
+  checkpoint: {
+    create: (params: {
+      workspaceId: string;
+      activeThreadId: string;
+      messageIndex: number;
+    }) => Promise<IpcResult<{ checkpoint: Checkpoint; finalizedPrev: Checkpoint | null }>>;
+    finalize: (params: {
+      workspaceId: string;
+      threadId: string;
+    }) => Promise<IpcResult<{ checkpointId: string; modifiedFiles: string[]; createdFiles: string[] } | null>>;
+    restore: (params: {
+      workspaceId: string;
+      stashRef: string | null;
+      modifiedFiles?: string[];
+      createdFiles?: string[];
+    }) => Promise<IpcResult>;
+  };
+  agentLog: {
+    getPath: () => Promise<IpcResult<string>>;
+    read: () => Promise<IpcResult<string>>;
+    openFolder: () => Promise<IpcResult>;
+  };
+  editor: {
+    openFile: (filePath: string, line?: number) => Promise<IpcResult>;
   };
 };
 

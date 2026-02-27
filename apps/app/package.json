@@ -6,9 +6,12 @@
   "scripts": {
     "dev": "vite --port 3010",
     "build": "vite build",
+    "build:electron": "ELECTRON=true vite build",
     "build:prod": "NODE_ENV=production vite build",
     "clean": "rm -rf dist",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@agentide/shared": "workspace:*",
@@ -18,6 +21,7 @@
     "@radix-ui/react-dialog": "^1.0.5",
     "@radix-ui/react-separator": "^1.0.3",
     "@radix-ui/react-tooltip": "^1.0.7",
+    "@tabler/icons-react": "^3.36.1",
     "@tailwindcss/typography": "^0.5.15",
     "@tailwindcss/vite": "^4.1.13",
     "@tanstack/react-router": "^1.131.10",
@@ -26,11 +30,16 @@
     "@tiptap/react": "^3.20.0",
     "@tiptap/starter-kit": "^3.20.0",
     "@tiptap/suggestion": "^3.20.0",
+    "@vscode/codicons": "^0.0.44",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/xterm": "^6.0.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
+    "devicon": "^2.17.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-markdown": "^10.1.0",
+    "react-resizable-panels": "^4.6.5",
     "remark-gfm": "^4.0.1",
     "shiki": "^3.22.0",
     "tailwind-merge": "^2.2.1",
@@ -42,6 +51,7 @@
     "@types/react-dom": "^18.2.0",
     "@vitejs/plugin-react": "^4.6.0",
     "typescript": "~5.8.3",
-    "vite": "^7.0.4"
+    "vite": "^7.0.4",
+    "vitest": "^3.0.0"
   }
 }

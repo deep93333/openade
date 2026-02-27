@@ -10,7 +10,13 @@ interface FileTreeProps {
 }
 
 export const FileTree = ({ onFileSelect, className }: FileTreeProps) => {
-  const { activeWorkspace } = useWorkspaceStore();
+  const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
+  const activeWorkspace = useWorkspaceStore((s) =>
+    s.workspaces.find((w) => w.id === s.activeWorkspaceId) ?? null
+  );
+  const fileTreeVersion = useWorkspaceStore((s) =>
+    activeWorkspaceId ? (s.fileTreeVersions[activeWorkspaceId] ?? 0) : 0
+  );
   const [fileTree, setFileTree] = useState<FileTreeNode | null>(null);
   const [selectedPath, setSelectedPath] = useState<string>("");
   const [loading, setLoading] = useState(false);
@@ -23,7 +29,7 @@ export const FileTree = ({ onFileSelect, className }: FileTreeProps) => {
     }
 
     loadFileTree(activeWorkspace.path);
-  }, [activeWorkspace?.path]);
+  }, [activeWorkspace?.path, fileTreeVersion]);
 
   const loadFileTree = async (workspacePath: string) => {
     setLoading(true);
@@ -63,7 +69,7 @@ export const FileTree = ({ onFileSelect, className }: FileTreeProps) => {
 
   if (!activeWorkspace) {
     return (
-      <div className={`flex items-center justify-center h-32 text-sm text-zinc-500 ${className || ""}`}>
+      <div className={`flex items-center justify-center h-32 text-sm text-muted-foreground ${className || ""}`}>
         No workspace selected
       </div>
     );
@@ -71,7 +77,7 @@ export const FileTree = ({ onFileSelect, className }: FileTreeProps) => {
 
   if (loading) {
     return (
-      <div className={`flex items-center justify-center h-32 text-sm text-zinc-500 ${className || ""}`}>
+      <div className={`flex items-center justify-center h-32 text-sm text-muted-foreground ${className || ""}`}>
         Loading file tree...
       </div>
     );
@@ -93,7 +99,7 @@ export const FileTree = ({ onFileSelect, className }: FileTreeProps) => {
 
   if (!fileTree) {
     return (
-      <div className={`flex items-center justify-center h-32 text-sm text-zinc-500 ${className || ""}`}>
+      <div className={`flex items-center justify-center h-32 text-sm text-muted-foreground ${className || ""}`}>
         No files found
       </div>
     );
@@ -101,7 +107,7 @@ export const FileTree = ({ onFileSelect, className }: FileTreeProps) => {
 
   return (
     <div className={`overflow-auto ${className || ""}`}>
-      <div className="py-2">
+      <div className="p-2">
         <FileTreeItem
           node={fileTree}
           depth={0}

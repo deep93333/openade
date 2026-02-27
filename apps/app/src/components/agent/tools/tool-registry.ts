@@ -5,33 +5,42 @@ import { TextEditorTool } from "./text-editor-tool";
 import { FileTool } from "./file-tool";
 import { SearchTool } from "./search-tool";
 import { DiffTool } from "./diff-tool";
+import { TodoWriteTool } from "./todo-write";
+import { LintsTool } from "./lints-tool";
+import { AskQuestionTool } from "./ask-question-tool";
 
 const registry: Record<string, ComponentType<ToolComponentProps>> = {
-  Bash: BashTool,
   bash: BashTool,
-
-  TextEditor: TextEditorTool,
+  todowrite: TodoWriteTool,
+  todo_write: TodoWriteTool,
+  texteditor: TextEditorTool,
   text_editor: TextEditorTool,
-  Write: TextEditorTool,
+  write: TextEditorTool,
   str_replace_editor: TextEditorTool,
-
-  Read: FileTool,
-  Edit: FileTool,
-  MultiEdit: FileTool,
-  Glob: FileTool,
-  LS: FileTool,
-  ListDir: FileTool,
-
-  Grep: SearchTool,
-  Search: SearchTool,
-  RipGrep: SearchTool,
-  WebSearch: SearchTool,
-
-  Diff: DiffTool,
-  ApplyDiff: DiffTool,
-  ApplyPatch: DiffTool,
+  read: FileTool,
+  edit: FileTool,
+  multiedit: FileTool,
+  glob: FileTool,
+  ls: FileTool,
+  listdir: FileTool,
+  "file.read": FileTool,
+  "file.edit": FileTool,
+  "file.glob": FileTool,
+  grep: SearchTool,
+  search: SearchTool,
+  ripgrep: SearchTool,
+  websearch: SearchTool,
+  webfetch: SearchTool,
+  diff: DiffTool,
+  applydiff: DiffTool,
+  applypatch: DiffTool,
+  delete: FileTool,
+  readlints: LintsTool,
+  lints: LintsTool,
+  ask_question: AskQuestionTool,
 };
 
 export const getToolComponent = (toolName: string): ComponentType<ToolComponentProps> | null => {
-  return registry[toolName] ?? null;
+  const key = toolName.toLowerCase().trim();
+  return registry[key] ?? null;
 };

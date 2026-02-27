@@ -54,12 +54,17 @@ function migrateLegacy(data: {
 export function getChat(workspaceId: string): ChatData {
   try {
     const filePath = getChatPath(workspaceId);
-    if (!existsSync(filePath))
+    if (!existsSync(filePath)) {
+      console.log("[chat-storage] getChat no file", { workspaceId, filePath });
       return { threads: [], activeThreadId: "", sdkSessionId: undefined };
+    }
     const raw = readFileSync(filePath, "utf-8");
     const data = JSON.parse(raw) as Parameters<typeof migrateLegacy>[0];
-    return migrateLegacy(data);
-  } catch {
+    const result = migrateLegacy(data);
+    console.log("[chat-storage] getChat", { workspaceId, filePath, threadsCount: result.threads.length, activeThreadId: result.activeThreadId });
+    return result;
+  } catch (err) {
+    console.log("[chat-storage] getChat error", { workspaceId, err });
     return { threads: [], activeThreadId: "", sdkSessionId: undefined };
   }
 }
@@ -95,7 +100,40 @@ export function setChat(
       JSON.stringify({ threads, activeThreadId, sdkSessionId }, null, 0),
       "utf-8"
     );
+    console.log("[chat-storage] setChat", { workspaceId, filePath, threadsCount: threads.length });
   } catch {
     // ignore
+  }
+}
+
+export function deleteThread(workspaceId: string, threadId: string): void {
+  try {
+    const current = getChat(workspaceId);
+    const threads = current.threads.filter((t) => t.id !== threadId);
+
+    // If we deleted the active thread, switch to another thread or empty string
+    let activeThreadId = current.activeThreadId;
+    if (activeThreadId === threadId) {
+      activeThreadId = threads.length > 0 ? threads[0].id : "";
+    }
+
+    const filePath = getChatPath(workspaceId);
+    writeFileSync(
+      filePath,
+      JSON.stringify({
+        threads,
+        activeThreadId,
+        sdkSessionId: current.sdkSessionId
+      }, null, 0),
+      "utf-8"
+    );
+    console.log("[chat-storage] deleteThread", {
+      workspaceId,
+      threadId,
+      threadsCount: threads.length,
+      newActiveThreadId: activeThreadId
+    });
+  } catch (err) {
+    console.error("[chat-storage] deleteThread error", { workspaceId, threadId, err });
   }
 }

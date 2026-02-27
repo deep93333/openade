@@ -1,22 +1,22 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Button,
+  ChevronDownIcon,
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  Input,
-  ChevronDownIcon,
-  GithubIcon,
   PlusIcon,
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
 } from "@agentide/ui";
+import { IconGitBranch } from "@tabler/icons-react";
 import { useWorkspaceStore } from "@/store/workspace.store";
+import { useUIStore } from "@/store/ui.store";
 import type { GitBranch } from "@agentide/shared";
 
 type BranchSwitcherProps = {
@@ -27,9 +27,10 @@ type BranchSwitcherProps = {
 export const BranchSwitcher = ({ workspaceId, currentBranch }: BranchSwitcherProps) => {
   const [branches, setBranches] = useState<GitBranch[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [newBranchName, setNewBranchName] = useState("");
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const { getGitBranches, switchGitBranch, createGitBranch, refreshGitInfo } = useWorkspaceStore();
+  const createDialogOpen = useUIStore((s) => s.createBranchDialog.open);
+  const openCreateBranchDialog = useUIStore((s) => s.openCreateBranchDialog);
+  const prevCreateDialogOpen = useRef(createDialogOpen);
+  const { getGitBranches, switchGitBranch, refreshGitInfo } = useWorkspaceStore();
 
   const loadBranches = async () => {
     setIsLoading(true);
@@ -48,6 +49,11 @@ export const BranchSwitcher = ({ workspaceId, currentBranch }: BranchSwitcherPro
     loadBranches();
   }, [workspaceId]);
 
+  useEffect(() => {
+    if (prevCreateDialogOpen.current && !createDialogOpen) loadBranches();
+    prevCreateDialogOpen.current = createDialogOpen;
+  }, [createDialogOpen]);
+
   const handleSwitchBranch = async (branchName: string) => {
     if (branchName === currentBranch) return;
 
@@ -57,22 +63,6 @@ export const BranchSwitcher = ({ workspaceId, currentBranch }: BranchSwitcherPro
       await loadBranches();
     } catch (error) {
       console.error("Failed to switch branch:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleCreateBranch = async () => {
-    if (!newBranchName.trim()) return;
-
-    setIsLoading(true);
-    try {
-      await createGitBranch(workspaceId, newBranchName.trim());
-      await loadBranches();
-      setNewBranchName("");
-      setIsDialogOpen(false);
-    } catch (error) {
-      console.error("Failed to create branch:", error);
     } finally {
       setIsLoading(false);
     }
@@ -104,112 +94,77 @@ export const BranchSwitcher = ({ workspaceId, currentBranch }: BranchSwitcherPro
           className="h-6 gap-1 px-2 text-xs text-muted-foreground hover:text-foreground"
           disabled={isLoading}
         >
-          <GithubIcon className="size-3" />
-          <span className="max-w-[80px] truncate">
+          <IconGitBranch className="size-3" />
+          <span className="max-w-[80px] truncate text-xs">
             {isLoading ? "..." : (currentBranch || "Unknown")}
           </span>
           <ChevronDownIcon className="size-3" />
         </Button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="start" className="w-48">
-        <div className="px-2 py-1 text-xs text-muted-foreground">
-          Switch Branch
-        </div>
-        <DropdownMenuSeparator />
+      <DropdownMenuContent align="start" className="w-[300px] p-0">
+        <Command className="max-h-[300px]">
+          <CommandInput placeholder="Search branches..." className="h-10 px-3 text-sm rounded-none border-b border-foreground/10" />
+          <CommandList className="max-h-[400px]">
+            <CommandEmpty>No branches found.</CommandEmpty>
 
-        {branches.length === 0 && !isLoading ? (
-          <DropdownMenuItem disabled>
-            No branches found
-          </DropdownMenuItem>
-        ) : (
-          branches
-            .filter(branch => !branch.remote) // Show only local branches first
-            .map((branch) => (
-              <DropdownMenuItem
-                key={branch.name}
-                onClick={() => handleSwitchBranch(branch.name)}
-                className="flex items-center justify-between"
-              >
-                <span className="truncate">{branch.name}</span>
-                {branch.current && (
-                  <span className="text-xs text-green-600">●</span>
-                )}
-              </DropdownMenuItem>
-            ))
-        )}
+            {branches.length > 0 && (
+              <CommandGroup heading="Local Branches">
+                {branches
+                  .filter(branch => !branch.remote)
+                  .map((branch) => (
+                    <CommandItem
+                      key={branch.name}
+                      onSelect={() => handleSwitchBranch(branch.name)}
+                      className="flex items-center justify-between rounded-lg"
+                    >
+                      <div className="flex items-center gap-2">
+                        <IconGitBranch size={12} className="size-3" />
+                        <span className="truncate text-xs">{branch.name}</span>
+                      </div>
+                      {branch.current && (
+                        <span className="text-xs text-accent">●</span>
+                      )}
+                    </CommandItem>
+                  ))}
+              </CommandGroup>
+            )}
 
-        {branches.some(branch => branch.remote) && (
-          <>
-            <DropdownMenuSeparator />
-            <div className="px-2 py-1 text-xs text-muted-foreground">
-              Remote Branches
-            </div>
-            {branches
-              .filter(branch => branch.remote && !branches.some(b => b.name === branch.name && !b.remote))
-              .map((branch) => (
-                <DropdownMenuItem
-                  key={`${branch.remote}/${branch.name}`}
-                  onClick={() => handleSwitchBranch(branch.name)}
-                  className="text-muted-foreground"
-                >
-                  <span className="truncate">
-                    {branch.remote}/{branch.name}
-                  </span>
-                </DropdownMenuItem>
-              ))
-            }
-          </>
-        )}
+            {branches.some(branch => branch.remote) && (
+              <CommandGroup heading="Remote Branches">
+                {branches
+                  .filter(branch => branch.remote && !branches.some(b => b.name === branch.name && !b.remote))
+                  .map((branch) => (
+                    <CommandItem
+                      key={`${branch.remote}/${branch.name}`}
+                      onSelect={() => handleSwitchBranch(branch.name)}
+                      className="text-muted-foreground rounded-lg"
+                    >
+                      <div className="flex items-center gap-2 overflow-hidden">
+                        <IconGitBranch size={12} className="size-3" />
+                        <span className="truncate text-xs">
+                          {branch.remote}/{branch.name}
+                        </span>
+                      </div>
+                    </CommandItem>
+                  ))}
+              </CommandGroup>
+            )}
 
-        <DropdownMenuSeparator />
+            <CommandSeparator />
 
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-              <PlusIcon className="size-3 mr-2" />
-              Create Branch
-            </DropdownMenuItem>
-          </DialogTrigger>
+            <CommandGroup>
+              <CommandItem className="rounded-lg" onSelect={() => openCreateBranchDialog(workspaceId)}>
+                <PlusIcon className="size-3 mr-2" />
+                Create Branch
+              </CommandItem>
 
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Create New Branch</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <Input
-                placeholder="Enter branch name..."
-                value={newBranchName}
-                onChange={(e) => setNewBranchName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    handleCreateBranch();
-                  }
-                }}
-              />
-              <div className="flex justify-end gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setIsDialogOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={handleCreateBranch}
-                  disabled={!newBranchName.trim() || isLoading}
-                >
-                  Create
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        <DropdownMenuItem onClick={handleRefreshGitInfo} disabled={isLoading}>
-          Refresh
-        </DropdownMenuItem>
+              <CommandItem className="rounded-lg" onSelect={handleRefreshGitInfo} disabled={isLoading}>
+                Refresh
+              </CommandItem>
+            </CommandGroup>
+          </CommandList>
+        </Command>
       </DropdownMenuContent>
     </DropdownMenu>
   );

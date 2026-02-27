@@ -12,9 +12,9 @@ export const CostDisplay = () => {
   if (totalCostUsd === 0) return null;
 
   return (
-    <div className="flex items-center gap-2 text-xs text-zinc-600">
-      <span className="text-zinc-500">Total Cost:</span>
-      <span className="font-medium text-zinc-800">
+    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+      <span className="text-muted-foreground">Total Cost:</span>
+      <span className="font-medium text-foreground">
         ${totalCostUsd.toFixed(4)}
       </span>
     </div>

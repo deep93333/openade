@@ -1,13 +1,24 @@
-import { BrowserWindow } from "electron";
+import { BrowserWindow, nativeTheme, app } from "electron";
 import path from "node:path";
 
 let appWindow: BrowserWindow | null = null;
 
+const useStaticApp =
+  process.env.NODE_ENV !== "development" || process.env.USE_STATIC_APP === "1";
+
+const getAppDistPath = (): string => {
+  if (app.isPackaged) {
+    return path.join(process.resourcesPath, "dist");
+  }
+  return path.resolve(__dirname, "..", "..", "app", "dist");
+};
+
 const getAppUrl = (route: string = "/"): string => {
-  if (process.env.NODE_ENV === "development") {
+  if (!useStaticApp) {
     return `http://localhost:3010${route}`;
   }
-  return `file://${path.join(__dirname, "../app/dist/index.html")}#${route}`;
+  const indexHtml = path.join(getAppDistPath(), "index.html");
+  return `file://${indexHtml}#${route}`;
 };
 
 export const createAppWindow = (): BrowserWindow => {
@@ -16,19 +27,22 @@ export const createAppWindow = (): BrowserWindow => {
     return appWindow;
   }
 
+  nativeTheme.themeSource = "dark";
+
   appWindow = new BrowserWindow({
     width: 1400,
     height: 900,
     minWidth: 800,
     minHeight: 600,
     titleBarStyle: "hiddenInset",
-    trafficLightPosition: { x: 16, y: 18 },
-    backgroundColor: "#09090b",
+    trafficLightPosition: { x: 12, y: 12 },
+    backgroundColor: "#1E231F",
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false,
+      webviewTag: true,
     },
   });
 

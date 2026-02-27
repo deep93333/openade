@@ -5,10 +5,11 @@ export default defineConfig({
   entry: {
     main: "src/main.ts",
     preload: "src/preload.ts",
+    "preload-log": "src/preload-log.ts",
   },
   format: ["cjs"],
   outDir: "dist",
-  external: ["electron"],
+  external: ["electron", "node-pty"],
   target: "node18",
   clean: true,
   minify: false,
@@ -19,7 +20,7 @@ export default defineConfig({
   platform: "node",
   esbuildOptions(options) {
     options.platform = "node";
-    options.external = [...(options.external || []), "electron"];
+    options.external = [...(options.external || []), "electron", "node-pty"];
     options.alias = {
       "@": path.resolve(__dirname, "./src"),
     };

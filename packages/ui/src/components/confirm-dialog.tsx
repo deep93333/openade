@@ -71,7 +71,7 @@ const ConfirmDialog = React.forwardRef<HTMLButtonElement, ConfirmButtonProps>(
 
     return (
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogTrigger onClick={(e) => e.stopPropagation()}>{children}</DialogTrigger>
+        <DialogTrigger asChild onClick={(e) => e.stopPropagation()}>{children}</DialogTrigger>
         <DialogContent className={cn("sm:max-w-[300px] flex flex-col gap-2 p-3", className)}>
           <DialogHeader>
             <DialogTitle>{title}</DialogTitle>

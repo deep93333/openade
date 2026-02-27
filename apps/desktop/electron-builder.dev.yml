@@ -1,0 +1,47 @@
+appId: com.agentide.app.dev
+productName: AgentIDE Dev
+
+asar: true
+asarUnpack:
+  - "**/node_modules/node-pty/**/*"
+
+files:
+  - "../app/dist/**/*"
+  - "dist/**/*"
+  - "package.json"
+  - "node_modules/node-pty/**/*"
+
+extraResources:
+  - from: "../app/dist"
+    to: "dist"
+    filter:
+      - "**/*"
+
+nodeGypRebuild: false
+npmRebuild: true
+
+directories:
+  output: release-dev
+
+mac:
+  target:
+    - target: dmg
+      arch:
+        - arm64
+  artifactName: "${productName}-${version}-${arch}.${ext}"
+  type: development
+  icon: src/icons/agentide.icns
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: entitlements.plist
+  entitlementsInherit: entitlements.plist
+  category: public.app-category.developer-tools
+
+dmg:
+  contents:
+    - x: 130
+      y: 220
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications

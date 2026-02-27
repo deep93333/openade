@@ -86,11 +86,11 @@ p {
 *:focus {
   outline: none !important;
 }
-
+/* 
 *:focus-visible {
   outline: 2px solid oklch(var(--oklch-accent)) !important;
   outline-offset: 2px !important;
-}
+} */
 
 ::selection {
   background-color: oklch(var(--oklch-accent) / 0.3);
@@ -100,6 +100,117 @@ p {
 ::-moz-selection {
   background-color: oklch(var(--oklch-accent) / 0.3);
   color: oklch(var(--oklch-foreground) / 0.8);
+}
+
+:root {
+  --code-text: #111111;
+  --code-comment: #94a3b8;
+  --code-punctuation: #1f2937;
+  --code-property: #2563eb;
+  --code-boolean: #e11d48;
+  --code-string: #059669;
+  --code-operator: #0ea5e9;
+  --code-function: #7c3aed;
+  --code-keyword: #e11d48;
+  --code-regex: #f97316;
+  --code-parameter: #0f172a;
+  --code-background: #f8fafc;
+  --code-border: rgba(15, 23, 42, 0.07);
+  --code-shadow: 0 18px 30px -20px rgba(15, 23, 42, 0.3);
+  --code-line-highlight: rgba(37, 99, 235, 0.08);
+  --diffs-addition-color-override: #059669;
+  --diffs-deletion-color-override: #e11d48;
+}
+
+.dark {
+  --code-text: #e5e7eb;
+  --code-comment: #64748b;
+  --code-punctuation: #cbd5f5;
+  --code-property: #60a5fa;
+  --code-boolean: #f472b6;
+  --code-string: #34d399;
+  --code-operator: #38bdf8;
+  --code-function: #c084fc;
+  --code-keyword: #f472b6;
+  --code-regex: #fbbf24;
+  --code-parameter: #fca5a5;
+  --code-background: #0f172a;
+  --code-border: rgba(148, 163, 184, 0.18);
+  --code-shadow: 0 18px 38px -18px rgba(15, 23, 42, 0.65);
+  --code-line-highlight: rgba(96, 165, 250, 0.16);
+  --diffs-addition-color-override: #34d399;
+  --diffs-deletion-color-override: #fb7185;
+}
+
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+  color: var(--code-comment);
+}
+
+.token.punctuation {
+  color: var(--code-punctuation);
+}
+
+.token.property,
+.token.tag,
+.token.constant,
+.token.symbol {
+  color: var(--code-property);
+}
+
+.token.boolean,
+.token.number,
+.token.variable {
+  color: var(--code-boolean);
+}
+
+.token.selector,
+.token.attr-name,
+.token.string,
+.token.char,
+.token.builtin {
+  color: var(--code-string);
+}
+
+.token.operator,
+.token.entity,
+.token.url {
+  color: var(--code-operator);
+}
+
+.token.atrule,
+.token.attr-value,
+.token.function,
+.token.class-name {
+  color: var(--code-function);
+}
+
+.token.keyword {
+  color: var(--code-keyword);
+}
+
+.token.regex,
+.token.important {
+  color: var(--code-regex);
+}
+
+.token.important {
+  font-weight: bold;
+}
+
+.token.entity {
+  cursor: help;
+}
+
+.token.parameter {
+  color: var(--code-parameter);
+}
+
+.line-highlight {
+  background: var(--code-line-highlight);
+  border-left: 2px solid var(--code-property);
 }
 
 .draggable {
@@ -113,11 +224,11 @@ button {
 }
 
 .shiki-file-viewer {
-  --pierre-bg: #ffffff;
-  --pierre-fg: #070707;
-  --pierre-line-number: #84848a;
-  --pierre-selection: #dfebff;
-  --pierre-gutter-border: #eeeeef;
+  --pierre-bg: #1e1e1e;
+  --pierre-fg: #d4d4d4;
+  --pierre-line-number: #858585;
+  --pierre-selection: #264f78;
+  --pierre-gutter-border: #404040;
   --pierre-gutter-width: 4rem;
   font-family: "Geist Mono", "SF Mono", Monaco, Consolas, "Ubuntu Mono", "Liberation Mono", "Courier New", monospace;
   font-size: 13px;
