@@ -28,13 +28,11 @@
   },
   "dependencies": {
     "@agentide/shared": "workspace:*",
-    "@ai-sdk/anthropic": "^3.0.47",
-    "@ai-sdk/openai": "^3.0.35",
-    "ai": "^6.0.103",
     "fix-path": "^5.0.0",
     "node-pty": "^1.0.0",
     "simple-git": "^3.32.1",
     "ulid": "^3.0.1",
-    "zod": "^4.3.6"
+    "zod": "^4.3.6",
+    "@agentide/agent": "workspace:*"
   }
 }

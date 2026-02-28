@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { glob } from "node:fs/promises";
 import * as path from "path";
-import type { ToolDefinition, ToolResult } from "./tool-types";
-import { truncateOutput } from "./tool-types";
+import type { ToolDefinition, ToolResult } from "./tool-types.js";
+import { truncateOutput } from "./tool-types.js";
 
 const IGNORE_DIRS = new Set([
   "node_modules", ".git", ".next", ".turbo", "dist", "build", "out",

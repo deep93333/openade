@@ -8,6 +8,7 @@ type Diagnostic = {
   col: number;
   severity: "error" | "warning";
   message: string;
+  source?: string;
 };
 
 function parseDiagnostics(result: unknown): Diagnostic[] {
@@ -17,12 +18,13 @@ function parseDiagnostics(result: unknown): Diagnostic[] {
   return meta.diagnostics as Diagnostic[];
 }
 
-function getDiagnosticCounts(result: unknown): { errors: number; warnings: number } {
-  if (!result || typeof result !== "object") return { errors: 0, warnings: 0 };
+function getDiagnosticCounts(result: unknown): { errors: number; warnings: number; tools: string[] } {
+  if (!result || typeof result !== "object") return { errors: 0, warnings: 0, tools: [] };
   const meta = result as Record<string, unknown>;
   return {
     errors: typeof meta.errors === "number" ? meta.errors : 0,
     warnings: typeof meta.warnings === "number" ? meta.warnings : 0,
+    tools: Array.isArray(meta.tools) ? (meta.tools as string[]) : [],
   };
 }
 
@@ -76,6 +78,18 @@ export const LintsTool = ({ toolInput, toolResult }: ToolComponentProps) => {
       }
       toolInput={toolInput}
     >
+      {counts.tools.length > 0 && (
+        <div className="mx-2 mb-1 flex flex-wrap gap-1 px-1">
+          {counts.tools.map((t) => (
+            <span
+              key={t}
+              className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
+            >
+              {t}
+            </span>
+          ))}
+        </div>
+      )}
       {diagnostics.length === 0 && !hasIssues && (
         <div className="px-3 py-2 text-xs text-emerald-600 dark:text-emerald-400 mx-2 mb-2">
           No errors or warnings found.
@@ -101,6 +115,11 @@ export const LintsTool = ({ toolInput, toolResult }: ToolComponentProps) => {
                   <span className="shrink-0 font-mono text-[10px] text-muted-foreground">
                     {d.line}:{d.col}
                   </span>
+                  {d.source && (
+                    <span className="shrink-0 rounded bg-muted px-1 text-[9px] font-medium text-muted-foreground">
+                      {d.source}
+                    </span>
+                  )}
                   <span className="text-xs text-foreground">{d.message}</span>
                 </div>
               ))}

@@ -3,8 +3,8 @@ import { createReadStream } from "fs";
 import * as fs from "fs/promises";
 import * as path from "path";
 import { createInterface } from "readline";
-import type { ToolDefinition, ToolResult } from "./tool-types";
-import { truncateOutput } from "./tool-types";
+import type { ToolDefinition, ToolResult } from "./tool-types.js";
+import { truncateOutput } from "./tool-types.js";
 
 const DEFAULT_LIMIT = 500;
 const MAX_LINE_LENGTH = 2000;

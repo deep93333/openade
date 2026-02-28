@@ -793,6 +793,32 @@ export const registerIpcHandlers = (): void => {
     }
   });
 
+  ipcMain.handle(IPC.MINIMAX_API_KEY_GET, async () => {
+    try {
+      const key = configStorage.getMinimaxApiKey();
+      return { success: true, data: key };
+    } catch {
+      return { success: false, error: "Failed to get MiniMax API key" };
+    }
+  });
+
+  ipcMain.handle(IPC.MINIMAX_API_KEY_SET, async (_event, apiKey: string | null) => {
+    try {
+      configStorage.setMinimaxApiKey(apiKey);
+      return { success: true };
+    } catch {
+      return { success: false, error: "Failed to save MiniMax API key" };
+    }
+  });
+
+  ipcMain.handle(IPC.MINIMAX_API_KEY_HAS, async () => {
+    try {
+      return { success: true, data: configStorage.hasMinimaxApiKey() };
+    } catch {
+      return { success: false, error: "Failed to check MiniMax API key" };
+    }
+  });
+
   ipcMain.handle(IPC.CONFIG_GET_ACTIVE_WORKSPACE, async () => {
     try {
       const id = configStorage.getActiveWorkspaceId();

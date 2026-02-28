@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { ToolDefinition, ToolResult } from "./tool-types";
+import type { ToolDefinition, ToolResult } from "./tool-types.js";
 
 const todoItemSchema = z.object({
   id: z.string().describe("Unique identifier for the TODO item"),
@@ -21,10 +21,10 @@ export const todoWriteTool: ToolDefinition<typeof todoWriteParameters> = {
   description: `Manage a structured task list. Only use for tasks with 3+ steps — skip for simple 1-2 step work. States: pending, in_progress (one at a time), completed, cancelled. Mark tasks done immediately after finishing.`,
   parameters: todoWriteParameters,
   async execute(args): Promise<ToolResult> {
-    const completed = args.todos.filter((t) => t.status === "completed").length;
-    const inProgress = args.todos.filter((t) => t.status === "in_progress").length;
-    const pending = args.todos.filter((t) => t.status === "pending").length;
-    const cancelled = args.todos.filter((t) => t.status === "cancelled").length;
+    const completed = args.todos.filter((t: { status: string }) => t.status === "completed").length;
+    const inProgress = args.todos.filter((t: { status: string }) => t.status === "in_progress").length;
+    const pending = args.todos.filter((t: { status: string }) => t.status === "pending").length;
+    const cancelled = args.todos.filter((t: { status: string }) => t.status === "cancelled").length;
 
     const summary = [
       `${args.todos.length} task(s)`,

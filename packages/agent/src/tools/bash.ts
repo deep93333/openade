@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { spawn } from "child_process";
-import type { ToolDefinition, ToolContext, ToolResult } from "./tool-types";
-import { truncateOutput } from "./tool-types";
+import type { ToolDefinition, ToolContext, ToolResult } from "./tool-types.js";
+import { truncateOutput } from "./tool-types.js";
 
 const DEFAULT_TIMEOUT = 120_000;
 const MAX_METADATA_OUTPUT = 30_000;

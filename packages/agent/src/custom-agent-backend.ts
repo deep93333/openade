@@ -7,16 +7,26 @@ import {
 } from "ai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
-import { getApiKey, getCodexApiKey } from "./config-storage";
-import { createToolSet, type ToolCallMetadata } from "./tools/registry";
-import { buildSystemPrompt, COMPACTION_PROMPT } from "./system-prompt";
-import { writeAgentLog } from "./agent-log";
-import type { AgentMessage } from "@agentide/shared";
+import { createMinimax } from "vercel-minimax-ai-provider";
+import { createToolSet, type ToolCallMetadata } from "./tools/registry.js";
+import { buildSystemPrompt, COMPACTION_PROMPT } from "./system-prompt.js";
+import type { AgentMessage, AgentProvider } from "@agentide/shared";
 import type {
   AgentBackend,
   AgentBackendStartOptions,
-} from "./agent-backend-types";
-import type { ToolContext } from "./tools/tool-types";
+} from "./agent-backend-types.js";
+import type { ToolContext } from "./tools/tool-types.js";
+
+export type AgentBackendConfig = {
+  getApiKey: () => string | null;
+  getCodexApiKey: () => string | null;
+  getMinimaxApiKey: () => string | null;
+  writeAgentLog?: (
+    level: "INFO" | "WARN" | "ERROR",
+    source: string,
+    ...args: unknown[]
+  ) => void;
+};
 
 const TOOL_OUTPUT_LIMIT = 800;
 const ASSISTANT_MSG_LIMIT = 2000;
@@ -66,16 +76,14 @@ function summarizeExistingMessages(messages: AgentMessage[]): ModelMessage[] {
   ];
 }
 
-type LlmProvider = "anthropic" | "openai";
-
-type UIProvider = "claude" | "codex";
+type LlmProvider = "anthropic" | "openai" | "minimax";
 
 type ModelDef = {
   value: string;
   label: string;
   llmProvider: LlmProvider;
   apiModelId: string;
-  uiProvider: UIProvider;
+  uiProvider: AgentProvider;
   inputPricePer1k?: number;
   outputPricePer1k?: number;
 };
@@ -129,6 +137,34 @@ const MODELS: ModelDef[] = [
     inputPricePer1k: 0.25 / 1000,
     outputPricePer1k: 2 / 1000,
   },
+  {
+    value: "minimax-m2",
+    label: "MiniMax M2",
+    llmProvider: "minimax",
+    apiModelId: "MiniMax-M2",
+    uiProvider: "minimax",
+  },
+  {
+    value: "minimax-m2.1",
+    label: "MiniMax M2.1",
+    llmProvider: "minimax",
+    apiModelId: "MiniMax-M2.1",
+    uiProvider: "minimax",
+  },
+  {
+    value: "minimax-m2.1-lightning",
+    label: "MiniMax M2.1 Lightning",
+    llmProvider: "minimax",
+    apiModelId: "MiniMax-M2.1-lightning",
+    uiProvider: "minimax",
+  },
+  {
+    value: "minimax-m2.5",
+    label: "MiniMax M2.5",
+    llmProvider: "minimax",
+    apiModelId: "MiniMax-M2.5",
+    uiProvider: "minimax",
+  },
 ];
 
 const RETRY_INITIAL_DELAY = 2000;
@@ -148,22 +184,31 @@ function resolveModel(modelValue: string | undefined): ModelDef {
   return MODELS.find((m) => m.value === modelValue) ?? MODELS[0];
 }
 
-function getProviderApiKey(provider: LlmProvider): string {
+function getProviderApiKey(provider: LlmProvider, config: AgentBackendConfig): string {
   if (provider === "anthropic") {
-    const key = getApiKey();
+    const key = config.getApiKey();
     if (!key) throw new Error("Anthropic API key not set. Configure it in Settings → Authentication.");
     return key;
   }
-  const key = getCodexApiKey();
+  if (provider === "minimax") {
+    const key = config.getMinimaxApiKey();
+    if (!key) throw new Error("MiniMax API key not set. Configure it in Settings → Authentication.");
+    return key;
+  }
+  const key = config.getCodexApiKey();
   if (!key) throw new Error("OpenAI API key not set. Configure it in Settings → Authentication (Codex).");
   return key;
 }
 
-function createLanguageModel(modelDef: ModelDef) {
-  const apiKey = getProviderApiKey(modelDef.llmProvider);
+function createLanguageModel(modelDef: ModelDef, config: AgentBackendConfig) {
+  const apiKey = getProviderApiKey(modelDef.llmProvider, config);
   if (modelDef.llmProvider === "anthropic") {
     const anthropic = createAnthropic({ apiKey });
     return anthropic(modelDef.apiModelId);
+  }
+  if (modelDef.llmProvider === "minimax") {
+    const minimax = createMinimax({ apiKey });
+    return minimax(modelDef.apiModelId);
   }
   const openai = createOpenAI({ apiKey });
   return openai(modelDef.apiModelId);
@@ -178,10 +223,10 @@ function computeCost(usage: LanguageModelUsage, modelDef: ModelDef): number {
   const outputTokens = usage.outputTokens ?? 0;
   const inputRate =
     modelDef.inputPricePer1k ??
-    (modelDef.llmProvider === "anthropic" ? 0.003 : 0.002);
+    (modelDef.llmProvider === "anthropic" ? 0.003 : modelDef.llmProvider === "minimax" ? 0.0002 : 0.002);
   const outputRate =
     modelDef.outputPricePer1k ??
-    (modelDef.llmProvider === "anthropic" ? 0.015 : 0.010);
+    (modelDef.llmProvider === "anthropic" ? 0.015 : modelDef.llmProvider === "minimax" ? 0.0008 : 0.010);
   return (inputTokens * inputRate + outputTokens * outputRate) / 1000;
 }
 
@@ -292,7 +337,7 @@ function pruneConversation(messages: ModelMessage[]): ModelMessage[] {
       const pruned = {
         ...msg,
         content: msg.content.map((part) => {
-          if ("output" in part) {
+          if (part && typeof part === "object" && "output" in part) {
             return {
               ...part,
               output: { type: "text" as const, value: "[Old tool result content cleared]" },
@@ -342,7 +387,17 @@ function extractApiErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-async function runAgent(options: AgentBackendStartOptions): Promise<void> {
+function noopLog(
+  _level: "INFO" | "WARN" | "ERROR",
+  _source: string,
+  ..._args: unknown[]
+): void {}
+
+async function runAgent(
+  config: AgentBackendConfig,
+  options: AgentBackendStartOptions,
+): Promise<void> {
+  const writeAgentLog = config.writeAgentLog ?? noopLog;
   const sessionId = options.sessionId;
   const modelDef = resolveModel(options.model);
 
@@ -353,7 +408,7 @@ async function runAgent(options: AgentBackendStartOptions): Promise<void> {
     workspacePath: options.workspacePath,
   });
 
-  const languageModel = createLanguageModel(modelDef);
+  const languageModel = createLanguageModel(modelDef, config);
   const systemPrompt = await buildSystemPrompt(options.workspacePath);
 
   const abortController = new AbortController();
@@ -375,6 +430,19 @@ async function runAgent(options: AgentBackendStartOptions): Promise<void> {
       if (result.behavior === "deny") return { denied: true, message: result.message };
       return { denied: false, updatedInput: result.updatedInput };
     },
+    onToolStart: (meta) => {
+      options.onMessage({
+        id: meta.toolCallId,
+        role: "tool",
+        content: "",
+        toolName: meta.toolName,
+        toolInput: meta.input,
+        toolStatus: "running",
+        timestamp: Date.now(),
+        sessionId,
+        toolCallId: meta.toolCallId,
+      });
+    },
   };
 
   let totalCostUsd = 0;
@@ -383,14 +451,16 @@ async function runAgent(options: AgentBackendStartOptions): Promise<void> {
 
   const toolCallHandler = (meta: ToolCallMetadata) => {
     options.onMessage({
-      id: ulid(),
+      id: meta.toolCallId,
       role: "tool",
       content: typeof meta.output === "string" ? meta.output : JSON.stringify(meta.output),
       toolName: meta.toolName,
       toolInput: meta.input,
       toolResult: meta.metadata,
+      toolStatus: "completed",
       timestamp: Date.now(),
       sessionId,
+      toolCallId: meta.toolCallId,
     });
   };
 
@@ -519,7 +589,7 @@ async function runAgent(options: AgentBackendStartOptions): Promise<void> {
 
       if (isContextOverflow(error)) {
         writeAgentLog("INFO", "Agent", "context overflow, attempting compaction", { sessionId });
-        const compacted = await compactConversation(conversationHistory, modelDef, linkedAbort.signal);
+        const compacted = await compactConversation(conversationHistory, modelDef, config, linkedAbort.signal);
         if (compacted) {
           conversationHistory.length = 0;
           conversationHistory.push(...compacted);
@@ -582,10 +652,12 @@ async function runAgent(options: AgentBackendStartOptions): Promise<void> {
 async function compactConversation(
   messages: ModelMessage[],
   modelDef: ModelDef,
+  config: AgentBackendConfig,
   signal: AbortSignal,
 ): Promise<ModelMessage[] | null> {
+  const writeAgentLog = config.writeAgentLog ?? noopLog;
   try {
-    const languageModel = createLanguageModel(modelDef);
+    const languageModel = createLanguageModel(modelDef, config);
     const compactionMessages: ModelMessage[] = [
       ...messages,
       { role: "user", content: COMPACTION_PROMPT } as ModelMessage,
@@ -607,7 +679,7 @@ async function compactConversation(
         content: "Continue with the task. The above is a summary of our previous conversation.",
       } as ModelMessage,
     ];
-  } catch (err) {
+  } catch (err: unknown) {
     writeAgentLog("ERROR", "Agent", "compaction failed", {
       error: err instanceof Error ? err.message : String(err),
     });
@@ -622,27 +694,29 @@ const capabilities = {
   supportsResume: false,
 };
 
-export const customAgentBackend: AgentBackend = {
-  provider: "claude" as const,
-  capabilities: {
-    supportedModes: [...capabilities.supportedModes],
-    supportsToolApproval: capabilities.supportsToolApproval,
-    supportsImageAttachments: capabilities.supportsImageAttachments,
-    supportsResume: capabilities.supportsResume,
-  },
-  models: MODELS.map((m) => ({
-    value: m.value,
-    label: m.label,
-    provider: m.uiProvider,
-  })),
-  async start(options) {
-    await runAgent(options);
-  },
-  async stop(sessionId) {
-    const controller = activeSessions.get(sessionId);
-    if (controller) {
-      controller.abort();
-      activeSessions.delete(sessionId);
-    }
-  },
-};
+export function createCustomAgentBackend(config: AgentBackendConfig): AgentBackend {
+  return {
+    provider: "claude",
+    capabilities: {
+      supportedModes: [...capabilities.supportedModes],
+      supportsToolApproval: capabilities.supportsToolApproval,
+      supportsImageAttachments: capabilities.supportsImageAttachments,
+      supportsResume: capabilities.supportsResume,
+    },
+    models: MODELS.map((m) => ({
+      value: m.value,
+      label: m.label,
+      provider: m.uiProvider,
+    })),
+    async start(options) {
+      await runAgent(config, options);
+    },
+    async stop(sessionId) {
+      const controller = activeSessions.get(sessionId);
+      if (controller) {
+        controller.abort();
+        activeSessions.delete(sessionId);
+      }
+    },
+  };
+}

@@ -1,0 +1,26 @@
+{
+  "name": "@agentide/agent",
+  "version": "1.0.0",
+  "description": "Agent backend and tools for AgentIDE",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@agentide/shared": "workspace:*",
+    "@ai-sdk/anthropic": "^3.0.47",
+    "@ai-sdk/openai": "^3.0.35",
+    "ai": "^6.0.103",
+    "ulid": "^3.0.1",
+    "vercel-minimax-ai-provider": "^0.0.2",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "typescript": "~5.8.3"
+  },
+  "files": ["dist"]
+}

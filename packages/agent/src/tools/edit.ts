@@ -1,7 +1,7 @@
 import { z } from "zod";
 import * as fs from "fs/promises";
 import * as path from "path";
-import type { ToolDefinition, ToolResult } from "./tool-types";
+import type { ToolDefinition, ToolResult } from "./tool-types.js";
 
 export const editParameters = z.object({
   file_path: z.string().describe("Absolute path to the file to edit"),

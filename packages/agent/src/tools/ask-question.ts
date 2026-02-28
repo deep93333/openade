@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { ToolDefinition, ToolResult } from "./tool-types";
+import type { ToolDefinition, ToolResult } from "./tool-types.js";
 
 const optionSchema = z.object({
   label: z.string().describe("Display text for this option"),

@@ -6,12 +6,19 @@ export type UserInputResponse = {
   message?: string;
 };
 
+export type ToolStartMeta = {
+  toolName: string;
+  input: unknown;
+  toolCallId: string;
+};
+
 export type ToolContext = {
   sessionId: string;
   workspacePath: string;
   abortSignal: AbortSignal;
   onMetadata: (meta: Record<string, unknown>) => void;
   requestUserInput: (toolName: string, input: unknown) => Promise<UserInputResponse>;
+  onToolStart?: (meta: ToolStartMeta) => void;
 };
 
 export type ToolResult = {

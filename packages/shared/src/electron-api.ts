@@ -35,6 +35,11 @@ export type ElectronAPI = {
     set: (apiKey: string | null) => Promise<IpcResult>;
     has: () => Promise<IpcResult<boolean>>;
   };
+  minimaxApiKey: {
+    get: () => Promise<IpcResult<string | null>>;
+    set: (apiKey: string | null) => Promise<IpcResult>;
+    has: () => Promise<IpcResult<boolean>>;
+  };
   auth: {
     status: () => Promise<IpcResult<import("./types.js").AuthStatus>>;
     setMethod: (method: import("./types.js").AuthMethod) => Promise<IpcResult>;

@@ -1,26 +1,27 @@
+import { ulid } from "ulid";
 import { tool, zodSchema, type ToolSet } from "ai";
-import { bashTool } from "./bash";
-import { readTool } from "./read";
-import { writeTool } from "./write";
-import { editTool } from "./edit";
-import { globTool } from "./glob";
-import { grepTool } from "./grep";
-import { lsTool } from "./ls";
-import { todoWriteTool } from "./todowrite";
-import { deleteTool } from "./delete";
-import { readLintsTool } from "./readlints";
-import { askQuestionTool } from "./ask-question";
-import type { ToolContext, ToolDefinition } from "./tool-types";
+import { bashTool } from "./bash.js";
+import { readTool } from "./read.js";
+import { writeTool } from "./write.js";
+import { editTool } from "./edit.js";
+import { globTool } from "./glob.js";
+import { grepTool } from "./grep.js";
+import { lsTool } from "./ls.js";
+import { todoWriteTool } from "./todowrite.js";
+import { deleteTool } from "./delete.js";
+import { readLintsTool } from "./readlints.js";
+import { askQuestionTool } from "./ask-question.js";
+import type { ToolContext, ToolDefinition } from "./tool-types.js";
 
 export type ToolCallMetadata = {
   toolName: string;
+  toolCallId: string;
   input: unknown;
   output: string;
   metadata: Record<string, unknown>;
   title: string;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function wrapTool(
   def: ToolDefinition,
   ctx: ToolContext,
@@ -30,9 +31,18 @@ function wrapTool(
     description: def.description,
     inputSchema: zodSchema(def.parameters) as never,
     execute: async (args: unknown) => {
+      const toolCallId = ulid();
+
+      ctx.onToolStart?.({
+        toolName: def.id,
+        input: args,
+        toolCallId,
+      });
+
       const result = await def.execute(args, ctx);
       onToolCall?.({
         toolName: def.id,
+        toolCallId,
         input: args,
         output: result.output,
         metadata: result.metadata,

@@ -13,7 +13,7 @@ import {
 } from "@agentide/ui";
 import { IconLoader } from "@tabler/icons-react";
 import { useWorkspaceItemContext } from "./workspace-item-context";
-import { threadLabel, getTaskStatusIcon, getTaskStatusLabel, TASK_STATUSES } from "./utils";
+import { threadLabel, getThreadStatusIcon, getTaskStatusIcon, getTaskStatusLabel, TASK_STATUSES } from "./utils";
 
 type WorkspaceThreadRowProps = {
   thread: ChatThread;
@@ -24,7 +24,6 @@ export function WorkspaceThreadRow({ thread }: WorkspaceThreadRowProps) {
   const { workspace, threads, activeThreadId, getThreadRuntime } = state;
 
   const threadRuntime = getThreadRuntime(workspace.id, thread.id);
-  const taskStatus: TaskStatus = thread.taskStatus ?? "backlog";
   const canDelete = threads.length > 1;
 
   return (
@@ -37,7 +36,7 @@ export function WorkspaceThreadRow({ thread }: WorkspaceThreadRowProps) {
             className="w-full justify-start gap-2 h-auto py-2"
           >
             <div className="flex items-center gap-2 min-w-0 flex-1">
-              {getTaskStatusIcon(taskStatus)}
+              {getThreadStatusIcon(threadRuntime.status)}
               <span className="min-w-0 truncate text-xs flex-1 text-left">
                 {threadLabel(thread)}
               </span>

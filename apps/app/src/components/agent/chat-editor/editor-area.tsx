@@ -1,10 +1,7 @@
 import type { Editor } from "@tiptap/react";
 import { EditorContent } from "@tiptap/react";
-import type { SuggestionProps } from "@tiptap/suggestion";
-import type { MentionNodeAttrs } from "@tiptap/extension-mention";
 import type { ImageAttachment } from "@agentide/shared";
 import { ImageIcon } from "@agentide/ui";
-import { FileMentionList, type FileMentionItem } from "../file-mention-list";
 import { ImageAttachmentList } from "../image-attachment-preview";
 import { cn } from "@/lib/cn";
 
@@ -18,12 +15,6 @@ type EditorAreaProps = {
   onDragLeave: (e: React.DragEvent) => void;
   onDrop: (e: React.DragEvent) => void;
   onPaste: (e: React.ClipboardEvent) => void;
-  isMentionTriggered: boolean;
-  mentionProps: SuggestionProps<FileMentionItem, MentionNodeAttrs> | null;
-  mentionItems: FileMentionItem[];
-  mentionSelectedIndex: number;
-  preventBlur: (e: React.MouseEvent | React.TouchEvent) => void;
-  workspacePath?: string;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   onFileInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 };
@@ -38,12 +29,6 @@ export const EditorArea = ({
   onDragLeave,
   onDrop,
   onPaste,
-  isMentionTriggered,
-  mentionProps,
-  mentionItems,
-  mentionSelectedIndex,
-  preventBlur,
-  workspacePath,
   fileInputRef,
   onFileInputChange,
 }: EditorAreaProps) => (
@@ -86,18 +71,6 @@ export const EditorArea = ({
           <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">Drop images here to attach</p>
         </div>
       </div>
-    )}
-
-    {isMentionTriggered && mentionProps && (
-      <FileMentionList
-        items={mentionItems}
-        selectedIndex={Math.min(mentionSelectedIndex, Math.max(0, mentionItems.length - 1))}
-        command={mentionProps.command}
-        clientRect={mentionProps.clientRect}
-        preventBlur={preventBlur}
-        onSelect={() => editor?.commands.focus()}
-        workspacePath={workspacePath}
-      />
     )}
 
     <input

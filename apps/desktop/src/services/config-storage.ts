@@ -8,6 +8,7 @@ type AppConfig = {
   activeWorkspaceId: string | null;
   encryptedApiKey: string | null;
   encryptedCodexApiKey: string | null;
+  encryptedMinimaxApiKey: string | null;
   authMethod: AuthMethod;
 };
 
@@ -24,6 +25,7 @@ const DEFAULT_CONFIG: AppConfig = {
   activeWorkspaceId: null,
   encryptedApiKey: null,
   encryptedCodexApiKey: null,
+  encryptedMinimaxApiKey: null,
   authMethod: "claude_login",
 };
 
@@ -40,6 +42,8 @@ function loadConfig(): AppConfig {
         typeof data?.encryptedApiKey === "string" ? data.encryptedApiKey : null,
       encryptedCodexApiKey:
         typeof data?.encryptedCodexApiKey === "string" ? data.encryptedCodexApiKey : null,
+      encryptedMinimaxApiKey:
+        typeof data?.encryptedMinimaxApiKey === "string" ? data.encryptedMinimaxApiKey : null,
       authMethod:
         data?.authMethod === "api_key" || data?.authMethod === "claude_login"
           ? data.authMethod
@@ -126,6 +130,35 @@ export function setCodexApiKey(apiKey: string | null): void {
   }
 }
 
+export function getMinimaxApiKey(): string | null {
+  try {
+    const config = loadConfig();
+    if (!config.encryptedMinimaxApiKey) return null;
+    if (!safeStorage.isEncryptionAvailable()) return null;
+    const decrypted = safeStorage.decryptString(
+      Buffer.from(config.encryptedMinimaxApiKey, "base64")
+    );
+    return decrypted || null;
+  } catch {
+    return null;
+  }
+}
+
+export function setMinimaxApiKey(apiKey: string | null): void {
+  try {
+    const config = loadConfig();
+    if (!apiKey) {
+      config.encryptedMinimaxApiKey = null;
+    } else if (safeStorage.isEncryptionAvailable()) {
+      const encrypted = safeStorage.encryptString(apiKey);
+      config.encryptedMinimaxApiKey = encrypted.toString("base64");
+    }
+    saveConfig(config);
+  } catch {
+    // ignore
+  }
+}
+
 export function hasApiKey(): boolean {
   const config = loadConfig();
   return !!config.encryptedApiKey;
@@ -134,6 +167,11 @@ export function hasApiKey(): boolean {
 export function hasCodexApiKey(): boolean {
   const config = loadConfig();
   return !!config.encryptedCodexApiKey;
+}
+
+export function hasMinimaxApiKey(): boolean {
+  const config = loadConfig();
+  return !!config.encryptedMinimaxApiKey;
 }
 
 export function getAuthMethod(): AuthMethod {

@@ -34,13 +34,18 @@ export const ApiKeyDialog = ({
   const [codexMasked, setCodexMasked] = useState<string | null>(null);
   const [codexSaving, setCodexSaving] = useState(false);
   const [codexError, setCodexError] = useState<string | null>(null);
+  const [minimaxApiKey, setMinimaxApiKey] = useState("");
+  const [minimaxMasked, setMinimaxMasked] = useState<string | null>(null);
+  const [minimaxSaving, setMinimaxSaving] = useState(false);
+  const [minimaxError, setMinimaxError] = useState<string | null>(null);
 
   const refreshAuthStatus = useCallback(async () => {
     const api = getElectronAPI();
-    const [authRes, keyRes, codexKeyRes] = await Promise.all([
+    const [authRes, keyRes, codexKeyRes, minimaxKeyRes] = await Promise.all([
       api?.auth?.status(),
       api?.apiKey?.get(),
       api?.codexApiKey?.get(),
+      api?.minimaxApiKey?.get(),
     ]);
     if (authRes?.success && authRes.data) {
       setAuthStatus(authRes.data);
@@ -58,6 +63,12 @@ export const ApiKeyDialog = ({
     } else {
       setCodexMasked(null);
     }
+    if (minimaxKeyRes?.success && minimaxKeyRes.data) {
+      const key = minimaxKeyRes.data;
+      setMinimaxMasked(`${key.slice(0, 7)}${"•".repeat(20)}${key.slice(-4)}`);
+    } else {
+      setMinimaxMasked(null);
+    }
   }, []);
 
   useEffect(() => {
@@ -69,6 +80,9 @@ export const ApiKeyDialog = ({
     setCodexApiKey("");
     setCodexError(null);
     setCodexSaving(false);
+    setMinimaxApiKey("");
+    setMinimaxError(null);
+    setMinimaxSaving(false);
     refreshAuthStatus();
   }, [open, refreshAuthStatus]);
 
@@ -155,6 +169,38 @@ export const ApiKeyDialog = ({
     await api.codexApiKey.set(null);
     setCodexMasked(null);
     setCodexApiKey("");
+  }, []);
+
+  const handleSaveMinimaxApiKey = useCallback(async () => {
+    const trimmed = minimaxApiKey.trim();
+    if (!trimmed) {
+      setMinimaxError("API key is required");
+      return;
+    }
+    setMinimaxSaving(true);
+    setMinimaxError(null);
+    const api = getElectronAPI();
+    if (!api?.minimaxApiKey) {
+      setMinimaxError("Electron API not available");
+      setMinimaxSaving(false);
+      return;
+    }
+    const result = await api.minimaxApiKey.set(trimmed);
+    setMinimaxSaving(false);
+    if (!result.success) {
+      setMinimaxError(result.error ?? "Failed to save API key");
+      return;
+    }
+    await refreshAuthStatus();
+    onSaved?.();
+  }, [minimaxApiKey, onSaved, refreshAuthStatus]);
+
+  const handleRemoveMinimaxApiKey = useCallback(async () => {
+    const api = getElectronAPI();
+    if (!api?.minimaxApiKey) return;
+    await api.minimaxApiKey.set(null);
+    setMinimaxMasked(null);
+    setMinimaxApiKey("");
   }, []);
 
   const handleLogin = useCallback(async () => {
@@ -375,6 +421,56 @@ export const ApiKeyDialog = ({
                 disabled={codexSaving || !codexApiKey.trim()}
               >
                 {codexSaving ? "Saving…" : "Save Codex API Key"}
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-3 border-t border-foreground/10 p-5">
+          <h3 className="text-xs font-medium text-muted-foreground">MiniMax</h3>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Used when the MiniMax provider is selected (MiniMax M2, M2.1). Get a key from{" "}
+            <a
+              href="https://platform.minimax.io/user-center/basic-information/interface-key"
+              target="_blank"
+              rel="noreferrer"
+              className="text-foreground underline underline-offset-2 hover:text-foreground/80"
+            >
+              platform.minimax.io
+            </a>
+            . Encrypted and stored locally.
+          </p>
+          <div className="flex flex-col gap-3 rounded-lg border border-foreground/10 bg-secondary/30 p-3">
+            {minimaxMasked && !minimaxApiKey && (
+              <div className="flex items-center gap-2">
+                <div className="flex-1 rounded-md border border-foreground/10 bg-secondary/50 px-3 py-2 font-mono text-xs text-muted-foreground">
+                  {minimaxMasked}
+                </div>
+                <Button size="sm" variant="secondary" onClick={handleRemoveMinimaxApiKey}>
+                  Remove
+                </Button>
+              </div>
+            )}
+            <Input
+              type="password"
+              placeholder="MiniMax API key"
+              value={minimaxApiKey}
+              onChange={(e) => { setMinimaxApiKey(e.target.value); setMinimaxError(null); }}
+              onKeyDown={(e) => { if (e.key === "Enter") handleSaveMinimaxApiKey(); }}
+              className={cn(
+                "font-mono text-xs",
+                minimaxError && "border-destructive focus-visible:ring-destructive"
+              )}
+            />
+            {minimaxError && <p className="text-xs text-destructive">{minimaxError}</p>}
+            <div className="flex justify-end">
+              <Button
+                size="sm"
+                variant="brand"
+                onClick={handleSaveMinimaxApiKey}
+                disabled={minimaxSaving || !minimaxApiKey.trim()}
+              >
+                {minimaxSaving ? "Saving…" : "Save MiniMax API Key"}
               </Button>
             </div>
           </div>

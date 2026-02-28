@@ -22,6 +22,8 @@ export type ImageAttachment = {
   file?: File; // Original file object (only available in browser)
 };
 
+export type ToolMessageStatus = "pending" | "running" | "completed" | "cancelled" | "failed";
+
 export type AgentMessage = {
   id: string;
   role: AgentMessageRole;
@@ -30,6 +32,8 @@ export type AgentMessage = {
   toolName?: string;
   toolInput?: unknown;
   toolResult?: unknown;
+  toolCallId?: string;
+  toolStatus?: ToolMessageStatus;
   isPartial?: boolean;
   sessionId?: string;
   imageAttachments?: ImageAttachment[];
@@ -48,7 +52,7 @@ export type Workspace = {
 
 export type AgentMode = "ask" | "plan" | "agent";
 
-export type AgentProvider = "claude" | "codex";
+export type AgentProvider = "claude" | "codex" | "minimax";
 
 export type AgentModelOption = {
   value: string;

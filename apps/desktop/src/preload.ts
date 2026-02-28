@@ -28,6 +28,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
     set: (apiKey: string | null) => ipcRenderer.invoke(IPC.CODEX_API_KEY_SET, apiKey),
     has: () => ipcRenderer.invoke(IPC.CODEX_API_KEY_HAS),
   },
+  minimaxApiKey: {
+    get: () => ipcRenderer.invoke(IPC.MINIMAX_API_KEY_GET),
+    set: (apiKey: string | null) => ipcRenderer.invoke(IPC.MINIMAX_API_KEY_SET, apiKey),
+    has: () => ipcRenderer.invoke(IPC.MINIMAX_API_KEY_HAS),
+  },
   auth: {
     status: () => ipcRenderer.invoke(IPC.AUTH_STATUS),
     setMethod: (method: AuthMethod) => ipcRenderer.invoke(IPC.AUTH_SET_METHOD, method),

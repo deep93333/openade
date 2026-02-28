@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { execFile } from "child_process";
 import * as path from "path";
-import type { ToolDefinition, ToolResult } from "./tool-types";
-import { truncateOutput } from "./tool-types";
+import type { ToolDefinition, ToolResult } from "./tool-types.js";
+import { truncateOutput } from "./tool-types.js";
 
 const EXCLUDE_DIRS = [
   "node_modules", ".git", ".next", ".turbo", "dist", "build", "out",

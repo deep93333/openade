@@ -4,6 +4,7 @@ import type { Checkpoint } from "@agentide/shared";
 
 const mockCheckpointCreate = vi.fn();
 const mockCheckpointRestore = vi.fn();
+const mockCheckpointRestoreSnapshots = vi.fn();
 const mockChatSave = vi.fn();
 
 vi.mock("@/lib/electron", () => ({
@@ -11,6 +12,7 @@ vi.mock("@/lib/electron", () => ({
     checkpoint: {
       create: mockCheckpointCreate,
       restore: mockCheckpointRestore,
+      restoreSnapshots: mockCheckpointRestoreSnapshots,
     },
     chat: { save: mockChatSave },
   })),
@@ -38,7 +40,9 @@ describe("Agent store checkpoint", () => {
               status: "idle",
               error: null,
               streamingText: "",
+              streamingCommittedPrefix: "",
               sessionId: null,
+              activeToolCalls: [],
             },
           },
           sessionToThread: {},
@@ -52,14 +56,18 @@ describe("Agent store checkpoint", () => {
     mockCheckpointCreate.mockResolvedValue({
       success: true,
       data: {
-        id: "cp-1",
-        threadId,
-        messageIndex: 0,
-        timestamp: Date.now(),
-        gitStashRef: "stash-ref-123",
-      } as Checkpoint,
+        checkpoint: {
+          id: "cp-1",
+          threadId,
+          messageIndex: 0,
+          timestamp: Date.now(),
+          gitStashRef: "stash-ref-123",
+        } as Checkpoint,
+        finalizedPrev: null,
+      },
     });
     mockCheckpointRestore.mockResolvedValue({ success: true });
+    mockCheckpointRestoreSnapshots.mockResolvedValue({ success: false });
     mockChatSave.mockResolvedValue(undefined);
     setWorkspaceState();
   });
@@ -87,12 +95,15 @@ describe("Agent store checkpoint", () => {
       mockCheckpointCreate.mockResolvedValueOnce({
         success: true,
         data: {
-          id: "cp-no-ref",
-          threadId,
-          messageIndex: 1,
-          timestamp: Date.now(),
-          gitStashRef: undefined,
-        } as Checkpoint,
+          checkpoint: {
+            id: "cp-no-ref",
+            threadId,
+            messageIndex: 1,
+            timestamp: Date.now(),
+            gitStashRef: undefined,
+          } as Checkpoint,
+          finalizedPrev: null,
+        },
       });
       const singleMsg = [{ id: "m0", role: "user" as const, content: "Hi", timestamp: 1 }];
       useAgentStore.setState({
@@ -105,7 +116,9 @@ describe("Agent store checkpoint", () => {
                 status: "idle",
                 error: null,
                 streamingText: "",
+                streamingCommittedPrefix: "",
                 sessionId: null,
+                activeToolCalls: [],
               },
             },
             sessionToThread: {},
@@ -127,7 +140,7 @@ describe("Agent store checkpoint", () => {
           [workspaceId]: {
             threads: [{ id: threadId, messages: [...msgs], createdAt: 1 }],
             activeThreadId: "",
-            threadRuntime: { [threadId]: { status: "idle", error: null, streamingText: "", sessionId: null } },
+            threadRuntime: { [threadId]: { status: "idle", error: null, streamingText: "", streamingCommittedPrefix: "", sessionId: null, activeToolCalls: [] } },
             sessionToThread: {},
           },
         },
@@ -162,7 +175,7 @@ describe("Agent store checkpoint", () => {
             ],
             activeThreadId: threadId,
             threadRuntime: {
-              [threadId]: { status: "idle", error: null, streamingText: "", sessionId: null },
+              [threadId]: { status: "idle", error: null, streamingText: "", streamingCommittedPrefix: "", sessionId: null, activeToolCalls: [] },
             },
             sessionToThread: {},
           },
@@ -215,7 +228,43 @@ describe("Agent store checkpoint", () => {
       expect(mockChatSave).not.toHaveBeenCalled();
     });
 
-    it("does not call restore when mode is code but checkpoint has no gitStashRef", async () => {
+    it("uses snapshot restore when checkpoint has snapshotStorePath", async () => {
+      mockCheckpointRestoreSnapshots.mockResolvedValueOnce({ success: true, data: { restored: ["file.ts"], deleted: [], errors: [] } });
+      useAgentStore.setState({
+        workspaces: {
+          [workspaceId]: {
+            threads: [
+              {
+                id: threadId,
+                messages: [...msgs],
+                createdAt: 1,
+                checkpoints: [{
+                  ...checkpointBoth,
+                  id: "cp-snap",
+                  snapshotStorePath: "/snapshots/ws-1/thread-1/cp-snap",
+                }],
+              },
+            ],
+            activeThreadId: threadId,
+            threadRuntime: {
+              [threadId]: { status: "idle", error: null, streamingText: "", streamingCommittedPrefix: "", sessionId: null, activeToolCalls: [] },
+            },
+            sessionToThread: {},
+          },
+        },
+      });
+      const { rewindToCheckpoint } = useAgentStore.getState();
+      await rewindToCheckpoint(workspaceId, "cp-snap", "code");
+
+      expect(mockCheckpointRestoreSnapshots).toHaveBeenCalledWith({
+        workspaceId,
+        threadId,
+        checkpointId: "cp-snap",
+      });
+      expect(mockCheckpointRestore).not.toHaveBeenCalled();
+    });
+
+    it("falls back to git restore when checkpoint has no gitStashRef and no snapshots", async () => {
       const singleMsg = [{ id: "m0", role: "user" as const, content: "Hello", timestamp: 1 }];
       useAgentStore.setState({
         workspaces: {
@@ -230,7 +279,7 @@ describe("Agent store checkpoint", () => {
             ],
             activeThreadId: threadId,
             threadRuntime: {
-              [threadId]: { status: "idle", error: null, streamingText: "", sessionId: null },
+              [threadId]: { status: "idle", error: null, streamingText: "", streamingCommittedPrefix: "", sessionId: null, activeToolCalls: [] },
             },
             sessionToThread: {},
           },
@@ -239,7 +288,13 @@ describe("Agent store checkpoint", () => {
       const { rewindToCheckpoint } = useAgentStore.getState();
       await rewindToCheckpoint(workspaceId, "cp-no-ref", "code");
 
-      expect(mockCheckpointRestore).not.toHaveBeenCalled();
+      expect(mockCheckpointRestoreSnapshots).not.toHaveBeenCalled();
+      expect(mockCheckpointRestore).toHaveBeenCalledWith({
+        workspaceId,
+        stashRef: null,
+        modifiedFiles: undefined,
+        createdFiles: undefined,
+      });
     });
   });
 });

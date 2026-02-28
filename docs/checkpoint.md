@@ -9,19 +9,51 @@ A checkpoint is created automatically before every agent run. Restoring one undo
 ## Data Model
 
 ```ts
+type FileSnapshot = {
+  filePath: string;
+  beforeContent: string | null;  // null for files that didn't exist
+  existed: boolean;
+};
+
 type Checkpoint = {
   id: string;
   threadId: string;
   messageIndex: number;        // index in thread.messages where the user message will land
   timestamp: number;
-  gitStashRef?: string;        // git stash create ref capturing dirty tracked files before the run
-  untrackedAtCheckpoint?: string[]; // untracked files that existed before the run
+  baseHead?: string;           // HEAD commit SHA at checkpoint creation
+  gitStashRef?: string;        // git stash create ref (legacy fallback)
+  untrackedAtCheckpoint?: string[];
   modifiedFiles?: string[];    // tracked files the agent modified (set after run completes)
   createdFiles?: string[];     // new files the agent created (set after run completes)
+  fileSnapshots?: FileSnapshot[]; // per-file before-content captured at mutation time
+  snapshotStorePath?: string;     // disk path where full snapshots are persisted
 };
 ```
 
 Checkpoints are stored on `ChatThread.checkpoints` and persisted with the thread in chat storage.
+
+---
+
+## Restore Strategy: Shadow Copy (Primary) + Git (Fallback)
+
+### Shadow Copy (primary — most reliable)
+
+Each file-modifying tool (`write`, `edit`, `delete`) captures the file's content **immediately before mutating it** via a `onFileSnapshot` callback in the tool context. This gives exact, race-free before-snapshots regardless of git state.
+
+Snapshots are:
+1. Accumulated per-session in the IPC layer during the agent run
+2. Persisted to `<userData>/agentide/snapshots/<workspaceId>/<threadId>/<checkpointId>/` at finalization
+3. Used for restore by writing back each file's `beforeContent`, or deleting files that didn't exist
+
+**Why this is more reliable than git-based restore:**
+- Captures truth at mutation time — no timing/race issues
+- Works in non-git repos, clean trees, and complex `.gitignore` scenarios
+- Handles all file operations uniformly (write, edit, delete, create)
+- Deterministic restore: just write bytes back, no git commands involved
+
+### Git stash (fallback)
+
+If no snapshots are available (e.g., old checkpoints created before this feature), the system falls back to the original git-based restore using `git stash create` refs and `git checkout`.
 
 ---
 
@@ -47,15 +79,15 @@ createCheckpoint(workspaceId)
        │
        ▼
 User message added to thread → agent starts
+       │
+       ▼
+Tools run: write/edit/delete each call onFileSnapshot(before, existed)
+  └─ Snapshots accumulated in sessionFileSnapshots map (keyed by workspace:thread)
 ```
-
-The previous checkpoint's `modifiedFiles` is computed **at this moment** using consecutive stash refs — not against the current working tree — so it captures exactly what that prior agent run changed, independent of any other concurrent thread activity.
 
 ### 2. Finalize — after every agent run completes
 
 Triggered by `setResult` → `api.checkpoint.finalize` → `IPC.CHECKPOINT_FINALIZE`.
-
-This handles only the **most recent** (last) checkpoint in the thread, since no next checkpoint exists yet:
 
 ```
 Agent run completes
@@ -65,7 +97,12 @@ CHECKPOINT_FINALIZE(workspaceId, threadId)
   ├─ Find last checkpoint without modifiedFiles
   ├─ git diff --name-only <stashRef or HEAD>  → modifiedFiles
   ├─ git ls-files --others minus untrackedAtCheckpoint → createdFiles
-  └─ Update checkpoint in storage + store
+  ├─ Collect accumulated file snapshots from session map
+  ├─ Save snapshots to disk via snapshotStore.saveSnapshots()
+  │    → <userData>/agentide/snapshots/<wsId>/<threadId>/<cpId>/
+  │       ├─ manifest.json
+  │       └─ <sanitized_filename>.snapshot  (one per file)
+  └─ Update checkpoint with snapshotStorePath + modifiedFiles/createdFiles
 ```
 
 ### 3. Restore — when user clicks rewind
@@ -73,20 +110,26 @@ CHECKPOINT_FINALIZE(workspaceId, threadId)
 User hovers a user message bubble → clicks the rotate icon → picks a restore mode.
 
 ```
-CHECKPOINT_RESTORE(workspaceId, stashRef, modifiedFiles?, createdFiles?)
+rewindToCheckpoint(workspaceId, checkpointId, mode)
        │
-       ├─ modifiedFiles known (checkpoint finalized):
-       │    git checkout <stashRef or HEAD> -- <modifiedFiles>   ← targeted, thread-scoped
-       │    delete <createdFiles> from disk
+       ├─ If checkpoint has snapshotStorePath (preferred):
+       │    api.checkpoint.restoreSnapshots(wsId, threadId, cpId)
+       │      ├─ loadSnapshots() → read manifest + .snapshot files
+       │      └─ restoreFromSnapshots()
+       │           ├─ existed=true:  write beforeContent back to filePath
+       │           └─ existed=false: delete filePath (agent-created file)
        │
-       ├─ modifiedFiles empty, stashRef present:
-       │    git checkout <stashRef> -- .                         ← full working tree restore
+       ├─ Else fallback to git-based restore:
+       │    api.checkpoint.restore(wsId, stashRef, modifiedFiles, createdFiles)
+       │      ├─ modifiedFiles known: git checkout <ref> -- <files> + delete createdFiles
+       │      ├─ stashRef present:    git checkout <stashRef> -- .
+       │      └─ stashRef null:       git checkout HEAD -- .
        │
-       └─ stashRef null (was clean):
-            git checkout HEAD -- .                               ← undo agent changes to HEAD
+       └─ Then conversation restore (if applicable):
+            truncate thread.messages to checkpoint.messageIndex
 ```
 
-Then, depending on the restore mode:
+Restore modes:
 
 | Mode | Code | Conversation |
 |---|---|---|
@@ -94,34 +137,45 @@ Then, depending on the restore mode:
 | Restore conversation only | — | ✓ |
 | Restore code only | ✓ | — |
 
-Conversation restore truncates `thread.messages` to `slice(0, checkpoint.messageIndex)`, removing the user message and all subsequent agent messages.
+---
+
+## Snapshot Garbage Collection
+
+Old snapshots are automatically cleaned up to prevent unbounded disk growth.
+
+### Triggers
+
+| When | Action |
+|---|---|
+| App startup | `runGarbageCollection()` fire-and-forget |
+| Thread deletion | `deleteThreadSnapshots(workspaceId, threadId)` |
+
+### Retention policy
+
+| Rule | Default | Rationale |
+|---|---|---|
+| Max age | 14 days | Nobody rewinds a 2-week-old chat |
+| Max total disk | 500 MB | Hard cap safety net |
+| Thread delete | Immediate | No reason to keep data for deleted threads |
+
+### GC algorithm
+
+1. Walk `<userData>/agentide/snapshots/` tree
+2. Delete any checkpoint directory with `manifest.json` mtime older than `maxAgeMs`
+3. If remaining total size exceeds `maxTotalBytes`, delete oldest first until under budget
+4. Runs asynchronously, never blocks the user
 
 ---
 
 ## Multi-thread safety
 
-Each thread's `modifiedFiles` is computed from **consecutive checkpoint stash refs within that thread**:
+Each thread's snapshots are isolated by directory path: `<wsId>/<threadId>/<cpId>/`. Restoring one thread's checkpoint only touches files that thread's agent run modified.
 
-```
-Thread A: checkpoint A1 ──agent── checkpoint A2 ──agent── checkpoint A3
-                     ↑                        ↑
-          A1.modifiedFiles =       A2.modifiedFiles =
-          diff(A1.stashRef,        diff(A2.stashRef,
-               A2.stashRef)             A3.stashRef)
-
-Thread B: checkpoint B1 ──agent── checkpoint B2
-                     ↑
-          B1.modifiedFiles =
-          diff(B1.stashRef, B2.stashRef)
-```
-
-Restoring Thread A's checkpoint only checks out `A1.modifiedFiles` — Thread B's files are never touched.
-
-If two threads modified the **same file**, restoring one thread's checkpoint will overwrite the shared file to its state at that checkpoint. This is expected: the user explicitly chose to restore, and there is no way to resolve a shared-file conflict without branches.
+If two threads modified the **same file**, restoring one thread's checkpoint will overwrite the shared file to its state before that thread's run. This is expected behavior.
 
 ---
 
-## Git operations reference
+## Git operations reference (fallback)
 
 | Operation | Git command | When |
 |---|---|---|
@@ -129,13 +183,13 @@ If two threads modified the **same file**, restoring one thread's checkpoint wil
 | List untracked files | `git ls-files --others --exclude-standard` | Checkpoint creation + finalization |
 | Diff two snapshots | `git diff --name-only <refA> <refB>` | Sequential finalization |
 | Diff snapshot to current | `git diff --name-only <ref>` | Last-checkpoint finalization |
-| Restore specific files | `git checkout <ref> -- file1 file2 ...` | Targeted restore |
-| Restore all tracked files | `git checkout <ref> -- .` | Full working tree restore |
-| Restore to last commit | `git checkout HEAD -- .` | Restore when snapshot was clean |
+| Restore specific files | `git checkout <ref> -- file1 file2 ...` | Targeted restore (fallback) |
+| Restore all tracked files | `git checkout <ref> -- .` | Full working tree restore (fallback) |
+| Restore to last commit | `git checkout HEAD -- .` | Restore when snapshot was clean (fallback) |
 
 ### Why `git stash create` instead of `git stash push`
 
-`git stash create` returns a commit hash of the working tree state **without modifying the stash list or touching the working tree**. It is silent and non-destructive. `git stash push` would modify the stash list and require cleanup. The returned refs are regular git commit objects and will be garbage-collected by git when unreachable (roughly 2 weeks by default, or on `git gc`).
+`git stash create` returns a commit hash of the working tree state **without modifying the stash list or touching the working tree**. It is silent and non-destructive. The returned refs are regular git commit objects and will be garbage-collected by git when unreachable.
 
 ---
 
@@ -143,11 +197,19 @@ If two threads modified the **same file**, restoring one thread's checkpoint wil
 
 | File | Responsibility |
 |---|---|
-| `packages/shared/src/types.ts` | `Checkpoint` and `ChatThread` types |
-| `packages/shared/src/ipc-channels.ts` | `CHECKPOINT_CREATE`, `CHECKPOINT_FINALIZE`, `CHECKPOINT_RESTORE` channel names |
+| `packages/shared/src/types.ts` | `FileSnapshot`, `Checkpoint`, and `ChatThread` types |
+| `packages/shared/src/ipc-channels.ts` | `CHECKPOINT_*` channel names including `SAVE_SNAPSHOTS`, `RESTORE_SNAPSHOTS` |
 | `packages/shared/src/electron-api.ts` | `ElectronAPI.checkpoint` type declarations |
-| `apps/desktop/src/services/git-service.ts` | All git operations: stash, diff, restore, delete |
-| `apps/desktop/src/ipc.ts` | IPC handlers for create, finalize, restore |
+| `packages/agent/src/tools/tool-types.ts` | `FileSnapshotEntry` type, `ToolContext.onFileSnapshot` callback |
+| `packages/agent/src/tools/write.ts` | Captures before-content before writing |
+| `packages/agent/src/tools/edit.ts` | Captures before-content before editing |
+| `packages/agent/src/tools/delete.ts` | Captures before-content before deleting |
+| `packages/agent/src/custom-agent-backend.ts` | Wires `onFileSnapshot` from options into tool context |
+| `packages/agent/src/agent-manager.ts` | Passes `onFileSnapshot` through to backend |
+| `apps/desktop/src/services/snapshot-store.ts` | Disk persistence: save, load, restore, delete, GC |
+| `apps/desktop/src/services/git-service.ts` | Git operations: stash, diff, restore (fallback) |
+| `apps/desktop/src/ipc.ts` | IPC handlers: accumulates snapshots per-session, saves on finalize |
 | `apps/desktop/src/preload.ts` | Electron preload bridge |
-| `apps/app/src/store/agent.store.ts` | `createCheckpoint`, `rewindToCheckpoint`, finalize in `setResult` |
+| `apps/app/src/store/agent.store.ts` | `createCheckpoint`, `rewindToCheckpoint` (tries snapshots first) |
+| `apps/app/src/utils/checkpoint.ts` | Helper utilities for checkpoint UI |
 | `apps/app/src/components/agent/message-bubble.tsx` | Rewind button UI on user message bubbles |

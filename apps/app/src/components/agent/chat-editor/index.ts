@@ -1,2 +1,2 @@
 export { ChatEditor } from "./chat-editor";
-export type { ChatEditorProps, ModelOption, ThreadChangedFile, ActiveWorkspace } from "./types";
+export type { ChatEditorProps } from "./types";

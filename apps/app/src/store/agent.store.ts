@@ -27,6 +27,7 @@ type ThreadRuntime = {
   streamingText: string;
   streamingCommittedPrefix: string;
   sessionId: string | null;
+  activeToolCalls: AgentMessage[];
 };
 
 const EMPTY_RUNTIME: ThreadRuntime = {
@@ -35,6 +36,7 @@ const EMPTY_RUNTIME: ThreadRuntime = {
   streamingText: "",
   streamingCommittedPrefix: "",
   sessionId: null,
+  activeToolCalls: [],
 };
 
 type WorkspaceAgentState = {
@@ -668,6 +670,56 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
       return;
     }
 
+    if (message.role === "tool" && message.toolStatus === "running") {
+      set((s) => {
+        const ws = s.workspaces[wsId];
+        if (!ws) return s;
+        const runtime = ws.threadRuntime[threadId] ?? EMPTY_RUNTIME;
+        let nextStreamingText = runtime.streamingText;
+        let nextCommittedPrefix = runtime.streamingCommittedPrefix;
+        const messagesToAdd: AgentMessage[] = [];
+
+        if (runtime.streamingText) {
+          messagesToAdd.push({
+            id: `${message.id}-assistant-before`,
+            role: "assistant",
+            content: runtime.streamingText,
+            timestamp: message.timestamp - 1,
+          });
+          nextCommittedPrefix = runtime.streamingCommittedPrefix + runtime.streamingText;
+          nextStreamingText = "";
+        }
+
+        const updatedThreads = messagesToAdd.length > 0
+          ? ws.threads.map((t) =>
+              t.id === threadId
+                ? { ...t, messages: [...t.messages, ...messagesToAdd] }
+                : t
+            )
+          : ws.threads;
+
+        return {
+          workspaces: {
+            ...s.workspaces,
+            [wsId]: {
+              ...ws,
+              threads: updatedThreads,
+              threadRuntime: {
+                ...ws.threadRuntime,
+                [threadId]: {
+                  ...runtime,
+                  streamingText: nextStreamingText,
+                  streamingCommittedPrefix: nextCommittedPrefix,
+                  activeToolCalls: [...runtime.activeToolCalls, message],
+                },
+              },
+            },
+          },
+        };
+      });
+      return;
+    }
+
     set((s) => {
       const ws = s.workspaces[wsId];
       if (!ws) return s;
@@ -676,6 +728,7 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
       let messagesToAdd: AgentMessage[] = [];
       let streamingTextToClear = runtime.streamingText;
       let streamingCommittedPrefixUpdate: string | null = null;
+      let nextActiveToolCalls = runtime.activeToolCalls;
 
       if (message.role === "tool") {
         if (runtime.streamingText) {
@@ -689,6 +742,11 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
         messagesToAdd.push({ ...message, content: message.content });
         streamingTextToClear = "";
         streamingCommittedPrefixUpdate = runtime.streamingCommittedPrefix + runtime.streamingText;
+        if (message.toolCallId) {
+          nextActiveToolCalls = runtime.activeToolCalls.filter(
+            (tc) => tc.toolCallId !== message.toolCallId
+          );
+        }
       } else if (message.role === "assistant") {
         const finalContent = runtime.streamingText || message.content;
         messagesToAdd.push({ ...message, content: finalContent });
@@ -732,7 +790,8 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
                 streamingText: streamingTextToClear,
                 streamingCommittedPrefix:
                   streamingCommittedPrefixUpdate ?? runtime.streamingCommittedPrefix,
-                ...(shouldCleanupSession ? { sessionId: null, streamingCommittedPrefix: "" } : {}),
+                activeToolCalls: nextActiveToolCalls,
+                ...(shouldCleanupSession ? { sessionId: null, streamingCommittedPrefix: "", activeToolCalls: [] } : {}),
               },
             },
           },
@@ -804,6 +863,9 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
                 ...prevRuntime,
                 status: result.success ? "idle" : "error",
                 error: result.error || null,
+                activeToolCalls: [],
+                streamingText: "",
+                streamingCommittedPrefix: "",
               },
             },
           },

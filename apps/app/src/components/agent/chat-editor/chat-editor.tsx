@@ -8,34 +8,29 @@ import type { MentionNodeAttrs } from "@tiptap/extension-mention";
 import type { FileMentionItem } from "../file-mention-list";
 import { useWorkspaceFiles } from "@/hooks/use-workspace-files";
 import { useAgentSkills } from "@/hooks/use-agent-skills";
+import { useSkillHint } from "@/hooks/use-skill-hint";
+import { useThreadChangedFiles } from "@/hooks/use-thread-changed-files";
 import { filesToImageAttachments } from "@/utils/image-attachment";
 import { ArrowUpIcon, Button, ImageIcon, StopIcon } from "@agentide/ui";
+import { useAgentStore } from "@/store/agent.store";
+import { useWorkspaceStore } from "@/store/workspace.store";
+import { useChatEditorStore } from "@/store/chat-editor.store";
+import { useUIStore } from "@/store/ui.store";
+import { useFileContextStore, type FileContext, type MentionFilePayload } from "@/store/file-context.store";
+import { FileMentionList } from "../file-mention-list";
 import { EditorArea } from "./editor-area";
 import { ChangedFilesBar } from "./changed-files-bar";
 import { EmbeddedToolbar } from "./embedded-toolbar";
 import { TokenUsagePopover } from "./token-usage-popover";
+import type { AgentMessage } from "@agentide/shared";
 import type { ChatEditorProps } from "./types";
 
-export const ChatEditor = ({
-  placeholder,
-  editable,
-  editorRef,
-  submitRef,
-  onPromptChange,
-  isRunning,
-  canSubmit,
-  onStop,
-  onSubmit,
-  embedded = false,
-  modelOptions = [],
-  onModelChange,
-  onNewChat,
-  activeWorkspace = null,
-  threadChangedFiles = [],
-  onThreadChangedFileSelect,
-  imageAttachments = [],
-  onImageAttachmentsChange,
-}: ChatEditorProps) => {
+const CHAT_PLACEHOLDER = "Send a message to the agent...";
+const NO_WORKSPACE_PLACEHOLDER = "Select a workspace first...";
+
+const EMPTY_THREAD_MESSAGES: AgentMessage[] = [];
+
+export const ChatEditor = ({ embedded = false }: ChatEditorProps) => {
   const [mentionProps, setMentionProps] = useState<SuggestionProps<FileMentionItem, MentionNodeAttrs> | null>(null);
   const [mentionQuery, setMentionQuery] = useState("");
   const [isMentionTriggered, setIsMentionTriggered] = useState(false);
@@ -47,6 +42,7 @@ export const ChatEditor = ({
   const [isProcessingImages, setIsProcessingImages] = useState(false);
   const [isChangedFilesExpanded, setIsChangedFilesExpanded] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const editorRef = useRef<Editor | null>(null);
 
   const mentionStateRef = useRef({
     setMentionProps,
@@ -62,10 +58,38 @@ export const ChatEditor = ({
 
   const workspaceFiles = useWorkspaceFiles();
   const agentSkills = useAgentSkills();
+  const { augmentWithSkillHint } = useSkillHint();
+
+  const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
+  const activeWorkspace = useWorkspaceStore((s) =>
+    s.workspaces.find((w) => w.id === s.activeWorkspaceId) ?? null
+  );
+
+  const runtime = useAgentStore((s) =>
+    s.getActiveRuntime(activeWorkspaceId ?? "")
+  );
+  const threadStatus = runtime.status;
+  const isRunning = threadStatus === "running";
+
+  const startAgent = useAgentStore((s) => s.startAgent);
+  const stopAgent = useAgentStore((s) => s.stopAgent);
+
+  const { modelOptions, imageAttachments, addImageAttachments, removeImageAttachment, clearImageAttachments } =
+    useChatEditorStore();
+
+  const openChangesViewer = useUIStore((s) => s.openChangesViewer);
+
+  const threadMessages = useAgentStore((s) => {
+    const wsId = activeWorkspaceId ?? "";
+    const thread = s.getActiveThread(wsId);
+    return thread?.messages ?? EMPTY_THREAD_MESSAGES;
+  });
+
+  const threadChangedFiles = useThreadChangedFiles(threadMessages, activeWorkspace?.path ?? null);
 
   const changedFilesSummary = useMemo(
     () =>
-      threadChangedFiles.reduce(
+      threadChangedFiles.reduce<{ added: number; deleted: number }>(
         (acc, file) => ({ added: acc.added + file.added, deleted: acc.deleted + file.deleted }),
         { added: 0, deleted: 0 }
       ),
@@ -77,6 +101,95 @@ export const ChatEditor = ({
       setIsChangedFilesExpanded(false);
     }
   }, [threadChangedFiles.length, isChangedFilesExpanded]);
+
+  const placeholder = activeWorkspace ? CHAT_PLACEHOLDER : NO_WORKSPACE_PLACEHOLDER;
+  const canSubmit = !!activeWorkspaceId && !isRunning;
+
+  const setAddContextHandler = useFileContextStore((s) => s.setAddContextHandler);
+  const setMentionFileHandler = useFileContextStore((s) => s.setMentionFileHandler);
+
+  const handleAddContextToChat = useCallback(
+    (ctx: FileContext) => {
+      const insertContext = () => {
+        const editor = editorRef.current;
+        if (!editor) return;
+        const fileName = ctx.filePath.split(/[/\\]/).pop() ?? ctx.filePath;
+        const lineRange = ctx.startLine === ctx.endLine
+          ? `:${ctx.startLine}`
+          : `:${ctx.startLine}-${ctx.endLine}`;
+        const end = editor.state.doc.content.size;
+        const trimmedComment = ctx.comment?.trim();
+        const mentionId = JSON.stringify({
+          filePath: ctx.filePath,
+          code: ctx.code,
+          startLine: ctx.startLine,
+          endLine: ctx.endLine,
+          comment: trimmedComment || undefined,
+        });
+        const chain = editor
+          .chain()
+          .focus()
+          .setTextSelection(end)
+          .insertContent({
+            type: "mention",
+            attrs: {
+              id: mentionId,
+              label: `${fileName}${lineRange}`,
+            },
+          });
+        if (trimmedComment) {
+          chain.insertContent(` ${trimmedComment}`);
+        }
+        chain.insertContent(" ").run();
+      };
+      requestAnimationFrame(insertContext);
+    },
+    []
+  );
+
+  const mentionFileHandler = useCallback(
+    (payload: MentionFilePayload) => {
+      const insertMention = () => {
+        const editor = editorRef.current;
+        if (!editor) return;
+        const workspacePath = payload.workspacePath ?? activeWorkspace?.path ?? null;
+        const normalizeWorkspacePathInner = (path: string, wsPath: string | null): string => {
+          const normalized = path.replace(/\\/g, "/").trim();
+          if (!wsPath) return normalized;
+          const workspaceNormalized = wsPath.replace(/\\/g, "/").replace(/\/+$/, "");
+          if (normalized.startsWith(`${workspaceNormalized}/`)) {
+            return normalized.slice(workspaceNormalized.length + 1);
+          }
+          return normalized;
+        };
+        const label = normalizeWorkspacePathInner(payload.filePath, workspacePath) || payload.filePath;
+        editor
+          .chain()
+          .focus()
+          .insertContent({
+            type: "mention",
+            attrs: {
+              id: payload.filePath,
+              label,
+            },
+          })
+          .insertContent(" ")
+          .run();
+      };
+      requestAnimationFrame(insertMention);
+    },
+    [activeWorkspace?.path]
+  );
+
+  useEffect(() => {
+    setAddContextHandler(handleAddContextToChat);
+    return () => setAddContextHandler(null);
+  }, [setAddContextHandler, handleAddContextToChat]);
+
+  useEffect(() => {
+    setMentionFileHandler(mentionFileHandler);
+    return () => setMentionFileHandler(null);
+  }, [setMentionFileHandler, mentionFileHandler]);
 
   const handleMentionStart = useCallback((props: SuggestionProps<FileMentionItem, MentionNodeAttrs>) => {
     mentionStateRef.current.setMentionProps(props);
@@ -152,7 +265,7 @@ export const ChatEditor = ({
       }
       return false;
     },
-    [mentionItems, mentionProps, handleMentionExit, editorRef]
+    [mentionItems, mentionProps, handleMentionExit]
   );
 
   mentionStateRef.current.handleMentionKeyDown = handleMentionKeyDown;
@@ -197,26 +310,24 @@ export const ChatEditor = ({
 
   const handleImageFiles = useCallback(
     async (files: FileList | File[]) => {
-      if (!onImageAttachmentsChange) return;
       setIsProcessingImages(true);
       try {
         const newAttachments = await filesToImageAttachments(files);
-        onImageAttachmentsChange([...imageAttachments, ...newAttachments]);
+        addImageAttachments(newAttachments);
       } catch (error) {
         console.error("Failed to process images:", error);
       } finally {
         setIsProcessingImages(false);
       }
     },
-    [imageAttachments, onImageAttachmentsChange]
+    [addImageAttachments]
   );
 
   const handleRemoveImageAttachment = useCallback(
     (attachmentId: string) => {
-      if (!onImageAttachmentsChange) return;
-      onImageAttachmentsChange(imageAttachments.filter((att) => att.id !== attachmentId));
+      removeImageAttachment(attachmentId);
     },
-    [imageAttachments, onImageAttachmentsChange]
+    [removeImageAttachment]
   );
 
   const handleFileInputChange = useCallback(
@@ -275,25 +386,30 @@ export const ChatEditor = ({
     fileInputRef.current?.click();
   }, []);
 
-  const submitWithContent = useCallback(() => {
+  const handleSubmit = useCallback(() => {
     const ed = editorRef.current;
-    const text = ed?.getText().trim() ?? "";
-    const html = ed?.getHTML() ?? "";
-    if (text || imageAttachments.length > 0) {
-      ed?.commands.clearContent();
-      submitRef.current(text, html, imageAttachments);
-      onImageAttachmentsChange?.([]);
-    }
-    onSubmit();
-  }, [editorRef, submitRef, imageAttachments, onImageAttachmentsChange, onSubmit]);
+    if (!ed || !activeWorkspaceId || isRunning) return;
 
-  const onPromptChangeRef = useRef(onPromptChange);
-  onPromptChangeRef.current = onPromptChange;
+    const text = ed.getText().trim();
+    const html = ed.getHTML();
+    if (!text && imageAttachments.length === 0) return;
+
+    const augmentedText = augmentWithSkillHint(ed, text);
+    const images = imageAttachments.length ? imageAttachments : undefined;
+
+    startAgent(activeWorkspaceId, augmentedText, {
+      displayContent: html || undefined,
+      imageAttachments: images,
+    });
+
+    ed.commands.clearContent();
+    clearImageAttachments();
+  }, [activeWorkspaceId, isRunning, imageAttachments, augmentWithSkillHint, startAgent, clearImageAttachments]);
 
   const editor = useEditor({
     extensions: [StarterKit, Placeholder.configure({ placeholder }), mentionExtension],
     content: "",
-    editable: true,
+    editable: !isRunning,
     editorProps: {
       handleKeyDown: (_view, event) => {
         if (mentionStateRef.current.isMentionTriggered) {
@@ -309,29 +425,17 @@ export const ChatEditor = ({
         }
         if (event.key === "Enter" && !event.shiftKey) {
           event.preventDefault();
-          const ed = editorRef.current;
-          const text = ed?.getText().trim() ?? "";
-          const html = ed?.getHTML() ?? "";
-          if (text || imageAttachments.length > 0) {
-            ed?.commands.clearContent();
-            submitRef.current(text, html, imageAttachments);
-            onImageAttachmentsChange?.([]);
-          }
+          handleSubmit();
           return true;
         }
         return false;
       },
     },
-    onUpdate: ({ editor: ed }) => onPromptChangeRef.current(ed.getText()),
-  }, [placeholder]);
+  }, [placeholder, isRunning]);
 
   useEffect(() => {
     editorRef.current = editor;
-  }, [editor, editorRef]);
-
-  useEffect(() => {
-    if (editor) editor.setEditable(editable);
-  }, [editor, editable]);
+  }, [editor]);
 
   const editorArea = (
     <EditorArea
@@ -344,16 +448,26 @@ export const ChatEditor = ({
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
       onPaste={handlePaste}
-      isMentionTriggered={isMentionTriggered}
-      mentionProps={mentionProps}
-      mentionItems={mentionItems}
-      mentionSelectedIndex={mentionSelectedIndex}
-      preventBlur={preventBlur}
-      workspacePath={activeWorkspace?.path}
       fileInputRef={fileInputRef}
       onFileInputChange={handleFileInputChange}
     />
   );
+
+  const mentionListOverlay =
+    isMentionTriggered &&
+    mentionProps && (
+      <div className="absolute left-0 right-0 top-0 z-10 pt-2 flex justify-center pointer-events-none *:pointer-events-auto">
+        <FileMentionList
+          items={mentionItems}
+          selectedIndex={Math.min(mentionSelectedIndex, Math.max(0, mentionItems.length - 1))}
+          command={mentionProps.command}
+          preventBlur={preventBlur}
+          onSelect={() => editor?.commands.focus()}
+          workspacePath={activeWorkspace?.path}
+          anchorTop
+        />
+      </div>
+    );
 
   const editorRow =
     embedded ? (
@@ -361,27 +475,25 @@ export const ChatEditor = ({
     ) : (
       <div className="flex flex-1 items-end gap-2 w-full">
         {editorArea}
-        {onImageAttachmentsChange && (
-          <Button
-            size="icon-sm"
-            variant="ghost"
-            onClick={openFileDialog}
-            disabled={isRunning || isProcessingImages}
-            title="Attach images"
-          >
-            <ImageIcon className="size-5" />
-          </Button>
-        )}
+        <Button
+          size="icon-sm"
+          variant="ghost"
+          onClick={openFileDialog}
+          disabled={isRunning || isProcessingImages}
+          title="Attach images"
+        >
+          <ImageIcon className="size-5" />
+        </Button>
         <TokenUsagePopover />
         {isRunning ? (
-          <Button size="icon-sm" variant="destructive" onClick={onStop} rounded="full">
+          <Button size="icon-sm" variant="destructive" onClick={() => activeWorkspaceId && stopAgent(activeWorkspaceId)} rounded="full">
             <StopIcon className="size-5" />
           </Button>
         ) : (
           <Button
             size="icon-sm"
             variant={canSubmit || imageAttachments.length > 0 ? "brand" : "secondary"}
-            onClick={submitWithContent}
+            onClick={handleSubmit}
             disabled={!canSubmit && imageAttachments.length === 0}
             rounded="full"
           >
@@ -391,7 +503,7 @@ export const ChatEditor = ({
       </div>
     );
 
-  const showEmbeddedLayout = embedded && (modelOptions.length > 0 || onNewChat != null);
+  const showEmbeddedLayout = embedded;
 
   if (showEmbeddedLayout) {
     return (
@@ -403,24 +515,25 @@ export const ChatEditor = ({
               summary={changedFilesSummary}
               isExpanded={isChangedFilesExpanded}
               onToggleExpanded={() => setIsChangedFilesExpanded((prev) => !prev)}
-              onFileSelect={onThreadChangedFileSelect}
+              onFileSelect={openChangesViewer}
               isRunning={isRunning}
             />
           )}
 
-          <div className="rounded-xl w-full shadow-card overflow-hidden bg-background/50 dark:bg-secondary/50 dark:ring-1 dark:ring-foreground/10 dark:shadow-none backdrop-blur-xl">
+          <div className="relative z-10 w-full">
+            {mentionListOverlay}
+          </div>
+          <div className="rounded-xl w-full shadow-card overflow-hidden bg-background/50 dark:bg-secondary/50 dark:ring-1 dark:ring-foreground/10 dark:shadow-none backdrop-blur-xl relative">
             <div className="flex flex-col w-full p-2">{editorRow}</div>
             <EmbeddedToolbar
               isRunning={isRunning}
-              canShowAttach={!!onImageAttachmentsChange}
+              canShowAttach
               onAttachClick={openFileDialog}
               isProcessingImages={isProcessingImages}
-              modelOptions={modelOptions}
-              onModelChange={onModelChange}
               canSubmit={canSubmit}
               imageCount={imageAttachments.length}
-              onStop={onStop}
-              onSubmit={submitWithContent}
+              onStop={() => activeWorkspaceId && stopAgent(activeWorkspaceId)}
+              onSubmit={handleSubmit}
             />
           </div>
         </div>
@@ -429,7 +542,8 @@ export const ChatEditor = ({
   }
 
   return (
-    <div className="flex w-full flex-col">
+    <div className="flex w-full flex-col relative">
+      {mentionListOverlay}
       {editorRow}
     </div>
   );
