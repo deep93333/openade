@@ -25,7 +25,7 @@ export function RightPanel({ activeView, setActiveView, onFileSelect, showSepara
               size="sm"
               onClick={() => setActiveView("files")}
             >
-              <IconFiles className="size-3.5" stroke={2.2} />
+              <IconFiles className="size-4" stroke={1} />
               Files
             </Button>
             <Button
@@ -33,7 +33,7 @@ export function RightPanel({ activeView, setActiveView, onFileSelect, showSepara
               size="sm"
               onClick={() => setActiveView("changes")}
             >
-              <IconExchange className="size-3.5" stroke={2.2} />
+              <IconExchange className="size-4" stroke={1} />
               Changes
             </Button>
           </div>

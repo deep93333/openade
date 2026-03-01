@@ -26,6 +26,7 @@ export const IPC = {
   WORKSPACE_GIT_UNSTAGE_FILE: "workspace:git-unstage-file",
   WORKSPACE_GIT_COMMIT: "workspace:git-commit",
   WORKSPACE_GIT_PUSH: "workspace:git-push",
+  WORKSPACE_GIT_AHEAD_COUNT: "workspace:git-ahead-count",
   WORKSPACE_FILES_CHANGED: "workspace:files-changed",
   WORKSPACE_GIT_CHANGED: "workspace:git-changed",
 

@@ -207,6 +207,17 @@ export class GitService {
     await git.push();
   }
 
+  async getAheadCount(workspacePath: string): Promise<number> {
+    try {
+      const git = this.getGit(workspacePath);
+      const count = await git.raw(["rev-list", "--count", "@{u}..HEAD"]);
+      const n = parseInt(count.trim(), 10);
+      return Number.isNaN(n) ? 0 : n;
+    } catch {
+      return 0;
+    }
+  }
+
   async getFileDiffContent(
     workspacePath: string,
     relativePath: string,

@@ -604,6 +604,22 @@ export const registerIpcHandlers = (): void => {
     }
   });
 
+  ipcMain.handle(IPC.WORKSPACE_GIT_AHEAD_COUNT, async (_event, workspaceId: string) => {
+    try {
+      const workspace = workspaceManager.get(workspaceId);
+      if (!workspace) {
+        return { success: false, error: "Workspace not found" };
+      }
+      const count = await gitService.getAheadCount(workspace.path);
+      return { success: true, data: count };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to get ahead count",
+      };
+    }
+  });
+
   ipcMain.handle(
     IPC.TERMINAL_CREATE,
     async (

@@ -138,6 +138,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
     push: (workspaceId: string) =>
       ipcRenderer.invoke(IPC.WORKSPACE_GIT_PUSH, workspaceId),
 
+    getAheadCount: (workspaceId: string) =>
+      ipcRenderer.invoke(IPC.WORKSPACE_GIT_AHEAD_COUNT, workspaceId),
+
     onFilesChanged: (callback: (payload: { workspaceId: string }) => void) => {
       const handler = (_event: Electron.IpcRendererEvent, payload: { workspaceId: string }) =>
         callback(payload);

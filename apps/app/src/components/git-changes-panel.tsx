@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { GitStagedChange, GitUnstagedChange, IpcResult } from "@agentide/shared";
+import type { ElectronAPI, GitStagedChange, GitUnstagedChange, IpcResult } from "@agentide/shared";
 import {
   Button,
   PlusIcon,
@@ -223,6 +223,7 @@ export const GitChangesPanel = ({ className, onFileSelect: _onFileSelect }: GitC
   const [pushLoading, setPushLoading] = useState(false);
   const [step, setStep] = useState<CommitStep>("changes");
   const [commitError, setCommitError] = useState<string | null>(null);
+  const [aheadCount, setAheadCount] = useState(0);
   const hasLoadedOnceRef = useRef(false);
 
   const totalCount = staged.length + unstaged.length;
@@ -235,6 +236,7 @@ export const GitChangesPanel = ({ className, onFileSelect: _onFileSelect }: GitC
     if (!activeWorkspace?.id) {
       setStaged([]);
       setUnstaged([]);
+      setAheadCount(0);
       return;
     }
     const api = getElectronAPI();
@@ -245,7 +247,7 @@ export const GitChangesPanel = ({ className, onFileSelect: _onFileSelect }: GitC
     setError(null);
     try {
       const timeoutMs = 8000;
-      const [unstagedRes, stagedRes] = await Promise.all([
+      const [unstagedRes, stagedRes, aheadRes] = await Promise.all([
         Promise.race([
           api.workspace.getUnstagedChanges(activeWorkspace.id),
           new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Request timed out")), timeoutMs)),
@@ -254,11 +256,14 @@ export const GitChangesPanel = ({ className, onFileSelect: _onFileSelect }: GitC
           api.workspace.getStagedChanges(activeWorkspace.id),
           new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Request timed out")), timeoutMs)),
         ]),
+        (api.workspace as ElectronAPI["workspace"]).getAheadCount(activeWorkspace.id),
       ]);
       if (unstagedRes.success && unstagedRes.data) setUnstaged(unstagedRes.data);
       else setUnstaged([]);
       if (stagedRes.success && stagedRes.data) setStaged(stagedRes.data);
       else setStaged([]);
+      if (aheadRes.success && typeof aheadRes.data === "number") setAheadCount(aheadRes.data);
+      else setAheadCount(0);
       hasLoadedOnceRef.current = true;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load changes");
@@ -395,7 +400,25 @@ export const GitChangesPanel = ({ className, onFileSelect: _onFileSelect }: GitC
   }
 
   return (
-    <div className={cn("flex flex-col overflow-hidden", className)}>
+    <div className={cn("flex flex-col overflow-hidden pr-1", className)}>
+      {step === "changes" && aheadCount > 0 && (
+        <div className="shrink-0 flex items-center justify-between gap-2 px-3 py-2 bg-amber-500/10 border-b border-amber-500/20">
+          <span className="text-xs font-medium text-amber-700 dark:text-amber-300">
+            You have unpushed commits
+          </span>
+          <Button
+            size="xs"
+            variant="secondary"
+            onClick={handlePush}
+            disabled={pushLoading}
+            loading={pushLoading}
+            className="gap-1 shrink-0"
+          >
+            <IconUpload className="size-3" />
+            Push
+          </Button>
+        </div>
+      )}
       {step === "changes" ? (
         <>
           <div className="shrink-0 p-2 border-b border-foreground/5">
@@ -485,7 +508,7 @@ export const GitChangesPanel = ({ className, onFileSelect: _onFileSelect }: GitC
               }
             >
               {unstaged.length === 0 ? (
-                <p className="px-2 py-2 text-xxs  text-muted-foreground">No unstaged changes</p>
+                <p className="px-2 py-2 m-2 text-center bg-foreground/5 rounded-md text-xxs  text-muted-foreground">No unstaged changes</p>
               ) : (
                 <GroupedFileList
                   files={unstaged}

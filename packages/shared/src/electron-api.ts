@@ -79,6 +79,7 @@ export type ElectronAPI = {
     unstageFile: (workspaceId: string, path: string) => Promise<IpcResult>;
     commit: (workspaceId: string, message: string) => Promise<IpcResult>;
     push: (workspaceId: string) => Promise<IpcResult>;
+    getAheadCount: (workspaceId: string) => Promise<IpcResult<number>>;
     onFilesChanged: (callback: (payload: { workspaceId: string }) => void) => () => void;
     onGitChanged: (callback: (payload: { workspaceId: string }) => void) => () => void;
   };
