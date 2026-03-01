@@ -77,7 +77,7 @@ export const ChatEditor = ({ embedded = false }: ChatEditorProps) => {
   const { modelOptions, imageAttachments, addImageAttachments, removeImageAttachment, clearImageAttachments } =
     useChatEditorStore();
 
-  const openChangesViewer = useUIStore((s) => s.openChangesViewer);
+  const openDiffViewer = useUIStore((s) => s.openDiffViewer);
 
   const threadMessages = useAgentStore((s) => {
     const wsId = activeWorkspaceId ?? "";
@@ -208,13 +208,37 @@ export const ChatEditor = ({ embedded = false }: ChatEditorProps) => {
     mentionStateRef.current.setMentionQuery("");
   }, []);
 
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+
+  useEffect(() => {
+    clearTimeout(debounceRef.current);
+    if (!mentionQuery.trim()) {
+      setDebouncedQuery("");
+      return;
+    }
+    debounceRef.current = setTimeout(() => setDebouncedQuery(mentionQuery), 80);
+    return () => clearTimeout(debounceRef.current);
+  }, [mentionQuery]);
+
   const filteredFileMentions = useMemo(() => {
-    if (!mentionQuery.trim()) return workspaceFiles.slice(0, 15);
-    const q = mentionQuery.toLowerCase();
+    if (!debouncedQuery.trim()) return workspaceFiles.slice(0, 15);
+    const q = debouncedQuery.toLowerCase();
     return workspaceFiles
       .filter((f) => f.label.toLowerCase().includes(q) || f.id.toLowerCase().includes(q))
+      .sort((a, b) => {
+        const aName = a.label.split("/").pop()?.toLowerCase() ?? "";
+        const bName = b.label.split("/").pop()?.toLowerCase() ?? "";
+        const aNameMatch = aName.includes(q);
+        const bNameMatch = bName.includes(q);
+        if (aNameMatch !== bNameMatch) return aNameMatch ? -1 : 1;
+        const aStartsWith = aName.startsWith(q);
+        const bStartsWith = bName.startsWith(q);
+        if (aStartsWith !== bStartsWith) return aStartsWith ? -1 : 1;
+        return a.label.length - b.label.length;
+      })
       .slice(0, 15);
-  }, [workspaceFiles, mentionQuery]);
+  }, [workspaceFiles, debouncedQuery]);
 
   const filteredSkillMentions = useMemo((): FileMentionItem[] => {
     const q = mentionQuery.trim().toLowerCase();
@@ -515,7 +539,7 @@ export const ChatEditor = ({ embedded = false }: ChatEditorProps) => {
               summary={changedFilesSummary}
               isExpanded={isChangedFilesExpanded}
               onToggleExpanded={() => setIsChangedFilesExpanded((prev) => !prev)}
-              onFileSelect={openChangesViewer}
+              onFileSelect={openDiffViewer}
               isRunning={isRunning}
             />
           )}

@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Button, BookIcon } from "@agentide/ui";
 import { cn } from "@/lib/cn";
-import { FolderIcon, getFileTypeIcon } from "@/components/file-tree/file-icons";
+import { FileName } from "@/components/primitives";
 
 export type FileMentionItem = {
   id: string;
@@ -21,18 +21,6 @@ type FileMentionListProps = {
   zIndexClassName?: string;
   anchorTop?: boolean;
 };
-
-// --- Helpers ---
-
-function getFileName(label: string): string {
-  const parts = label.split("/");
-  return parts[parts.length - 1] || label;
-}
-
-function getParentDir(label: string): string | null {
-  const lastSlash = label.lastIndexOf("/");
-  return lastSlash > 0 ? label.slice(0, lastSlash + 1) : null;
-}
 
 type GroupedItems = {
   skills: FileMentionItem[];
@@ -56,18 +44,15 @@ function SectionHeader({ children }: { children: React.ReactNode }) {
   );
 }
 
-interface MentionItemProps {
+type MentionItemProps = {
   item: FileMentionItem;
   isSelected: boolean;
   index: number;
   onSelect: () => void;
   command: (item: FileMentionItem) => void;
-}
+};
 
 function MentionItem({ item, isSelected, index, onSelect, command }: MentionItemProps) {
-  const fileName = getFileName(item.label);
-  const parentDir = getParentDir(item.label);
-
   return (
     <Button
       data-mention-index={index}
@@ -83,30 +68,21 @@ function MentionItem({ item, isSelected, index, onSelect, command }: MentionItem
         onSelect();
       }}
     >
-      <ItemIcon item={item} fileName={fileName} />
-      <ItemLabel fileName={fileName} parentDir={parentDir} />
-    </Button>
-  );
-}
-
-function ItemIcon({ item, fileName }: { item: FileMentionItem; fileName: string }) {
-  if (item.type === "skill") {
-    return <BookIcon className="size-3.5 shrink-0 text-muted-foreground" />;
-  }
-  if (item.type === "directory") {
-    return <FolderIcon name={fileName} />;
-  }
-  return getFileTypeIcon(fileName);
-}
-
-function ItemLabel({ fileName, parentDir }: { fileName: string; parentDir: string | null }) {
-  return (
-    <span className="min-w-0 flex items-baseline gap-0 truncate text-xs font-medium">
-      <span className="text-foreground">{fileName}</span>
-      {parentDir && (
-        <span className="ml-1.5 text-muted-foreground text-[10px]">{parentDir}</span>
+      {item.type === "skill" ? (
+        <>
+          <BookIcon className="size-3.5 shrink-0 text-muted-foreground" />
+          <span className="min-w-0 truncate text-xs font-medium text-foreground">{item.label}</span>
+        </>
+      ) : (
+        <FileName
+          path={item.label}
+          type={item.type}
+          showParentDir
+          nameClassName="text-xs font-medium text-foreground"
+          parentDirClassName="ml-1.5 text-[10px]"
+        />
       )}
-    </span>
+    </Button>
   );
 }
 

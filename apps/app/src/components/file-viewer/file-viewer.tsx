@@ -5,7 +5,7 @@ import { File } from "@pierre/diffs/react";
 import { useFileContextStore } from "@/store/file-context.store";
 import { getElectronAPI } from "@/lib/electron";
 
-type FileViewerDrawerProps = {
+type FileViewerProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   filePath: string | null;
@@ -70,12 +70,12 @@ function extractLines(content: string, start: number, end: number): string {
   return lines.slice(s, e).join("\n");
 }
 
-export const FileViewerDrawer = ({
+export const FileViewer = ({
   open,
   onOpenChange,
   filePath,
   className,
-}: FileViewerDrawerProps) => {
+}: FileViewerProps) => {
   const [content, setContent] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -228,12 +228,13 @@ export const FileViewerDrawer = ({
 
   return (
     <div className={className}>
-      <div className="flex h-10 flex-row items-center justify-between gap-2 border-b border-border px-3">
+      <div className="flex h-10 flex-row items-center justify-between gap-2 border-b border-foreground/5 px-3">
         <span className="truncate font-mono text-sm font-medium text-foreground">
           {fileName || "File"}
         </span>
         <Button
-          size="icon-sm"
+          size="icon-xs"
+          variant="ghost"
           onClick={() => onOpenChange(false)}
         >
           <CircleXIcon className="size-5" />

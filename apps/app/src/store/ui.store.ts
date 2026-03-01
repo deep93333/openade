@@ -3,7 +3,7 @@ import { getElectronAPI } from "@/lib/electron";
 
 export type NavigationView = "files" | "changes";
 export type CenterPage = "chat" | "skills" | "tasks";
-export type SecondaryPaneMode = "file" | "changes";
+export type SecondaryPaneMode = "file" | "diff";
 
 type UIStoreState = {
   activeView: NavigationView;
@@ -22,7 +22,6 @@ type UIStoreState = {
   setRightPanelOpen: (open: boolean) => void;
   setTerminalVisible: (visible: boolean) => void;
   openFileViewer: (path: string) => void;
-  openChangesViewer: (path?: string | null) => void;
   closeSecondaryPane: () => void;
   setSecondaryPaneOpen: (open: boolean) => void;
   openWebView: (url?: string) => void;
@@ -37,6 +36,8 @@ type UIStoreState = {
   hasApiKey: boolean;
   setApiKeyDialogOpen: (open: boolean) => void;
   checkApiKey: () => Promise<void>;
+
+  openDiffViewer: (path: string) => void;
 
   agentLogDrawerOpen: boolean;
   openAgentLogDrawer: () => void;
@@ -58,15 +59,6 @@ export const useUIStore = create<UIStoreState>()((set) => ({
   setTerminalVisible: (visible) => set({ terminalVisible: visible }),
   openFileViewer: (path) =>
     set({ secondaryPane: { open: true, mode: "file", path } }),
-  openChangesViewer: (path = null) =>
-    set((state) => ({
-      activeView: "changes",
-      secondaryPane: {
-        open: true,
-        mode: "changes",
-        path,
-      },
-    })),
   closeSecondaryPane: () =>
     set((state) => ({
       secondaryPane: { ...state.secondaryPane, open: false, path: null },
@@ -108,6 +100,9 @@ export const useUIStore = create<UIStoreState>()((set) => ({
       set({ apiKeyDialogOpen: true });
     }
   },
+
+  openDiffViewer: (path) =>
+    set({ secondaryPane: { open: true, mode: "diff", path } }),
 
   agentLogDrawerOpen: false,
   openAgentLogDrawer: () => set({ agentLogDrawerOpen: true }),

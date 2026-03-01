@@ -246,8 +246,8 @@ body {
   --color-destructive-shadow: oklch(var(--oklch-destructive-shadow));
   --color-destructive-hover-shadow: oklch(var(--oklch-destructive-hover-shadow));
 
-  --text-xxs: calc(2 * var(--spacing));
-  --text-xxs--line-height: calc(1 / (2 * var(--spacing))); 
+  --text-xxs: calc(2.8 * var(--spacing));
+  --text-xxs--line-height: calc(1 / (2.8 * var(--spacing))); 
   --text-xs: calc(3 * var(--spacing));
   --text-xs--line-height: calc(1 / (3 * var(--spacing)));
   --text-sm: calc(3 * var(--spacing) + 1px);

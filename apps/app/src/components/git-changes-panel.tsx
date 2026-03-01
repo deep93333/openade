@@ -1,97 +1,202 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { GitStagedChange, GitUnstagedChange, IpcResult } from "@agentide/shared";
-import { Button, PlusIcon, Tabs, TabsContent, TabsList, TabsTrigger } from "@agentide/ui";
-import { IconLoader } from "@tabler/icons-react";
+import {
+  Button,
+  PlusIcon,
+  Textarea,
+  CircleCheckIcon,
+  cn,
+} from "@agentide/ui";
+import {
+  IconArrowBackUp,
+  IconChevronDown,
+  IconChevronRight,
+  IconGitCommit,
+  IconLoader,
+  IconMinus,
+  IconRefresh,
+  IconUpload,
+} from "@tabler/icons-react";
 import { getElectronAPI } from "@/lib/electron";
 import { useWorkspaceStore } from "@/store/workspace.store";
-import { cn } from "@/lib/cn";
-import { GitChangesDrawer } from "@/components/git-changes-drawer";
-import { GitCommitDialog } from "@/components/git-commit-dialog";
-import { getFileTypeIcon } from "@/components/file-tree/file-icons";
+import { useUIStore } from "@/store/ui.store";
+import { FileName, basename, DiffStats } from "@/components/primitives";
 
 type GitChangesPanelProps = {
   className?: string;
   onFileSelect?: (path: string) => void;
 };
 
-function dirname(path: string): string {
-  const i = path.lastIndexOf("/");
-  return i <= 0 ? "" : path.slice(0, i);
-}
+type ChangeFile = { path: string; added: number; deleted: number };
 
-function basename(path: string): string {
-  const i = path.lastIndexOf("/");
-  return i < 0 ? path : path.slice(i + 1);
-}
-
-type ChangeRowProps = {
-  path: string;
-  added: number;
-  deleted: number;
-  workspacePath: string;
-  onOpenDrawer?: (path: string) => void;
-  action: "stage" | "unstage";
-  onAction: (path: string) => void;
-  actionLabel: string;
-  actionLoading?: boolean;
+type DirGroup = {
+  dir: string;
+  files: ChangeFile[];
 };
 
-function ChangeRow({
-  path,
-  added,
-  deleted,
-  workspacePath,
-  onOpenDrawer,
+function groupByDirectory(files: ChangeFile[]): DirGroup[] {
+  const map = new Map<string, ChangeFile[]>();
+  for (const f of files) {
+    const i = f.path.lastIndexOf("/");
+    const dir = i <= 0 ? "" : f.path.slice(0, i);
+    const list = map.get(dir);
+    if (list) list.push(f);
+    else map.set(dir, [f]);
+  }
+  const groups: DirGroup[] = [];
+  for (const [dir, dirFiles] of map) {
+    groups.push({ dir, files: dirFiles });
+  }
+  groups.sort((a, b) => a.dir.localeCompare(b.dir));
+  return groups;
+}
+
+type FileRowProps = {
+  file: ChangeFile;
+  onSelect: (path: string) => void;
+  isSelected: boolean;
+  action: "stage" | "unstage";
+  onAction: (path: string) => void;
+  actionLoading?: boolean;
+  onRevert?: (path: string) => void;
+  revertLoading?: boolean;
+};
+
+function FileRow({
+  file,
+  onSelect,
+  isSelected,
   action,
   onAction,
-  actionLabel,
   actionLoading,
-}: ChangeRowProps) {
-  const dir = dirname(path);
-  const name = basename(path);
+  onRevert,
+  revertLoading,
+}: FileRowProps) {
   return (
-    <div className="flex group/change-row items-center relative gap-2 rounded-md px-2 py-1.5 group hover:bg-foreground/10">
-      <button
-        type="button"
-        onClick={() => onOpenDrawer?.(path)}
-        className="flex min-w-0 flex-1 relative flex-col items-start gap-0.5 text-left text-sm"
-      >
-        <div className="flex w-full items-center gap-1 flex-1">
-          {getFileTypeIcon(name)}
-          <span className="min-w-0 shrink-0 truncate font-medium text-xs text-foreground flex-1">{name}</span>
-          <div className="flex shrink-0 items-center gap-1">
-            {added > 0 && (
-              <span className="rounded bg-green-500/15 px-1.5 py-0.5 text-[10px] font-medium text-green-700 dark:text-green-400">
-                +{added}
-              </span>
-            )}
-            {deleted > 0 && (
-              <span className="rounded bg-red-500/15 px-1.5 py-0.5 text-[10px] font-medium text-red-700 dark:text-red-400">
-                -{deleted}
-              </span>
-            )}
-          </div>
+    <div
+      className={cn(
+        "flex group/row items-center gap-1.5 rounded-sm px-2 py-1 cursor-pointer hover:bg-foreground/5 transition-colors",
+        isSelected && "bg-foreground/8"
+      )}
+      onClick={() => onSelect(file.path)}
+    >
+      <FileName path={file.path} nameClassName="text-xs text-foreground" className="min-w-0 flex-1" />
+      
+      <div className="flex items-center gap-0.5 shrink-0">
+        <div className="flex items-center gap-0.5 opacity-0 group-hover/row:opacity-100 transition-opacity ml-0.5">
+          {action === "stage" && onRevert && (
+            <Button
+              tooltip="Revert"
+              size="icon-xs"
+              variant="ghost"
+              disabled={revertLoading}
+              onClick={(e) => { e.stopPropagation(); onRevert(file.path); }}
+              className="size-5"
+            >
+              <IconArrowBackUp className="size-3" />
+            </Button>
+          )}
+          <Button
+            tooltip={action === "stage" ? "Stage" : "Unstage"}
+            size="icon-xs"
+            variant="ghost"
+            disabled={actionLoading}
+            onClick={(e) => { e.stopPropagation(); onAction(file.path); }}
+            className="size-5"
+          >
+            {action === "stage" ? <PlusIcon className="size-3" /> : <IconMinus className="size-3" />}
+          </Button>
         </div>
-        {/* {dir ? (
-          <span className="ml-1.5 truncate text-xs text-muted-foreground" dir="rtl">
-            {dir}/
-          </span>
-        ) : null} */}
-      </button>
-      <div className="absolute flex px-1 items-center justify-center group-hover/change-row:opacity-100 opacity-0 transition-opacity right-0 top-0 bottom-0">
-      <Button
-      tooltip={actionLabel}
-        size="icon-xs"
-        variant="bordered"
-        disabled={actionLoading}
-        onClick={() => onAction(path)}
-      >
-        <PlusIcon/>
-      </Button>
       </div>
     </div>
   );
 }
+
+type GroupedFileListProps = {
+  files: ChangeFile[];
+  onSelect: (path: string) => void;
+  selectedPath: string | null;
+  action: "stage" | "unstage";
+  onAction: (path: string) => void;
+  actionLoadingPath: string | null;
+  onRevert?: (path: string) => void;
+  revertLoadingPath: string | null;
+};
+
+function GroupedFileList({
+  files,
+  onSelect,
+  selectedPath,
+  action,
+  onAction,
+  actionLoadingPath,
+  onRevert,
+  revertLoadingPath,
+}: GroupedFileListProps) {
+  const groups = useMemo(() => groupByDirectory(files), [files]);
+
+  return (
+    <div className="flex flex-col">
+      {groups.map((group) => (
+        <div key={group.dir || "__root"}>
+          {group.dir && (
+            <div className="px-2 pt-2 pb-0.5">
+              <span className="text-xxs  text-muted-foreground truncate">{group.dir}</span>
+            </div>
+          )}
+          {group.files.map((f) => (
+            <FileRow
+              key={f.path}
+              file={f}
+              onSelect={onSelect}
+              isSelected={selectedPath === f.path}
+              action={action}
+              onAction={onAction}
+              actionLoading={actionLoadingPath === f.path}
+              onRevert={onRevert}
+              revertLoading={revertLoadingPath === f.path}
+            />
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+type SectionProps = {
+  title: string;
+  count: number;
+  defaultOpen?: boolean;
+  headerAction?: React.ReactNode;
+  children: React.ReactNode;
+};
+
+function Section({ title, count, defaultOpen = true, headerAction, children }: SectionProps) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div>
+      <div
+        className="flex items-center gap-1.5 px-3 py-1.5 cursor-pointer select-none hover:bg-foreground/5"
+        onClick={() => setOpen(!open)}
+      >
+        {open ? (
+          <IconChevronDown className="size-3 text-muted-foreground shrink-0" />
+        ) : (
+          <IconChevronRight className="size-3 text-muted-foreground shrink-0" />
+        )}
+        <span className="text-xxs  font-semibold  text-muted-foreground">{title}</span>
+        <span className="text-xxs  text-muted-foreground">({count})</span>
+        <div className="flex-1" />
+        {headerAction && (
+          <div onClick={(e) => e.stopPropagation()}>{headerAction}</div>
+        )}
+      </div>
+      {open && children}
+    </div>
+  );
+}
+
+type CommitStep = "changes" | "push";
 
 export const GitChangesPanel = ({ className, onFileSelect: _onFileSelect }: GitChangesPanelProps) => {
   const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
@@ -101,33 +206,39 @@ export const GitChangesPanel = ({ className, onFileSelect: _onFileSelect }: GitC
   const gitChangeVersion = useWorkspaceStore((s) =>
     activeWorkspaceId ? (s.gitChangeVersions[activeWorkspaceId] ?? 0) : 0
   );
+  const openDiffViewer = useUIStore((s) => s.openDiffViewer);
+
   const [staged, setStaged] = useState<GitStagedChange[]>([]);
-  const [changes, setChanges] = useState<GitUnstagedChange[]>([]);
+  const [unstaged, setUnstaged] = useState<GitUnstagedChange[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [drawerScrollToPath, setDrawerScrollToPath] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"staged" | "unstaged">("unstaged");
-  const [commitDialogOpen, setCommitDialogOpen] = useState(false);
+  const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [stageLoading, setStageLoading] = useState<string | null>(null);
   const [unstageLoading, setUnstageLoading] = useState<string | null>(null);
   const [stageAllLoading, setStageAllLoading] = useState(false);
+  const [revertLoading, setRevertLoading] = useState<string | null>(null);
+  const [commitMessage, setCommitMessage] = useState("");
+  const [commitLoading, setCommitLoading] = useState(false);
+  const [pushLoading, setPushLoading] = useState(false);
+  const [step, setStep] = useState<CommitStep>("changes");
+  const [commitError, setCommitError] = useState<string | null>(null);
   const hasLoadedOnceRef = useRef(false);
+
+  const totalCount = staged.length + unstaged.length;
+  const totalAdded = useMemo(() => [...staged, ...unstaged].reduce((s, c) => s + c.added, 0), [staged, unstaged]);
+  const totalDeleted = useMemo(() => [...staged, ...unstaged].reduce((s, c) => s + c.deleted, 0), [staged, unstaged]);
+  const totalStagedAdded = useMemo(() => staged.reduce((s, c) => s + c.added, 0), [staged]);
+  const totalStagedDeleted = useMemo(() => staged.reduce((s, c) => s + c.deleted, 0), [staged]);
 
   const load = useCallback(async () => {
     if (!activeWorkspace?.id) {
       setStaged([]);
-      setChanges([]);
+      setUnstaged([]);
       return;
     }
     const api = getElectronAPI();
-    if (!api) {
-      setStaged([]);
-      setChanges([]);
-      setError("Not available in browser");
-      return;
-    }
+    if (!api) return;
     const isInitial = !hasLoadedOnceRef.current;
     if (isInitial) setLoading(true);
     else setRefreshing(true);
@@ -137,28 +248,20 @@ export const GitChangesPanel = ({ className, onFileSelect: _onFileSelect }: GitC
       const [unstagedRes, stagedRes] = await Promise.all([
         Promise.race([
           api.workspace.getUnstagedChanges(activeWorkspace.id),
-          new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error("Request timed out")), timeoutMs)
-          ),
+          new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Request timed out")), timeoutMs)),
         ]),
         Promise.race([
           api.workspace.getStagedChanges(activeWorkspace.id),
-          new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error("Request timed out")), timeoutMs)
-          ),
+          new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Request timed out")), timeoutMs)),
         ]),
       ]);
-      if (unstagedRes.success && unstagedRes.data) setChanges(unstagedRes.data);
-      else setChanges([]);
+      if (unstagedRes.success && unstagedRes.data) setUnstaged(unstagedRes.data);
+      else setUnstaged([]);
       if (stagedRes.success && stagedRes.data) setStaged(stagedRes.data);
       else setStaged([]);
-      if (!unstagedRes.success && "error" in unstagedRes && unstagedRes.error) setError(unstagedRes.error);
-      else if (!stagedRes.success && "error" in stagedRes && stagedRes.error) setError(stagedRes.error);
       hasLoadedOnceRef.current = true;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load changes");
-      setStaged([]);
-      setChanges([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -173,62 +276,95 @@ export const GitChangesPanel = ({ className, onFileSelect: _onFileSelect }: GitC
     load();
   }, [load, gitChangeVersion]);
 
-  const handleStage = useCallback(
-    async (path: string) => {
-      const api = getElectronAPI();
-      const stage = (api?.workspace as { stageFile?: (w: string, p: string) => Promise<{ success?: boolean }> } | undefined)?.stageFile;
-      if (!stage || !activeWorkspace?.id) return;
-      setStageLoading(path);
-      const result = await stage(activeWorkspace.id, path);
-      setStageLoading(null);
-      if (result?.success) load();
-    },
-    [activeWorkspace?.id, load]
-  );
+  const handleStage = useCallback(async (path: string) => {
+    const api = getElectronAPI();
+    const stage = (api?.workspace as { stageFile?: (w: string, p: string) => Promise<{ success?: boolean }> } | undefined)?.stageFile;
+    if (!stage || !activeWorkspace?.id) return;
+    setStageLoading(path);
+    const result = await stage(activeWorkspace.id, path);
+    setStageLoading(null);
+    if (result?.success) load();
+  }, [activeWorkspace?.id, load]);
 
-  const handleUnstage = useCallback(
-    async (path: string) => {
-      const api = getElectronAPI();
-      const unstage = (api?.workspace as { unstageFile?: (w: string, p: string) => Promise<{ success?: boolean }> } | undefined)?.unstageFile;
-      if (!unstage || !activeWorkspace?.id) return;
-      setUnstageLoading(path);
-      const result = await unstage(activeWorkspace.id, path);
-      setUnstageLoading(null);
-      if (result?.success) load();
-    },
-    [activeWorkspace?.id, load]
-  );
+  const handleUnstage = useCallback(async (path: string) => {
+    const api = getElectronAPI();
+    const unstage = (api?.workspace as { unstageFile?: (w: string, p: string) => Promise<{ success?: boolean }> } | undefined)?.unstageFile;
+    if (!unstage || !activeWorkspace?.id) return;
+    setUnstageLoading(path);
+    const result = await unstage(activeWorkspace.id, path);
+    setUnstageLoading(null);
+    if (result?.success) load();
+  }, [activeWorkspace?.id, load]);
 
   const handleStageAll = useCallback(async () => {
     const api = getElectronAPI();
     const stage = (api?.workspace as { stageFile?: (w: string, p: string) => Promise<{ success?: boolean }> } | undefined)?.stageFile;
-    if (!stage || !activeWorkspace?.id || changes.length === 0) return;
+    if (!stage || !activeWorkspace?.id || unstaged.length === 0) return;
     setStageAllLoading(true);
-    for (const c of changes) {
+    for (const c of unstaged) {
       await stage(activeWorkspace.id, c.path);
     }
     setStageAllLoading(false);
     load();
-  }, [activeWorkspace?.id, changes, load]);
+  }, [activeWorkspace?.id, unstaged, load]);
 
-  const openDrawer = useCallback((path: string | null) => {
-    setDrawerScrollToPath(path);
-    setDrawerOpen(true);
-  }, []);
+  const handleRevert = useCallback(async (path: string) => {
+    const api = getElectronAPI();
+    const revert = (api?.workspace as { revertFileChange?: (w: string, p: string) => Promise<IpcResult> } | undefined)?.revertFileChange;
+    if (!revert || !activeWorkspace?.id) return;
+    setRevertLoading(path);
+    const result = await revert(activeWorkspace.id, path);
+    setRevertLoading(null);
+    if (result?.success) load();
+  }, [activeWorkspace?.id, load]);
 
-  const handleDrawerOpenChange = useCallback((open: boolean) => {
-    setDrawerOpen(open);
-    if (!open) setDrawerScrollToPath(null);
+  const handleFileSelect = useCallback((path: string) => {
+    setSelectedPath(path);
+    openDiffViewer(path);
+  }, [openDiffViewer]);
+
+  const handleCommit = useCallback(async () => {
+    const api = getElectronAPI();
+    const commit = (api?.workspace as { commit?: (w: string, m: string) => Promise<{ success?: boolean; error?: string }> })?.commit;
+    if (!commit || !activeWorkspace?.id || !commitMessage.trim()) return;
+    setCommitLoading(true);
+    setCommitError(null);
+    const result = await commit(activeWorkspace.id, commitMessage.trim());
+    setCommitLoading(false);
+    if (result?.success) {
+      setStep("push");
+      load();
+    } else if (result?.error) {
+      setCommitError(result.error);
+    }
+  }, [activeWorkspace?.id, commitMessage, load]);
+
+  const handlePush = useCallback(async () => {
+    const api = getElectronAPI();
+    const push = (api?.workspace as { push?: (w: string) => Promise<{ success?: boolean; error?: string }> })?.push;
+    if (!push || !activeWorkspace?.id) return;
+    setPushLoading(true);
+    setCommitError(null);
+    const result = await push(activeWorkspace.id);
+    setPushLoading(false);
+    if (result?.success) {
+      setStep("changes");
+      setCommitMessage("");
+      load();
+    } else if (result?.error) {
+      setCommitError(result.error);
+    }
+  }, [activeWorkspace?.id, load]);
+
+  const handleDone = useCallback(() => {
+    setStep("changes");
+    setCommitMessage("");
+    setCommitError(null);
   }, []);
 
   if (!activeWorkspace) {
     return (
-      <div
-        className={cn(
-          "flex flex-col items-center justify-center gap-2 py-8 text-sm text-muted-foreground",
-          className
-        )}
-      >
+      <div className={cn("flex flex-col items-center justify-center py-8 text-xs text-muted-foreground", className)}>
         No workspace selected
       </div>
     );
@@ -236,12 +372,8 @@ export const GitChangesPanel = ({ className, onFileSelect: _onFileSelect }: GitC
 
   if (loading) {
     return (
-      <div
-        className={cn(
-          "flex flex-col items-center justify-center gap-2 py-8 text-sm text-muted-foreground",
-          className
-        )}
-      >
+      <div className={cn("flex flex-col items-center justify-center py-8 text-xs text-muted-foreground", className)}>
+        <IconLoader className="size-4 animate-spin mb-2" />
         Loading changes...
       </div>
     );
@@ -249,8 +381,8 @@ export const GitChangesPanel = ({ className, onFileSelect: _onFileSelect }: GitC
 
   if (error) {
     return (
-      <div className={cn("flex flex-col gap-2 p-4", className)}>
-        <p className="text-sm text-destructive">{error}</p>
+      <div className={cn("flex flex-col gap-2 p-3", className)}>
+        <p className="text-xs text-destructive">{error}</p>
         <button
           type="button"
           onClick={() => { setError(null); load(); }}
@@ -262,128 +394,134 @@ export const GitChangesPanel = ({ className, onFileSelect: _onFileSelect }: GitC
     );
   }
 
-  const workspacePath = activeWorkspace.path;
-  const hasStaged = staged.length > 0;
-  const hasChanges = changes.length > 0;
-  const hasAny = hasStaged || hasChanges;
-
   return (
     <div className={cn("flex flex-col overflow-hidden", className)}>
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "staged" | "unstaged")} className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <div className="shrink-0 px-2 py-0.5 border-b border-foreground/5">
-          <TabsList className="w-full justify-start gap-0.5 bg-transparent p-0">
-            <TabsTrigger value="staged" className="flex-1 text-xs">
-              Staged {hasStaged ? `(${staged.length})` : ""}
-            </TabsTrigger>
-            <TabsTrigger value="unstaged" className="flex-1 text-xs">
-              Unstaged {hasChanges ? `(${changes.length})` : ""}
-            </TabsTrigger>
-            {refreshing && (
-              <span className="flex items-center gap-1 text-[10px] text-muted-foreground px-1">
-                <IconLoader className="size-3 animate-spin" />
-                Updating…
-              </span>
+      {step === "changes" ? (
+        <>
+          <div className="shrink-0 p-2 border-b border-foreground/5">
+            <div className="flex flex-col gap-1 rounded-lg">
+              <Textarea
+                placeholder="Commit message..."
+                value={commitMessage}
+                onChange={(e) => setCommitMessage(e.target.value)}
+                className="min-h-[60px] p-3 resize-none text-xs bg-transparent border-0 shadow-none focus-visible:ring-0"
+                rows={2}
+              />
+              {commitError && (
+                <p className="text-xxs  text-destructive mt-1">{commitError}</p>
+              )}
+              <div className="flex items-center justify-between mt-1">
+                <span className="text-xxs  text-muted-foreground inline-flex items-center gap-1">
+                  {staged.length} staged
+                  {(totalStagedAdded > 0 || totalStagedDeleted > 0) && (
+                    <>
+                      {" · "}
+                      <DiffStats added={totalStagedAdded} deleted={totalStagedDeleted} />
+                    </>
+                  )}
+                </span>
+                <Button
+                  size="xs"
+                  onClick={handleCommit}
+                  disabled={staged.length === 0 || !commitMessage.trim() || commitLoading}
+                  loading={commitLoading}
+                  className="gap-1"
+                >
+                  <IconGitCommit className="size-3" />
+                  Commit
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <div className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 border-b border-foreground/5">
+            <span className="text-[11px] font-medium text-muted-foreground">
+              {totalCount} files
+            </span>
+            <DiffStats added={totalAdded} deleted={totalDeleted} />
+            <div className="flex-1" />
+            {refreshing && <IconLoader className="size-3 animate-spin text-muted-foreground" />}
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              onClick={() => load()}
+              className="size-5"
+              title="Refresh"
+            >
+              <IconRefresh className="size-3" stroke={1.5} />
+            </Button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto">
+            {staged.length > 0 && (
+              <Section title="Staged" count={staged.length}>
+                <GroupedFileList
+                  files={staged}
+                  onSelect={handleFileSelect}
+                  selectedPath={selectedPath}
+                  action="unstage"
+                  onAction={handleUnstage}
+                  actionLoadingPath={unstageLoading}
+                  revertLoadingPath={null}
+                />
+              </Section>
             )}
-          </TabsList>
+
+            <Section
+              title="Unstaged"
+              count={unstaged.length}
+              headerAction={
+                unstaged.length > 0 ? (
+                  <Button
+                    size="xs"
+                    variant="secondary"
+                    disabled={stageAllLoading}
+                    onClick={handleStageAll}
+                    className="text-xxs  h-5"
+                  >
+                    {stageAllLoading ? "Staging…" : "Stage all"}
+                  </Button>
+                ) : undefined
+              }
+            >
+              {unstaged.length === 0 ? (
+                <p className="px-2 py-2 text-xxs  text-muted-foreground">No unstaged changes</p>
+              ) : (
+                <GroupedFileList
+                  files={unstaged}
+                  onSelect={handleFileSelect}
+                  selectedPath={selectedPath}
+                  action="stage"
+                  onAction={handleStage}
+                  actionLoadingPath={stageLoading}
+                  onRevert={handleRevert}
+                  revertLoadingPath={revertLoading}
+                />
+              )}
+            </Section>
+          </div>
+        </>
+      ) : (
+        <div className="flex flex-col gap-3 p-3">
+          <div className="flex items-center gap-2 rounded-lg bg-green-500/10 p-2.5">
+            <CircleCheckIcon className="size-4 text-green-600 dark:text-green-400" />
+            <span className="text-xs font-medium text-green-700 dark:text-green-300">
+              Committed successfully
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Push to <span className="font-medium text-foreground">{activeWorkspace.branch || "remote"}</span>?
+          </p>
+          {commitError && <p className="text-xs text-destructive">{commitError}</p>}
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="secondary" onClick={handleDone}>Done</Button>
+            <Button size="sm" onClick={handlePush} disabled={pushLoading} loading={pushLoading} className="gap-1">
+              <IconUpload className="size-3" />
+              Push
+            </Button>
+          </div>
         </div>
-
-        <TabsContent value="staged" className="mt-0 flex min-h-0 flex-1 flex-col overflow-hidden data-[state=inactive]:hidden">
-          {hasStaged ? (
-            <>
-              <div className="shrink-0 flex gap-2 p-2">
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  className="flex-1"
-                  onClick={() => openDrawer(null)}
-                >
-                  Review all
-                </Button>
-                <Button
-                  size="sm"
-                  className="flex-1"
-                  onClick={() => setCommitDialogOpen(true)}
-                >
-                  Commit Changes
-                </Button>
-              </div>
-              <div className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-1.5">
-                {staged.map((c) => (
-                  <ChangeRow
-                    key={c.path}
-                    path={c.path}
-                    added={c.added}
-                    deleted={c.deleted}
-                    workspacePath={workspacePath}
-                    onOpenDrawer={openDrawer}
-                    action="unstage"
-                    onAction={handleUnstage}
-                    actionLabel="Unstage"
-                    actionLoading={unstageLoading === c.path}
-                  />
-                ))}
-              </div>
-            </>
-          ) : (
-            <p className="py-4 text-center text-xs text-muted-foreground">No staged changes</p>
-          )}
-        </TabsContent>
-        <TabsContent value="unstaged" className="mt-0 flex min-h-0 flex-1 flex-col overflow-hidden data-[state=inactive]:hidden">
-          {hasChanges ? (
-            <>
-              <div className="shrink-0 flex items-center justify-end gap-1 px-2 py-1.5">
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  className="w-full"
-                  disabled={stageAllLoading}
-                  onClick={handleStageAll}
-                >
-                  {stageAllLoading ? "Staging…" : "Stage all"}
-                </Button>
-              </div>
-              <div className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-2">
-                {changes.map((c) => (
-                  <ChangeRow
-                    key={c.path}
-                    path={c.path}
-                    added={c.added}
-                    deleted={c.deleted}
-                    workspacePath={workspacePath}
-                    onOpenDrawer={openDrawer}
-                    action="stage"
-                    onAction={handleStage}
-                    actionLabel="Stage"
-                    actionLoading={stageLoading === c.path}
-                  />
-                ))}
-              </div>
-            </>
-          ) : (
-            <p className="py-4 text-center text-xs text-muted-foreground">No unstaged changes</p>
-          )}
-        </TabsContent>
-      </Tabs>
-
-   
-
-      <GitChangesDrawer
-        open={drawerOpen}
-        onOpenChange={handleDrawerOpenChange}
-        workspaceId={activeWorkspace.id}
-        changes={changes}
-        onRevert={load}
-        scrollToPath={drawerScrollToPath}
-      />
-
-      <GitCommitDialog
-        open={commitDialogOpen}
-        onOpenChange={setCommitDialogOpen}
-        workspaceId={activeWorkspace.id}
-        stagedChanges={staged}
-        branchName={activeWorkspace.branch}
-        onSuccess={load}
-      />
+      )}
     </div>
   );
 };

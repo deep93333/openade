@@ -83,7 +83,8 @@ export type ElectronAPI = {
     onGitChanged: (callback: (payload: { workspaceId: string }) => void) => () => void;
   };
   filesystem: {
-    readDirectoryTree: (path: string) => Promise<IpcResult<FileTreeNode>>;
+    readDirectoryTree: (path: string, maxDepth?: number) => Promise<IpcResult<FileTreeNode>>;
+    readDirectoryChildren: (dirPath: string) => Promise<IpcResult<FileTreeNode[]>>;
     readFile: (path: string) => Promise<IpcResult<string>>;
   };
   dialog: {

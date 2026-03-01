@@ -194,7 +194,7 @@ export const AgentPanel = () => {
         </Alert>
       )}
 
-      <div className="mx-auto mb-4 w-full max-w-2xl shrink-0 px-2">
+      <div className="mx-auto mb-4 w-full max-w-2xl shrink-0 px-4">
         <ChatEditor embedded />
       </div>
     </div>

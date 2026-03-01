@@ -2,7 +2,7 @@ const DV = "text-[15px] mr-1.5 shrink-0 inline-block leading-none";
 const SV = "size-4 mr-1.5 shrink-0";
 
 const ICON_COLOR =
-  "color-mix(in srgb, oklch(var(--oklch-accent) / 0.85) 35%, white)";
+  "rgba(255, 255, 255, 0.95)";
 
 export function FolderIcon({ name, open }: { name: string; open?: boolean }) {
   return (

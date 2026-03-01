@@ -2,6 +2,7 @@ import { ChevronDownIcon, Switch } from "@agentide/ui";
 import { IconRepeat } from "@tabler/icons-react";
 import { cn } from "@/lib/cn";
 import { useAgentStore } from "@/store/agent.store";
+import { FileName, DiffStats } from "@/components/primitives";
 import type { ThreadChangedFile } from "./types";
 
 type ChangedFilesSummary = { added: number; deleted: number };
@@ -35,20 +36,7 @@ export const ChangedFilesBar = ({
           disabled={isRunning}
         >
           <span className="truncate">Changed files ({threadChangedFiles.length})</span>
-          {(summary.added > 0 || summary.deleted > 0) && (
-            <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
-              {summary.added > 0 && (
-                <span className="rounded bg-green-500/15 px-1 text-green-700 dark:text-green-400">
-                  +{summary.added}
-                </span>
-              )}
-              {summary.deleted > 0 && (
-                <span className="rounded bg-red-500/15 px-1 text-red-700 dark:text-red-400">
-                  -{summary.deleted}
-                </span>
-              )}
-            </span>
-          )}
+          <DiffStats added={summary.added} deleted={summary.deleted} badge />
           <div className="flex-1" />
           <ChevronDownIcon
             className={cn("size-3.5 shrink-0 opacity-60 transition-transform", isExpanded && "rotate-180")}
@@ -73,19 +61,8 @@ export const ChangedFilesBar = ({
               onClick={() => onFileSelect?.(file.path)}
               className="flex w-full items-center gap-2 rounded px-2 py-2 text-left hover:bg-foreground/5"
             >
-              <span className="min-w-0 flex-1 truncate text-xs text-foreground/80">{file.path}</span>
-              <div className="flex shrink-0 items-center gap-1">
-                {file.added > 0 && (
-                  <span className="rounded bg-green-500/15 px-1.5 py-0.5 text-[10px] font-medium text-green-700 dark:text-green-400">
-                    +{file.added}
-                  </span>
-                )}
-                {file.deleted > 0 && (
-                  <span className="rounded bg-red-500/15 px-1.5 py-0.5 text-[10px] font-medium text-red-700 dark:text-red-400">
-                    -{file.deleted}
-                  </span>
-                )}
-              </div>
+              <FileName path={file.path} nameClassName="text-xs text-foreground/80" className="min-w-0 flex-1" />
+              <DiffStats added={file.added} deleted={file.deleted} badge className="shrink-0" />
             </button>
           ))}
         </div>

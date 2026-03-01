@@ -124,23 +124,27 @@ type WorkspaceTask = {
 
 type WorkspaceOption = { id: string; name: string; path: string };
 
-function flattenFileTree(node: FileTreeNode, rootPath: string): FileMentionItem[] {
-  const result: FileMentionItem[] = [];
+function flattenFileTreeBreadthFirst(node: FileTreeNode, rootPath: string): FileMentionItem[] {
+  const files: FileMentionItem[] = [];
+  const dirs: FileMentionItem[] = [];
+  const queue: FileTreeNode[] = [node];
 
-  const relativePath = node.path.startsWith(rootPath)
-    ? node.path.slice(rootPath.length).replace(/^\//, "")
-    : node.name;
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    const relativePath = current.path.startsWith(rootPath)
+      ? current.path.slice(rootPath.length).replace(/^\//, "")
+      : current.name;
 
-  if (relativePath && node.type === "file") {
-    result.push({ id: node.path, label: relativePath, type: "file" });
-  } else if (relativePath && node.type === "directory") {
-    result.push({ id: node.path, label: relativePath, type: "directory" });
+    if (relativePath) {
+      const item: FileMentionItem = { id: current.path, label: relativePath, type: current.type === "file" ? "file" : "directory" };
+      if (current.type === "file") files.push(item);
+      else dirs.push(item);
+    }
+
+    if (current.children) queue.push(...current.children);
   }
 
-  const children = node.children ?? [];
-  for (const child of children) result.push(...flattenFileTree(child, rootPath));
-
-  return result;
+  return [...files, ...dirs];
 }
 
 type TaskBacklogEditorProps = {
@@ -172,7 +176,7 @@ function TaskBacklogEditor({ workspacePath, placeholder, onTextChange, editorRef
 
     void api.filesystem.readDirectoryTree(workspacePath).then((res) => {
       if (res.success && res.data) {
-        setWorkspaceFiles(flattenFileTree(res.data, workspacePath));
+        setWorkspaceFiles(flattenFileTreeBreadthFirst(res.data, workspacePath));
         return;
       }
       setWorkspaceFiles([]);
@@ -184,6 +188,17 @@ function TaskBacklogEditor({ workspacePath, placeholder, onTextChange, editorRef
     if (!query) return workspaceFiles.slice(0, 15);
     return workspaceFiles
       .filter((file) => file.label.toLowerCase().includes(query) || file.id.toLowerCase().includes(query))
+      .sort((a, b) => {
+        const aName = a.label.split("/").pop()?.toLowerCase() ?? "";
+        const bName = b.label.split("/").pop()?.toLowerCase() ?? "";
+        const aNameMatch = aName.includes(query);
+        const bNameMatch = bName.includes(query);
+        if (aNameMatch !== bNameMatch) return aNameMatch ? -1 : 1;
+        const aStartsWith = aName.startsWith(query);
+        const bStartsWith = bName.startsWith(query);
+        if (aStartsWith !== bStartsWith) return aStartsWith ? -1 : 1;
+        return a.label.length - b.label.length;
+      })
       .slice(0, 15);
   }, [workspaceFiles, mentionQuery]);
 

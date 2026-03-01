@@ -32,6 +32,7 @@ export const IPC = {
   DIALOG_SELECT_FOLDER: "dialog:select-folder",
 
   READ_DIRECTORY_TREE: "filesystem:read-directory-tree",
+  READ_DIRECTORY_CHILDREN: "filesystem:read-directory-children",
   READ_FILE: "filesystem:read-file",
 
   CHAT_LOAD: "chat:load",

@@ -1,13 +1,12 @@
 import { useEffect, useState } from "react";
-import type { FileTreeNode } from "@agentide/shared";
 import { FileTreeItem } from "./file-tree-item";
-import { getElectronAPI } from "@/lib/electron";
 import { useWorkspaceStore } from "@/store/workspace.store";
+import { useFileTreeStore } from "@/store/file-tree.store";
 
-interface FileTreeProps {
+type FileTreeProps = {
   onFileSelect?: (path: string) => void;
   className?: string;
-}
+};
 
 export const FileTree = ({ onFileSelect, className }: FileTreeProps) => {
   const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
@@ -17,55 +16,23 @@ export const FileTree = ({ onFileSelect, className }: FileTreeProps) => {
   const fileTreeVersion = useWorkspaceStore((s) =>
     activeWorkspaceId ? (s.fileTreeVersions[activeWorkspaceId] ?? 0) : 0
   );
-  const [fileTree, setFileTree] = useState<FileTreeNode | null>(null);
+
+  const tree = useFileTreeStore((s) => s.tree);
+  const loading = useFileTreeStore((s) => s.loading);
+  const error = useFileTreeStore((s) => s.error);
+  const loadRoot = useFileTreeStore((s) => s.loadRoot);
+  const refresh = useFileTreeStore((s) => s.refresh);
+  const reset = useFileTreeStore((s) => s.reset);
+
   const [selectedPath, setSelectedPath] = useState<string>("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!activeWorkspace?.path) {
-      setFileTree(null);
+      reset();
       return;
     }
-
-    loadFileTree(activeWorkspace.path);
+    loadRoot(activeWorkspace.path);
   }, [activeWorkspace?.path, fileTreeVersion]);
-
-  const loadFileTree = async (workspacePath: string) => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const api = getElectronAPI();
-      if (!api) {
-        setError("Electron API not available");
-        return;
-      }
-
-      const response = await api.filesystem.readDirectoryTree(workspacePath);
-
-      if (response.success && response.data) {
-        setFileTree(response.data);
-      } else {
-        setError(response.error || "Failed to load file tree");
-      }
-    } catch (err) {
-      console.error("Failed to load file tree:", err);
-      setError("Failed to load file tree");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSelect = (path: string) => {
-    setSelectedPath(path);
-  };
-
-  const refresh = () => {
-    if (activeWorkspace?.path) {
-      loadFileTree(activeWorkspace.path);
-    }
-  };
 
   if (!activeWorkspace) {
     return (
@@ -97,7 +64,7 @@ export const FileTree = ({ onFileSelect, className }: FileTreeProps) => {
     );
   }
 
-  if (!fileTree) {
+  if (!tree) {
     return (
       <div className={`flex items-center justify-center h-32 text-sm text-muted-foreground ${className || ""}`}>
         No files found
@@ -106,12 +73,12 @@ export const FileTree = ({ onFileSelect, className }: FileTreeProps) => {
   }
 
   return (
-    <div className={`overflow-auto ${className || ""}`}>
-      <div className="p-2">
+    <div className={`overflow-auto min-w-0 ${className || ""}`}>
+      <div className=" min-w-0">
         <FileTreeItem
-          node={fileTree}
+          node={tree}
           depth={0}
-          onSelect={handleSelect}
+          onSelect={setSelectedPath}
           onFileSelect={onFileSelect}
           selectedPath={selectedPath}
         />

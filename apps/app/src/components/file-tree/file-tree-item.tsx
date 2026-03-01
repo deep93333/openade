@@ -1,4 +1,3 @@
-import { useState } from "react";
 import type { FileTreeNode } from "@agentide/shared";
 import {
   Button,
@@ -9,10 +8,14 @@ import {
   ContextMenuTrigger,
   cn,
 } from "@agentide/ui";
+import { IconLoader2 } from "@tabler/icons-react";
 import { getElectronAPI } from "@/lib/electron";
 import { useFileContextStore } from "@/store/file-context.store";
 import { useWorkspaceStore } from "@/store/workspace.store";
-import { FolderIcon, getFileTypeIcon } from "./file-icons";
+import { useFileTreeStore } from "@/store/file-tree.store";
+import { FileName } from "@/components/primitives";
+
+const INDENT_PX = 16;
 
 function ChevronIcon({ open }: { open: boolean }) {
   return (
@@ -34,6 +37,8 @@ function ChevronIcon({ open }: { open: boolean }) {
   );
 }
 
+const LINE_COLOR = "border-foreground/12";
+
 type FileTreeItemProps = {
   node: FileTreeNode;
   depth: number;
@@ -43,9 +48,7 @@ type FileTreeItemProps = {
 };
 
 export const FileTreeItem = ({ node, depth, onSelect, onFileSelect, selectedPath }: FileTreeItemProps) => {
-  const [isExpanded, setIsExpanded] = useState(depth < 2);
   const isDirectory = node.type === "directory";
-  const hasChildren = isDirectory && node.children && node.children.length > 0;
   const isSelected = selectedPath === node.path;
   const mentionFileInChat = useFileContextStore((s) => s.mentionFileInChat);
   const workspacePath = useWorkspaceStore((s) =>
@@ -54,11 +57,18 @@ export const FileTreeItem = ({ node, depth, onSelect, onFileSelect, selectedPath
   const canMentionFile =
     Boolean(mentionFileInChat) && (node.type === "file" || node.type === "directory");
 
+  const expandedPaths = useFileTreeStore((s) => s.expandedPaths);
+  const loadingPaths = useFileTreeStore((s) => s.loadingPaths);
+  const toggleDirectory = useFileTreeStore((s) => s.toggleDirectory);
+
+  const isExpanded = expandedPaths.has(node.path);
+  const isLoading = loadingPaths.has(node.path);
+  const hasChildren = isDirectory && node.children && node.children.length > 0;
+  const showChevron = isDirectory;
+
   const handleOpenInEditor = () => {
     const electronAPI = getElectronAPI();
-    if (!electronAPI?.editor?.openFile) {
-      return;
-    }
+    if (!electronAPI?.editor?.openFile) return;
     electronAPI.editor.openFile(node.path).catch((error) => {
       console.error("Failed to open file in external editor", error);
     });
@@ -66,12 +76,11 @@ export const FileTreeItem = ({ node, depth, onSelect, onFileSelect, selectedPath
 
   const handleMentionInChat = () => {
     mentionFileInChat?.({ filePath: node.path, workspacePath });
-    handleOpenInEditor();
   };
 
   const handleClick = () => {
     if (isDirectory) {
-      setIsExpanded(!isExpanded);
+      toggleDirectory(node.path);
     }
     onSelect?.(node.path);
     if (node.type === "file") {
@@ -81,43 +90,60 @@ export const FileTreeItem = ({ node, depth, onSelect, onFileSelect, selectedPath
 
   const handleToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (hasChildren) {
-      setIsExpanded(!isExpanded);
+    if (isDirectory) {
+      toggleDirectory(node.path);
     }
   };
 
   const row = (
     <div
       className={cn(
-        "flex items-center py-1 px-2 text-sm cursor-pointer rounded-lg hover:bg-foreground/10 select-none",
-        isSelected && "bg-accent/30 text-foreground/90",
+        "flex items-stretch py-0 pr-1 text-sm cursor-pointer hover:bg-foreground/10 select-none min-w-0",
+        isSelected && "bg-foreground/10 text-foreground/90",
         "group"
       )}
-      style={{ paddingLeft: `${depth * 16 + 8}px` }}
       onClick={handleClick}
     >
-      <div className="flex items-center min-w-0 flex-1">
-        {hasChildren ? (
+      {depth > 0 && (
+        <div className="flex shrink-0" aria-hidden>
+          {Array.from({ length: depth }).map((_, i) => (
+            <div
+              key={i}
+              className="shrink-0 relative"
+              style={{ width: INDENT_PX }}
+            >
+              <div
+                className={cn("absolute top-0 bottom-0 w-px", "bg-foreground/5")}
+                style={{ left: 7 }}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="flex items-center min-w-0 flex-1 gap-0.5 py-1">
+        {showChevron ? (
           <Button
             size="icon-xs"
             variant="ghost"
             onClick={handleToggle}
-            className="flex items-center justify-center w-4 h-4 mr-1 hover:bg-zinc-200"
           >
-            <ChevronIcon open={isExpanded} />
+            {isLoading ? (
+              <IconLoader2 className="size-2.5 animate-spin text-muted-foreground" />
+            ) : (
+              <ChevronIcon open={isExpanded} />
+            )}
           </Button>
         ) : (
-          <div className="w-5" />
+          <div className="w-5 shrink-0" />
         )}
 
-        <div className="flex items-center min-w-0">
-          {isDirectory ? (
-            <FolderIcon name={node.name} open={isExpanded} />
-          ) : (
-            getFileTypeIcon(node.name)
-          )}
-          <span className="truncate text-muted-foreground">{node.name}</span>
-        </div>
+        <FileName
+          path={node.name}
+          type={isDirectory ? "directory" : "file"}
+          isOpen={isExpanded}
+          nameClassName="text-muted-foreground"
+          className="min-w-0 flex-1 overflow-hidden"
+        />
       </div>
     </div>
   );
@@ -153,7 +179,7 @@ export const FileTreeItem = ({ node, depth, onSelect, onFileSelect, selectedPath
         row
       )}
 
-      {isDirectory && hasChildren && isExpanded && (
+      {isDirectory && isExpanded && hasChildren && (
         <div>
           {node.children?.map((child) => (
             <FileTreeItem

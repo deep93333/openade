@@ -851,14 +851,48 @@ export const registerIpcHandlers = (): void => {
     return { success: true, data: filePaths[0] ?? null };
   });
 
-  ipcMain.handle(IPC.READ_DIRECTORY_TREE, async (_event, dirPath: string) => {
+  ipcMain.handle(IPC.READ_DIRECTORY_TREE, async (_event, dirPath: string, maxDepth?: number) => {
     try {
-      const tree = await readDirectoryTree(dirPath);
+      const tree = await readDirectoryTree(dirPath, maxDepth ?? 10);
       return { success: true, data: tree };
     } catch (error) {
       return {
         success: false,
         error: error instanceof Error ? error.message : "Failed to read directory tree",
+      };
+    }
+  });
+
+  ipcMain.handle(IPC.READ_DIRECTORY_CHILDREN, async (_event, dirPath: string) => {
+    try {
+      const entries = await fs.readdir(dirPath, { withFileTypes: true });
+
+      const filteredEntries = entries.filter(entry => {
+        if (DIRECTORY_TREE_SKIP.has(entry.name)) return false;
+        if (entry.isDirectory() && entry.name.startsWith('.')) return false;
+        return true;
+      });
+
+      const children: FileTreeNode[] = [];
+      for (const entry of filteredEntries) {
+        const entryPath = path.join(dirPath, entry.name);
+        if (entry.isDirectory()) {
+          children.push({ name: entry.name, path: entryPath, type: "directory", children: [] });
+        } else if (entry.isFile()) {
+          children.push({ name: entry.name, path: entryPath, type: "file" });
+        }
+      }
+
+      children.sort((a, b) => {
+        if (a.type !== b.type) return a.type === "directory" ? -1 : 1;
+        return a.name.localeCompare(b.name);
+      });
+
+      return { success: true, data: children };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to read directory children",
       };
     }
   });
