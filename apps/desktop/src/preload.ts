@@ -154,8 +154,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
   },
 
   filesystem: {
-    readDirectoryTree: (path: string) =>
-      ipcRenderer.invoke(IPC.READ_DIRECTORY_TREE, path),
+    readDirectoryTree: (path: string, maxDepth?: number) =>
+      ipcRenderer.invoke(IPC.READ_DIRECTORY_TREE, path, maxDepth),
+    readDirectoryChildren: (dirPath: string) =>
+      ipcRenderer.invoke(IPC.READ_DIRECTORY_CHILDREN, dirPath),
     readFile: (path: string) => ipcRenderer.invoke(IPC.READ_FILE, path),
   },
 
