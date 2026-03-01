@@ -414,6 +414,28 @@ export class GitService {
       );
     }
   }
+
+  async init(workspacePath: string): Promise<void> {
+    try {
+      const git = this.getGit(workspacePath);
+      await git.init();
+    } catch (error) {
+      throw new Error(
+        `Failed to init git: ${error instanceof Error ? error.message : "Unknown error"}`
+      );
+    }
+  }
+
+  async clone(repoUrl: string, targetPath: string): Promise<void> {
+    try {
+      const git = simpleGit();
+      await git.clone(repoUrl, targetPath);
+    } catch (error) {
+      throw new Error(
+        `Failed to clone: ${error instanceof Error ? error.message : "Unknown error"}`
+      );
+    }
+  }
 }
 
 export const gitService = new GitService();

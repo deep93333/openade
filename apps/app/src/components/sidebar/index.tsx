@@ -43,7 +43,7 @@ export const Sidebar = () => {
           {workspaces.length === 0 ? (
             <div className="flex flex-1 p-2 flex-col items-center justify-center gap-3 px-4 text-center">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl">
-                <IconFolder className="size-5 text-muted-foreground" />
+                <IconFolder stroke={1} className="size-5 text-muted-foreground" />
               </div>
               <div>
                 <p className="text-xs font-medium text-muted-foreground">No workspaces</p>
@@ -68,21 +68,21 @@ export const Sidebar = () => {
                   className="w-full justify-start"
                   onClick={() => setIsDialogOpen(true)}
                 >
-                  <IconPlus /> New Project
+                  <IconPlus stroke={1} /> New Project
                 </Button>
                 <Button
                   variant={centerPage === "skills" ? "secondary" : "ghost"}
                   className={cn("w-full justify-start", centerPage === "skills" && "bg-foreground/5")}
                   onClick={() => setCenterPage("skills")}
                 >
-                  <IconBook className="size-4" /> Skills
+                  <IconBook stroke={1} className="size-4" /> Skills
                 </Button>
                 <Button
                   variant={centerPage === "tasks" ? "secondary" : "ghost"}
                   className={cn("w-full justify-start", centerPage === "tasks" && "bg-foreground/5")}
                   onClick={() => setCenterPage("tasks")}
                 >
-                  <IconList className="size-4" stroke={2} /> Tasks
+                  <IconList stroke={1} className="size-4" /> Tasks
                 </Button>
               </div>
               <div className="flex flex-col divide-y divide-foreground/5">
@@ -109,7 +109,7 @@ export const Sidebar = () => {
               className="ml-auto flex items-center justify-center size-6 rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
               title="API Key Settings"
             >
-              <IconKey className="size-3.5" stroke={1.75} />
+              <IconKey className="size-3.5" stroke={1} />
             </button>
           </div>
         </div>

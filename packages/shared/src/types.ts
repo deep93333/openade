@@ -40,6 +40,8 @@ export type AgentMessage = {
   inputTokens?: number;
   outputTokens?: number;
   costUsd?: number;
+  planContent?: string;
+  agentMode?: AgentMode;
 };
 
 export type Workspace = {

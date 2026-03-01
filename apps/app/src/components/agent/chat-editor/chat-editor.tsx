@@ -21,7 +21,7 @@ import { FileMentionList } from "../file-mention-list";
 import { EditorArea } from "./editor-area";
 import { ChangedFilesBar } from "./changed-files-bar";
 import { EmbeddedToolbar } from "./embedded-toolbar";
-import { TokenUsagePopover } from "./token-usage-popover";
+
 import type { AgentMessage } from "@agentide/shared";
 import type { ChatEditorProps } from "./types";
 
@@ -297,7 +297,7 @@ export const ChatEditor = ({ embedded = false }: ChatEditorProps) => {
   const mentionExtension = useMemo(
     () =>
       Mention.configure({
-        HTMLAttributes: { class: "font-medium text-accent" },
+        HTMLAttributes: { class: "font-medium text-accent-foreground", "data-type": "mention" },
         suggestion: {
           char: "@",
           items: () => [],
@@ -464,6 +464,7 @@ export const ChatEditor = ({ embedded = false }: ChatEditorProps) => {
   const editorArea = (
     <EditorArea
       editor={editor}
+      
       embedded={embedded}
       imageAttachments={imageAttachments}
       onRemoveImage={handleRemoveImageAttachment}
@@ -508,7 +509,6 @@ export const ChatEditor = ({ embedded = false }: ChatEditorProps) => {
         >
           <ImageIcon className="size-5" />
         </Button>
-        <TokenUsagePopover />
         {isRunning ? (
           <Button size="icon-sm" variant="destructive" onClick={() => activeWorkspaceId && stopAgent(activeWorkspaceId)} rounded="full">
             <StopIcon className="size-5" />

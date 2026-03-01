@@ -20,6 +20,7 @@ import { CARD_CLASS } from "./constants";
 export const AppLayout = () => {
   const {
     activeWorkspace,
+    leftPanelOpen,
     rightPanelOpen,
     activeView,
     setActiveView,
@@ -49,14 +50,6 @@ export const AppLayout = () => {
       <>
         <AppTopBar
           title={activeWorkspace?.name ?? "AgentIDE"}
-          left={
-            activeWorkspace?.branch ? (
-              <BranchSwitcher
-                workspaceId={activeWorkspace.id}
-                currentBranch={activeWorkspace.branch}
-              />
-            ) : undefined
-          }
         />
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <AgentPanel />
@@ -68,13 +61,14 @@ export const AppLayout = () => {
     <TooltipProvider>
       <div className="flex h-screen w-full min-w-0 flex-col overflow-hidden bg-tertiary dark:bg-background">
         <div className="flex min-h-0 min-w-0 flex-1 flex-row overflow-hidden bg-tertiary dark:bg-background">
-          <Sidebar />
+          {leftPanelOpen && <Sidebar />}
           <Group orientation="horizontal" className="min-h-0 min-w-0 flex-1 bg-tertiary dark:bg-background gap-0.5">
             <Panel id="main" minSize={360}>
               <div
                 className={cn(
                   "py-2 flex min-w-0 h-full flex-col",
-                  showPanelGap ? "pr-0" : "pr-2"
+                  showPanelGap ? "pr-0" : "pr-2",
+                  leftPanelOpen ? "pl-0" : "pl-2"
                 )}
               >
                 <div className={cn("flex min-h-0 flex-1 flex-col overflow-hidden", CARD_CLASS)}>

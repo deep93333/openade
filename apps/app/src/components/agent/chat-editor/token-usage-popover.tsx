@@ -43,11 +43,10 @@ export const TokenUsagePopover = () => {
         <Button
           variant="ghost"
           size="xs"
-          className="min-w-[4.5rem] justify-end text-muted-foreground"
           title="Token usage"
         >
-          <IconChartBar stroke={1.5} className="size-4 shrink-0" />
-          <span className="text-xs tabular-nums">
+          <IconChartBar stroke={1} className="size-3.5 shrink-0" />
+          <span className="text-xxs">
             {formatTokens(totalUsed)} tokens
           </span>
         </Button>

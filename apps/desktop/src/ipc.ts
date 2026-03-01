@@ -867,6 +867,43 @@ export const registerIpcHandlers = (): void => {
     return { success: true, data: filePaths[0] ?? null };
   });
 
+  ipcMain.handle(
+    IPC.PROJECT_CREATE_EMPTY,
+    async (_event, parentDir: string, folderName: string) => {
+      try {
+        const targetPath = path.join(parentDir, folderName.trim());
+        if (targetPath === parentDir || !folderName.trim()) {
+          return { success: false, error: "Invalid folder name" };
+        }
+        await fs.mkdir(targetPath, { recursive: true });
+        await gitService.init(targetPath);
+        return { success: true, data: targetPath };
+      } catch (error) {
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : "Failed to create project",
+        };
+      }
+    }
+  );
+
+  ipcMain.handle(IPC.PROJECT_CLONE, async (_event, repoUrl: string, parentDir: string) => {
+    try {
+      const trimmed = repoUrl.trim();
+      if (!trimmed) return { success: false, error: "Repository URL is required" };
+      const baseName = path.basename(trimmed.replace(/\.git$/i, ""));
+      if (!baseName) return { success: false, error: "Invalid repository URL" };
+      const targetPath = path.join(parentDir, baseName);
+      await gitService.clone(trimmed, targetPath);
+      return { success: true, data: targetPath };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to clone repository",
+      };
+    }
+  });
+
   ipcMain.handle(IPC.READ_DIRECTORY_TREE, async (_event, dirPath: string, maxDepth?: number) => {
     try {
       const tree = await readDirectoryTree(dirPath, maxDepth ?? 10);

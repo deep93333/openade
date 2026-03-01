@@ -8,6 +8,7 @@ export type SecondaryPaneMode = "file" | "diff";
 type UIStoreState = {
   activeView: NavigationView;
   centerPage: CenterPage;
+  leftPanelOpen: boolean;
   rightPanelOpen: boolean;
   secondaryPane: {
     open: boolean;
@@ -18,6 +19,7 @@ type UIStoreState = {
 
   setActiveView: (view: NavigationView) => void;
   setCenterPage: (page: CenterPage) => void;
+  setLeftPanelOpen: (open: boolean) => void;
   setRightPanelOpen: (open: boolean) => void;
   openFileViewer: (path: string) => void;
   closeSecondaryPane: () => void;
@@ -46,12 +48,14 @@ type UIStoreState = {
 export const useUIStore = create<UIStoreState>()((set) => ({
   activeView: "files",
   centerPage: "chat",
+  leftPanelOpen: true,
   rightPanelOpen: false,
   secondaryPane: { open: false, mode: "file", path: null },
   webView: { open: false, url: "http://localhost:3000" },
 
   setActiveView: (view) => set({ activeView: view }),
   setCenterPage: (page) => set({ centerPage: page }),
+  setLeftPanelOpen: (open) => set({ leftPanelOpen: open }),
   setRightPanelOpen: (open) => set({ rightPanelOpen: open }),
   openFileViewer: (path) =>
     set({ secondaryPane: { open: true, mode: "file", path } }),

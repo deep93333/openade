@@ -168,6 +168,13 @@ contextBridge.exposeInMainWorld("electronAPI", {
     selectFolder: () => ipcRenderer.invoke(IPC.DIALOG_SELECT_FOLDER),
   },
 
+  project: {
+    createEmpty: (parentDir: string, folderName: string) =>
+      ipcRenderer.invoke(IPC.PROJECT_CREATE_EMPTY, parentDir, folderName),
+    clone: (repoUrl: string, parentDir: string) =>
+      ipcRenderer.invoke(IPC.PROJECT_CLONE, repoUrl, parentDir),
+  },
+
   terminal: {
     create: (params: { cwd?: string; cols?: number; rows?: number }) =>
       ipcRenderer.invoke(IPC.TERMINAL_CREATE, params),

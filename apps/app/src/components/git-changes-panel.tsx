@@ -174,7 +174,7 @@ type SectionProps = {
 function Section({ title, count, defaultOpen = true, headerAction, children }: SectionProps) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div>
+    <div className="pb-2">
       <div
         className="flex items-center gap-1.5 px-3 py-1.5 cursor-pointer select-none hover:bg-foreground/5"
         onClick={() => setOpen(!open)}
@@ -475,7 +475,7 @@ export const GitChangesPanel = ({ className, onFileSelect: _onFileSelect }: GitC
             </Button>
           </div>
 
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto divide-y divide-foreground/5">
             {staged.length > 0 && (
               <Section title="Staged" count={staged.length}>
                 <GroupedFileList
@@ -508,7 +508,7 @@ export const GitChangesPanel = ({ className, onFileSelect: _onFileSelect }: GitC
               }
             >
               {unstaged.length === 0 ? (
-                <p className="px-2 py-2 m-2 text-center bg-foreground/5 rounded-md text-xxs  text-muted-foreground">No unstaged changes</p>
+                <p className="px-3 py-3 m-2 text-center border border-dashed border-foreground/5 rounded-md text-xxs  text-muted-foreground">No unstaged changes</p>
               ) : (
                 <GroupedFileList
                   files={unstaged}

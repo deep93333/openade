@@ -14,6 +14,8 @@ import { useUIStore } from "@/store/ui.store";
 import { useChatEditorStore } from "@/store/chat-editor.store";
 import { ChatEditor } from "./chat-editor";
 import { MessageList } from "./message-list";
+import { BranchSwitcher } from "@/components/sidebar/branch-switcher";
+import { TokenUsagePopover } from "./chat-editor/token-usage-popover";
 
 const playCompletionSound = (isError = false) => {
   try {
@@ -47,6 +49,9 @@ const playCompletionSound = (isError = false) => {
 
 export const AgentPanel = () => {
   const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
+  const activeWorkspace = useWorkspaceStore((s) =>
+    s.workspaces.find((w) => w.id === activeWorkspaceId)
+  );
 
   const runtime = useAgentStore((s) =>
     s.getActiveRuntime(activeWorkspaceId ?? "")
@@ -162,8 +167,19 @@ export const AgentPanel = () => {
         </Alert>
       )}
 
-      <div className="mx-auto mb-4 w-full max-w-2xl shrink-0 px-4">
+      <div className="mx-auto mb-2 w-full max-w-2xl shrink-0 px-4">
         <ChatEditor embedded />
+        <div className="mt-2 flex items-center justify-between">
+          {activeWorkspace?.branch ? (
+            <BranchSwitcher
+              workspaceId={activeWorkspace.id}
+              currentBranch={activeWorkspace.branch}
+            />
+          ) : (
+            <div />
+          )}
+          <TokenUsagePopover />
+        </div>
       </div>
     </div>
   );

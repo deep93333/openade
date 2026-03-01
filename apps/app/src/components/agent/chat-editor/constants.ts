@@ -7,8 +7,7 @@ export const AGENT_MODES: {
   description: string;
   icon: React.ComponentType<{ className?: string }>;
 }[] = [
-  { value: "agent", label: "Agent", description: "Full Claude Code agent with all tools", icon: LlmChatIcon },
-  // TODO: re-enable when ready
-  // { value: "plan", label: "Plan", description: "Reads code and plans changes, no edits", icon: TodoListIcon },
-  // { value: "ask", label: "Ask", description: "Answers questions without using any tools", icon: ChatBubbleLineIcon },
+  { value: "ask", label: "Ask", description: "Answers questions without using any tools", icon: ChatBubbleLineIcon },
+  { value: "plan", label: "Plan", description: "Creates a structured plan, then build from it", icon: TodoListIcon },
+  { value: "agent", label: "Agent", description: "Full agent with all tools", icon: LlmChatIcon },
 ];

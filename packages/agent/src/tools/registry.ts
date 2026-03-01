@@ -74,6 +74,19 @@ export function createToolSet(
   };
 }
 
+export function createReadOnlyToolSet(
+  ctx: ToolContext,
+  onToolCall?: (meta: ToolCallMetadata) => void,
+): ToolSet {
+  return {
+    read: wrapTool(readTool, ctx, onToolCall),
+    glob: wrapTool(globTool, ctx, onToolCall),
+    grep: wrapTool(grepTool, ctx, onToolCall),
+    ls: wrapTool(lsTool, ctx, onToolCall),
+    readlints: wrapTool(readLintsTool, ctx, onToolCall),
+  };
+}
+
 export function getToolIds(): string[] {
   return [bashTool, readTool, writeTool, editTool, globTool, grepTool, lsTool, todoWriteTool, deleteTool, readLintsTool, askQuestionTool].map(
     (t) => t.id,

@@ -306,6 +306,7 @@ button {
 .tiptap .ProseMirror {
   caret-color: var(--color-foreground, #18181b);
   cursor: text;
+  line-height: 1.8;
 }
 
 .ProseMirror:focus,

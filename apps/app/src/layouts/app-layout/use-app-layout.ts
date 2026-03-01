@@ -12,6 +12,7 @@ export function useAppLayout() {
   const initAgentListeners = useAgentStore((s) => s.initListeners);
   const teardownAgentListeners = useAgentStore((s) => s.teardownListeners);
   const pendingToolApprovals = useAgentStore((s) => s.pendingToolApprovals);
+  const leftPanelOpen = useUIStore((s) => s.leftPanelOpen);
   const rightPanelOpen = useUIStore((s) => s.rightPanelOpen);
   const activeView = useUIStore((s) => s.activeView);
   const setActiveView = useUIStore((s) => s.setActiveView);
@@ -70,6 +71,7 @@ export function useAppLayout() {
   return {
     activeWorkspace,
     activeWorkspaceId,
+    leftPanelOpen,
     rightPanelOpen,
     activeView,
     setActiveView,

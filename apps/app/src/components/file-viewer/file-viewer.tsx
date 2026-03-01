@@ -1,6 +1,6 @@
 import type { ChangeEvent, KeyboardEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button, ChatBubbleLineIcon, CircleXIcon } from "@agentide/ui";
+import { Button, ChatBubbleLineIcon, CircleXIcon, Textarea } from "@agentide/ui";
 import { File } from "@pierre/diffs/react";
 import { useFileContextStore } from "@/store/file-context.store";
 import { getElectronAPI } from "@/lib/electron";
@@ -258,24 +258,28 @@ export const FileViewer = ({
             />
             {selection && (
               <div
-                className="absolute left-0 right-0 z-50 px-6"
+                className="absolute  max-w-[400px] w-full right-0 z-50 px-6"
                 style={{ top: selection.anchorY + 4 }}
               >
-                <div className="rounded-lg shadow-popover bg-secondary/95 backdrop-blur-xl">
-                  <div className="flex items-center justify-between gap-2 px-3 pt-2.5 pb-1.5">
-                    <div className="flex items-center gap-1.5">
-                      <ChatBubbleLineIcon className="size-4 text-muted-foreground" />
-                      <span className="text-sm font-medium text-muted-foreground">
-                        {rangeLabel}
-                      </span>
-                    </div>
+                <div className="rounded-xl shadow-popover bg-secondary">
+                  <p className="text-xs font-medium text-foreground px-3 pt-2.5 pb-1">Add a comment {rangeLabel}</p>
+                <div className="p-1.5">
+                    <Textarea
+                      value={comment}
+                      onChange={handleCommentChange}
+                      placeholder="Add a comment… (⌘↵ to send)"
+                      className="w-full bg-background/50! min-h-[80px] text-xs"
+                    />
+                  </div>
+                  <div className="flex items-center justify-end gap-2 px-1.5 pb-1.5">
+                    
                     <div className="flex items-center gap-1">
                       <Button
                         size="sm"
                         variant="secondary"
                         onClick={handleClearSelection}
                       >
-                        Esc
+                        Cancel
                       </Button>
                       <Button
                         size="sm"
@@ -286,17 +290,7 @@ export const FileViewer = ({
                       </Button>
                     </div>
                   </div>
-                  <div className="px-3 pb-2.5">
-                    <textarea
-                      ref={textareaRef}
-                      value={comment}
-                      onChange={handleCommentChange}
-                      onKeyDown={handleKeyDown}
-                      rows={3}
-                      placeholder="Add a comment… (⌘↵ to send)"
-                      className="w-full resize-none rounded-md bg-transparent px-2 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/60 focus:border-accent/50 focus:outline-none"
-                    />
-                  </div>
+                
                 </div>
               </div>
             )}

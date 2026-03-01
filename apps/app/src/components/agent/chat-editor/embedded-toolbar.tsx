@@ -12,7 +12,7 @@ import {
 import { IconPaperclip } from "@tabler/icons-react";
 import { useAgentStore } from "@/store/agent.store";
 import { useChatEditorStore } from "@/store/chat-editor.store";
-import { TokenUsagePopover } from "./token-usage-popover";
+import { ModeSelector } from "./mode-selector";
 
 type EmbeddedToolbarProps = {
   isRunning: boolean;
@@ -46,6 +46,7 @@ export const EmbeddedToolbar = ({
   return (
     <div className="flex flex-wrap items-center gap-2 pb-2 px-2">
       <div className="flex flex-wrap items-center gap-2">
+        <ModeSelector disabled={isRunning} />
         {canShowAttach && (
           <Button
             size="icon-xs"
@@ -82,7 +83,6 @@ export const EmbeddedToolbar = ({
           </DropdownMenu>
         )}
 
-        <TokenUsagePopover />
         {isRunning ? (
           <Button size="icon-sm" rounded="full" variant="secondary" onClick={onStop}>
             <StopIcon className="size-4" />

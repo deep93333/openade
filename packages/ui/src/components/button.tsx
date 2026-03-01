@@ -22,7 +22,7 @@ const buttonVariants = cva(
         destructive:
           "bg-destructive text-white [&_.shortcut]:text-white/70 hover:bg-destructive-hover",
         bordered:
-          "bg-base-background dark:bg-secondary hover:bg-base-background dark:hover:bg-secondary text-foreground/90 hover:text-foreground [&_[data-shortcut='true']]:text-foreground/50 shadow-button",
+          "bg-base-background dark:bg-secondary hover:bg-base-background dark:hover:bg-secondary text-foreground/90 hover:text-foreground [&_[data-shortcut='true']]:text-foreground/50 shadow-button dark:hover:opacity-80",
         secondary:
           "bg-foreground/10 text-foreground/90 hover:text-foreground hover:bg-foreground/15 [&_[data-shortcut='true']]:text-foreground/50",
         ghost:

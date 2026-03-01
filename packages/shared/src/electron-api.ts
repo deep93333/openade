@@ -91,6 +91,10 @@ export type ElectronAPI = {
   dialog: {
     selectFolder: () => Promise<IpcResult<string | null>>;
   };
+  project: {
+    createEmpty: (parentDir: string, folderName: string) => Promise<IpcResult<string>>;
+    clone: (repoUrl: string, parentDir: string) => Promise<IpcResult<string>>;
+  };
   terminal: {
     create: (params: { cwd?: string; cols?: number; rows?: number }) => Promise<IpcResult<{ terminalId: string }>>;
     write: (terminalId: string, data: string) => Promise<IpcResult>;

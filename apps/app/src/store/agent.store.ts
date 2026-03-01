@@ -79,6 +79,7 @@ type AgentStoreState = {
     prompt: string,
     options?: { displayContent?: string; imageAttachments?: ImageAttachment[]; provider?: AgentProvider }
   ) => Promise<void>;
+  buildFromPlan: (workspaceId: string, planContent: string) => Promise<void>;
   stopAgent: (workspaceId: string) => Promise<void>;
 
   addMessage: (message: AgentMessage) => void;
@@ -353,7 +354,7 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
     const userMessage: AgentMessage = {
       id: crypto.randomUUID(),
       role: "user",
-      content: displayContent ? normalizeUserMessageContentToText(displayContent) : trimmed,
+      content: displayContent ?? trimmed,
       timestamp: Date.now(),
     };
 
@@ -491,9 +492,7 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
     const userMessage: AgentMessage = {
       id: crypto.randomUUID(),
       role: "user",
-      content: options?.displayContent
-        ? normalizeUserMessageContentToText(options.displayContent)
-        : prompt,
+      content: options?.displayContent ?? prompt,
       timestamp: Date.now(),
       imageAttachments: images,
     };
@@ -523,7 +522,13 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
     const resumeSessionId = activeThread?.sdkSessionId;
     const provider = options?.provider ?? activeThread?.provider ?? get().selectedProvider;
 
-    const existingMessages = activeThread ? activeThread.messages.slice(0, -1) : [];
+    const existingMessages = activeThread
+      ? activeThread.messages.slice(0, -1).map((m) =>
+          m.role === "user"
+            ? { ...m, content: normalizeUserMessageContentToText(m.content) }
+            : m
+        )
+      : [];
     const result = await api.agent.start({
       prompt,
       workspaceId,
@@ -578,6 +583,12 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
         };
       });
     }
+  },
+
+  buildFromPlan: async (workspaceId, planContent) => {
+    const prompt = `Execute the following implementation plan step by step. Follow each step precisely, reading the relevant files first before making changes.\n\n---\n${planContent}\n---\n\nBegin implementing the plan now.`;
+    set({ selectedMode: "agent" });
+    await get().startAgent(workspaceId, prompt);
   },
 
   stopAgent: async (workspaceId) => {

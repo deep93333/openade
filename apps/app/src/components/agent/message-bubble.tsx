@@ -5,6 +5,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  PlayIcon,
   RotateIcon,
 } from "@agentide/ui";
 import { cn } from "@/lib/cn";
@@ -35,7 +36,7 @@ function normalizeUserContent(content: string): NormalizedPart[] {
   const trimmed = content.trim();
   if (!trimmed) return [];
   const unescaped = unescapeHtml(trimmed);
-  const looksLikeHtml = /<[^>]+>/.test(unescaped) && /data-type\s*=\s*["']mention["']/.test(unescaped);
+  const looksLikeHtml = /<[^>]+>/.test(unescaped);
   if (looksLikeHtml) {
     try {
       const doc = new DOMParser().parseFromString(unescaped, "text/html");
@@ -168,6 +169,34 @@ function MessageUsageFooter({ message }: { message: AgentMessage }) {
   );
 }
 
+function PlanBuildFooter({ planContent }: { planContent: string }) {
+  const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
+  const buildFromPlan = useAgentStore((s) => s.buildFromPlan);
+  const runtime = useAgentStore((s) =>
+    s.getActiveRuntime(activeWorkspaceId ?? "")
+  );
+  const isRunning = runtime.status === "running";
+
+  const handleBuild = () => {
+    if (!activeWorkspaceId || isRunning) return;
+    buildFromPlan(activeWorkspaceId, planContent);
+  };
+
+  return (
+    <div className="mt-3 flex items-center gap-2">
+      <Button
+        size="sm"
+        variant="brand"
+        onClick={handleBuild}
+        disabled={!activeWorkspaceId || isRunning}
+      >
+        <PlayIcon className="size-3.5 mr-1.5" />
+        Build from Plan
+      </Button>
+    </div>
+  );
+}
+
 export const MessageBubble = ({ message, messageIndex }: MessageBubbleProps) => {
   const isUser = message.role === "user";
   const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
@@ -185,6 +214,7 @@ export const MessageBubble = ({ message, messageIndex }: MessageBubbleProps) => 
   }
 
   const codeRestoreAvailable = isCodeRestoreAvailable(checkpoint);
+  const isPlanMessage = !isUser && !!message.planContent && !message.isPartial;
 
   return (
     <div className="flex gap-3 px-4 py-3 w-full group">
@@ -192,8 +222,8 @@ export const MessageBubble = ({ message, messageIndex }: MessageBubbleProps) => 
         className={cn(
           "max-w-2xl rounded-lg super-ellipse py-1 text-sm leading-relaxed flex-1 min-w-0",
           isUser
-            ? "bg-foreground/10 px-3 !text-white [&_[data-type=mention]]:font-medium [&_[data-type=mention]]:text-accent"
-            : "bg-transparent w-full px-0 py-0 text-foreground [&_[data-type=mention]]:font-medium [&_[data-type=mention]]:text-accent"
+            ? "bg-foreground/10 px-3 !text-white [&_[data-type=mention]]:font-medium [&_[data-type=mention]]:text-accent-foreground"
+            : "bg-transparent w-full px-0 py-0 text-foreground [&_[data-type=mention]]:font-medium [&_[data-type=mention]]:text-accent-foreground"
         )}
       >
         {isUser ? (
@@ -203,6 +233,7 @@ export const MessageBubble = ({ message, messageIndex }: MessageBubbleProps) => 
             <MarkdownMessage content={message.content} />
           </div>
         )}
+        {isPlanMessage && <PlanBuildFooter planContent={message.planContent!} />}
         <MessageUsageFooter message={message} />
       </div>
       {isUser && checkpoint && activeWorkspace && (

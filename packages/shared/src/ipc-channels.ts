@@ -32,6 +32,9 @@ export const IPC = {
 
   DIALOG_SELECT_FOLDER: "dialog:select-folder",
 
+  PROJECT_CREATE_EMPTY: "project:create-empty",
+  PROJECT_CLONE: "project:clone",
+
   READ_DIRECTORY_TREE: "filesystem:read-directory-tree",
   READ_DIRECTORY_CHILDREN: "filesystem:read-directory-children",
   READ_FILE: "filesystem:read-file",

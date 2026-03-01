@@ -10,6 +10,7 @@ import {
   Input,
   Label,
 } from "@agentide/ui";
+import { IconFolder, IconPlus, IconLink } from "@tabler/icons-react";
 import { useWorkspaceStore } from "@/store/workspace.store";
 import { getElectronAPI } from "@/lib/electron";
 
@@ -18,79 +19,341 @@ type CreateWorkspaceDialogProps = {
   onClose: () => void;
 };
 
+type WorkspaceMode = "existing" | "empty" | "clone";
+
+const OPTIONS: { value: WorkspaceMode; label: string }[] = [
+  { value: "existing", label: "Existing Project" },
+  { value: "empty", label: "New Project" },
+  { value: "clone", label: "Git Clone" },
+];
+
+function OptionIcon({ value }: { value: WorkspaceMode }) {
+  switch (value) {
+    case "existing":
+      return <IconFolder className="size-6" stroke={1} />;
+    case "empty":
+      return <IconPlus className="size-6" stroke={1} />;
+    case "clone":
+      return <IconLink className="size-6" stroke={1} />;
+  }
+}
+
+function getProjectNameFromPath(dirPath: string): string {
+  const normalized = dirPath.replace(/[/\\]+$/, "").split(/[/\\]/).filter(Boolean);
+  return normalized[normalized.length - 1] ?? "project";
+}
+
 export const CreateWorkspaceDialog = ({ isOpen, onClose }: CreateWorkspaceDialogProps) => {
-  const [name, setName] = useState("");
+  const [step, setStep] = useState<1 | 2>(1);
+  const [mode, setMode] = useState<WorkspaceMode | null>(null);
   const [path, setPath] = useState("");
+  const [folderName, setFolderName] = useState("");
+  const [cloneUrl, setCloneUrl] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const createWorkspace = useWorkspaceStore((s) => s.createWorkspace);
   const electronAPI = getElectronAPI();
   const hasFolderPicker = Boolean(electronAPI?.dialog?.selectFolder);
+  const hasProjectApi = Boolean(electronAPI?.project);
 
-  const handleSelectFolder = async () => {
+  const options = hasProjectApi ? OPTIONS : OPTIONS.slice(0, 1);
+
+  const handleSelectFolder = async (): Promise<string | null> => {
     const api = getElectronAPI();
-    if (!api?.dialog?.selectFolder) return;
+    if (!api?.dialog?.selectFolder) return null;
     const result = await api.dialog.selectFolder();
-    if (result.success && result.data) setPath(result.data);
+    return result.success && result.data ? result.data : null;
+  };
+
+  const addWorkspaceFromPath = async (dirPath: string) => {
+    const name = getProjectNameFromPath(dirPath);
+    await createWorkspace(name, dirPath);
+  };
+
+  const reset = () => {
+    setStep(1);
+    setMode(null);
+    setPath("");
+    setFolderName("");
+    setCloneUrl("");
+    setError(null);
+  };
+
+  const handleChooseOption = async (value: WorkspaceMode) => {
+    setError(null);
+    const api = getElectronAPI();
+    if (!api) return;
+
+    if (value === "existing") {
+      const selectedPath = await handleSelectFolder();
+      if (selectedPath) {
+        setIsSubmitting(true);
+        try {
+          await addWorkspaceFromPath(selectedPath);
+          reset();
+          onClose();
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "Failed to add workspace");
+        } finally {
+          setIsSubmitting(false);
+        }
+      } else if (hasFolderPicker) {
+        return;
+      } else {
+        setMode("existing");
+        setStep(2);
+      }
+      return;
+    }
+
+    if (value === "empty") {
+      const parentPath = await handleSelectFolder();
+      if (parentPath) {
+        setPath(parentPath);
+        setMode("empty");
+        setStep(2);
+      } else if (!hasFolderPicker) {
+        setMode("empty");
+        setStep(2);
+      }
+      return;
+    }
+
+    setMode(value);
+    setStep(2);
+  };
+
+  const handleBack = () => {
+    setStep(1);
+    setMode(null);
+    setPath("");
+    setFolderName("");
+    setCloneUrl("");
+    setError(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !path.trim()) return;
-    await createWorkspace(name.trim(), path.trim());
-    setName("");
-    setPath("");
-    onClose();
+    setError(null);
+    const api = getElectronAPI();
+    if (!api || !mode) return;
+
+    if (mode === "existing") {
+      if (!path.trim()) return;
+      setIsSubmitting(true);
+      try {
+        await addWorkspaceFromPath(path.trim());
+        reset();
+        onClose();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to add workspace");
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
+
+    if (mode === "empty") {
+      if (!path.trim() || !folderName.trim()) return;
+      setIsSubmitting(true);
+      try {
+        const result = await api.project.createEmpty(path.trim(), folderName.trim());
+        if (!result.success || !result.data) {
+          setError(result.error ?? "Failed to create project");
+          return;
+        }
+        await addWorkspaceFromPath(result.data);
+        reset();
+        onClose();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to create project");
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
+
+    if (mode === "clone") {
+      if (!path.trim() || !cloneUrl.trim()) return;
+      setIsSubmitting(true);
+      try {
+        const result = await api.project.clone(cloneUrl.trim(), path.trim());
+        if (!result.success || !result.data) {
+          setError(result.error ?? "Failed to clone repository");
+          return;
+        }
+        await addWorkspaceFromPath(result.data);
+        reset();
+        onClose();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to clone repository");
+      } finally {
+        setIsSubmitting(false);
+      }
+    }
   };
 
+  const canSubmit =
+    mode === "existing"
+      ? path.trim().length > 0
+      : mode === "empty"
+        ? path.trim().length > 0 && folderName.trim().length > 0
+        : path.trim().length > 0 && cloneUrl.trim().length > 0;
+
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && (reset(), onClose())}>
       <DialogContent className="w-[440px] p-4">
-        <DialogTitle>New Workspace</DialogTitle>
+        <DialogTitle>Add Workspace</DialogTitle>
         <DialogDescription>
-          Add a directory to work with the agent.
+          {step === 1
+            ? "Choose how you want to add a workspace."
+            : mode === "existing"
+              ? "Select an existing project folder. Name is taken from the folder."
+              : mode === "empty"
+                ? "Create a new folder with git init. Name is taken from the folder."
+                : "Clone a repository. Name is taken from the cloned folder."}
         </DialogDescription>
 
         <form onSubmit={handleSubmit}>
           <DialogBody className="mt-5 flex flex-col gap-4">
-            <div className="flex flex-col gap-1.5">
-              <Label>Name</Label>
-              <Input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="my-project"
-                autoFocus
-              />
-            </div>
+            {step === 1 && (
+              <div className="flex flex-col gap-4">
+                <Label>What do you want to do?</Label>
+                <div className="flex flex-row gap-2">
+                  {options.map(({ value, label }) => (
+                    <Button
+                      key={value}
+                      type="button"
+                      variant="bordered"
+                      onClick={() => handleChooseOption(value)}
+                      className="flex flex-1 flex-col gap-1.5 h-24"
+                    >
+                      <OptionIcon value={value} />
+                      {label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
 
-            <div className="flex flex-col gap-1.5">
-              <Label>Directory</Label>
-              <div className="flex gap-2">
-                <Input
-                  type="text"
-                  value={path}
-                  onChange={(e) => setPath(e.target.value)}
-                  placeholder={
-                    hasFolderPicker
-                      ? "Select a folder or paste path"
-                      : "/Users/you/projects/my-project"
-                  }
-                />
-                {hasFolderPicker && (
-                  <Button type="button" variant="secondary" onClick={handleSelectFolder}>
-                    Browse…
-                  </Button>
+            {step === 2 && mode === "existing" && (
+              <div className="flex flex-col gap-1.5">
+                <Label>Directory</Label>
+                <div className="flex gap-2">
+                  <Input
+                    type="text"
+                    value={path}
+                    onChange={(e) => setPath(e.target.value)}
+                    placeholder={
+                      hasFolderPicker
+                        ? "Select a folder or paste path"
+                        : "/Users/you/projects/my-project"
+                    }
+                  />
+                  {hasFolderPicker && (
+                    <Button type="button" variant="secondary" onClick={handleSelectFolder}>
+                      Browse…
+                    </Button>
+                  )}
+                </div>
+                {path.trim() && (
+                  <p className="text-xs text-muted-foreground">
+                    Project name: {getProjectNameFromPath(path)}
+                  </p>
                 )}
               </div>
-            </div>
+            )}
+
+            {step === 2 && mode === "empty" && (
+              <>
+                <div className="flex flex-col gap-1.5">
+                  <Label>Parent directory</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      type="text"
+                      value={path}
+                      onChange={(e) => setPath(e.target.value)}
+                      placeholder={
+                        hasFolderPicker ? "Select folder or paste path" : "/Users/you/projects"
+                      }
+                    />
+                    {hasFolderPicker && (
+                      <Button type="button" variant="secondary" onClick={handleSelectFolder}>
+                        Browse…
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label>Folder name</Label>
+                  <Input
+                    type="text"
+                    value={folderName}
+                    onChange={(e) => setFolderName(e.target.value)}
+                    placeholder="my-project"
+                  />
+                </div>
+              </>
+            )}
+
+            {step === 2 && mode === "clone" && (
+              <>
+                <div className="flex flex-col gap-1.5">
+                  <Label>Clone into (parent directory)</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      type="text"
+                      value={path}
+                      onChange={(e) => setPath(e.target.value)}
+                      placeholder={
+                        hasFolderPicker ? "Select folder or paste path" : "/Users/you/projects"
+                      }
+                    />
+                    {hasFolderPicker && (
+                      <Button type="button" variant="secondary" onClick={handleSelectFolder}>
+                        Browse…
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label>Repository URL</Label>
+                  <Input
+                    type="text"
+                    value={cloneUrl}
+                    onChange={(e) => setCloneUrl(e.target.value)}
+                    placeholder="https://github.com/user/repo.git"
+                  />
+                </div>
+              </>
+            )}
+
+            {error && (
+              <p className="text-sm text-destructive" role="alert">
+                {error}
+              </p>
+            )}
           </DialogBody>
 
           <DialogFooter className="mt-6 justify-end gap-2">
-            <Button type="button" variant="ghost" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" variant="brand" disabled={!name.trim() || !path.trim()}>
-              Create
-            </Button>
+            {step === 1 ? (
+              <Button type="button" variant="ghost" onClick={() => (reset(), onClose())}>
+                Cancel
+              </Button>
+            ) : (
+              <>
+                <Button type="button" variant="ghost" onClick={handleBack}>
+                  Back
+                </Button>
+                <Button
+                  type="submit"
+                  variant="brand"
+                  disabled={!canSubmit || isSubmitting}
+                >
+                  {isSubmitting ? "Adding…" : mode === "existing" ? "Add" : "Create & add"}
+                </Button>
+              </>
+            )}
           </DialogFooter>
         </form>
       </DialogContent>

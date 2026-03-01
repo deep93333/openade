@@ -26,13 +26,13 @@ export function WorkspaceItemHeader() {
     >
       <div className="flex flex-1 items-center gap-3 min-w-0">
         <div className="flex relative flex-1 flex-row gap-2 items-center text-left">
-          <IconFolder className="size-4 text-muted-foreground" stroke={2} />
+          <IconFolder className="size-4 text-muted-foreground" stroke={1} />
           <span className="truncate text-sm font-medium">{workspace.name}</span>
           {isActive && <div className="size-2 rounded-full bg-accent" />}
         </div>
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="icon-xs" onClick={handlers.handleNewChat}>
-            <IconPlus className="size-3.5 text-muted-foreground" stroke={2} />
+            <IconPlus className="size-3.5 text-muted-foreground" stroke={1} />
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -41,7 +41,7 @@ export function WorkspaceItemHeader() {
                 size="icon-xs"
                 onClick={(e) => e.stopPropagation()}
               >
-                <IconDots className="size-3.5 text-muted-foreground" stroke={2} />
+                <IconDots className="size-3.5 text-muted-foreground" stroke={1} />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>

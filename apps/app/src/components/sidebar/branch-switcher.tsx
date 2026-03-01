@@ -5,7 +5,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
-  PlusIcon,
   Command,
   CommandEmpty,
   CommandGroup,
@@ -14,7 +13,7 @@ import {
   CommandList,
   CommandSeparator,
 } from "@agentide/ui";
-import { IconGitBranch } from "@tabler/icons-react";
+import { IconGitBranch, IconPlus } from "@tabler/icons-react";
 import { useWorkspaceStore } from "@/store/workspace.store";
 import { useUIStore } from "@/store/ui.store";
 import type { GitBranch } from "@agentide/shared";
@@ -119,7 +118,7 @@ export const BranchSwitcher = ({ workspaceId, currentBranch }: BranchSwitcherPro
                       className="flex items-center justify-between rounded-lg"
                     >
                       <div className="flex items-center gap-2">
-                        <IconGitBranch size={12} className="size-3" />
+                        <IconGitBranch stroke={1} size={12} className="size-3" />
                         <span className="truncate text-xs">{branch.name}</span>
                       </div>
                       {branch.current && (
@@ -141,7 +140,7 @@ export const BranchSwitcher = ({ workspaceId, currentBranch }: BranchSwitcherPro
                       className="text-muted-foreground rounded-lg"
                     >
                       <div className="flex items-center gap-2 overflow-hidden">
-                        <IconGitBranch size={12} className="size-3" />
+                        <IconGitBranch stroke={1} size={12} className="size-3" />
                         <span className="truncate text-xs">
                           {branch.remote}/{branch.name}
                         </span>
@@ -155,7 +154,7 @@ export const BranchSwitcher = ({ workspaceId, currentBranch }: BranchSwitcherPro
 
             <CommandGroup>
               <CommandItem className="rounded-lg" onSelect={() => openCreateBranchDialog(workspaceId)}>
-                <PlusIcon className="size-3 mr-2" />
+                <IconPlus stroke={1} className="size-3 mr-2" />
                 Create Branch
               </CommandItem>
 

@@ -8,9 +8,9 @@ import {
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createMinimax } from "vercel-minimax-ai-provider";
-import { createToolSet, type ToolCallMetadata } from "./tools/registry.js";
+import { createToolSet, createReadOnlyToolSet, type ToolCallMetadata } from "./tools/registry.js";
 import { buildSystemPrompt, COMPACTION_PROMPT } from "./system-prompt.js";
-import type { AgentMessage, AgentProvider } from "@agentide/shared";
+import type { AgentMessage, AgentMode, AgentProvider } from "@agentide/shared";
 import type {
   AgentBackend,
   AgentBackendStartOptions,
@@ -408,8 +408,9 @@ async function runAgent(
     workspacePath: options.workspacePath,
   });
 
+  const mode: AgentMode = options.mode ?? "agent";
   const languageModel = createLanguageModel(modelDef, config);
-  const systemPrompt = await buildSystemPrompt(options.workspacePath);
+  const systemPrompt = await buildSystemPrompt(options.workspacePath, mode);
 
   const abortController = new AbortController();
   activeSessions.set(sessionId, abortController);
@@ -419,52 +420,9 @@ async function runAgent(
   options.abortSignal.addEventListener("abort", onExternalAbort, { once: true });
   abortController.signal.addEventListener("abort", () => linkedAbort.abort(), { once: true });
 
-  const toolCtx: ToolContext = {
-    sessionId,
-    workspacePath: options.workspacePath,
-    abortSignal: linkedAbort.signal,
-    onMetadata: () => {},
-    requestUserInput: async (toolName: string, input: unknown) => {
-      if (!options.canUseTool) return { denied: false, updatedInput: input };
-      const result = await options.canUseTool(sessionId, toolName, input);
-      if (result.behavior === "deny") return { denied: true, message: result.message };
-      return { denied: false, updatedInput: result.updatedInput };
-    },
-    onToolStart: (meta) => {
-      options.onMessage({
-        id: meta.toolCallId,
-        role: "tool",
-        content: "",
-        toolName: meta.toolName,
-        toolInput: meta.input,
-        toolStatus: "running",
-        timestamp: Date.now(),
-        sessionId,
-        toolCallId: meta.toolCallId,
-      });
-    },
-  };
-
   let totalCostUsd = 0;
   let totalInputTokens = 0;
   let totalOutputTokens = 0;
-
-  const toolCallHandler = (meta: ToolCallMetadata) => {
-    options.onMessage({
-      id: meta.toolCallId,
-      role: "tool",
-      content: typeof meta.output === "string" ? meta.output : JSON.stringify(meta.output),
-      toolName: meta.toolName,
-      toolInput: meta.input,
-      toolResult: meta.metadata,
-      toolStatus: "completed",
-      timestamp: Date.now(),
-      sessionId,
-      toolCallId: meta.toolCallId,
-    });
-  };
-
-  const toolSet = createToolSet(toolCtx, toolCallHandler);
 
   const conversationHistory: ModelMessage[] = options.existingMessages?.length
     ? summarizeExistingMessages(options.existingMessages)
@@ -488,145 +446,357 @@ async function runAgent(
 
   conversationHistory.push({ role: "user", content: userContent } as ModelMessage);
 
-  let attempt = 0;
-
-  while (!linkedAbort.signal.aborted) {
-    try {
-      const prunedHistory = pruneConversation(conversationHistory);
-      let currentStreamedText = "";
-
-      const result = streamText({
-        model: languageModel,
-        system: systemPrompt,
-        messages: prunedHistory,
-        tools: toolSet,
-        stopWhen: stepCountIs(MAX_TOOL_STEPS),
-        abortSignal: linkedAbort.signal,
-        onError: ({ error }) => {
-          const err = error as { message?: string; statusCode?: number; responseBody?: string; data?: unknown };
-          writeAgentLog("ERROR", "Agent", "stream error", {
-            sessionId,
-            message: err.message ?? String(error),
-            statusCode: err.statusCode,
-            responseBody: err.responseBody ? (err.responseBody.length > 500 ? err.responseBody.slice(0, 500) + "…" : err.responseBody) : undefined,
-            data: err.data,
-          });
-        },
-      });
-
-      for await (const textDelta of result.textStream) {
-        if (linkedAbort.signal.aborted) break;
-        currentStreamedText += textDelta;
+  if (mode === "ask" || mode === "plan") {
+    const isAsk = mode === "ask";
+    const toolCtxReadOnly: ToolContext = {
+      sessionId,
+      workspacePath: options.workspacePath,
+      abortSignal: linkedAbort.signal,
+      onMetadata: () => {},
+      requestUserInput: async () => ({ denied: false, updatedInput: undefined }),
+      onToolStart: (meta) => {
         options.onMessage({
-          id: ulid(),
-          role: "assistant",
-          content: currentStreamedText,
-          isPartial: true,
+          id: meta.toolCallId,
+          role: "tool",
+          content: "",
+          toolName: meta.toolName,
+          toolInput: meta.input,
+          toolStatus: "running",
           timestamp: Date.now(),
           sessionId,
+          toolCallId: meta.toolCallId,
         });
-      }
+      },
+    };
 
-      const finalText = await result.text;
-      const finishReason = await result.finishReason;
-      const response = await result.response;
-
-      const totalUsage = await result.totalUsage;
-      if (totalUsage) {
-        const callInput = totalUsage.inputTokens ?? 0;
-        const callOutput = totalUsage.outputTokens ?? 0;
-        totalInputTokens += callInput;
-        totalOutputTokens += callOutput;
-        totalCostUsd += computeCost(totalUsage, modelDef);
-      }
-
-      if (finalText) {
-        options.onMessage({
-          id: ulid(),
-          role: "assistant",
-          content: finalText,
-          isPartial: false,
-          timestamp: Date.now(),
-          sessionId,
-        });
-      }
-
-      for (const msg of response.messages) {
-        conversationHistory.push(msg as ModelMessage);
-      }
-
-      attempt = 0;
-
-      if (finishReason !== "tool-calls") {
-        writeAgentLog("INFO", "Agent", "agent finished", { sessionId, reason: finishReason });
-        break;
-      }
-
-    } catch (error: unknown) {
-      if (linkedAbort.signal.aborted) {
-        writeAgentLog("INFO", "Agent", "agent aborted", { sessionId });
-        break;
-      }
-
-      const message = extractApiErrorMessage(error);
-      const err = error as { message?: string; statusCode?: number; responseBody?: string; data?: unknown; stack?: string };
-      let dataStr: string | undefined;
-      if (err.data != null) {
-        try {
-          dataStr = JSON.stringify(err.data).slice(0, 500);
-        } catch {
-          dataStr = String(err.data).slice(0, 500);
-        }
-      }
-      writeAgentLog("ERROR", "Agent", "agent loop error", {
+    const readOnlyToolCallHandler = (meta: ToolCallMetadata) => {
+      options.onMessage({
+        id: meta.toolCallId,
+        role: "tool",
+        content: typeof meta.output === "string" ? meta.output : JSON.stringify(meta.output),
+        toolName: meta.toolName,
+        toolInput: meta.input,
+        toolResult: meta.metadata,
+        toolStatus: "completed",
+        timestamp: Date.now(),
         sessionId,
-        message,
-        statusCode: err.statusCode,
-        responseBody: err.responseBody ? (err.responseBody.length > 1000 ? err.responseBody.slice(0, 1000) + "…" : err.responseBody) : undefined,
-        data: dataStr,
-        stack: err.stack?.slice(0, 800),
+        toolCallId: meta.toolCallId,
       });
+    };
 
-      if (isContextOverflow(error)) {
-        writeAgentLog("INFO", "Agent", "context overflow, attempting compaction", { sessionId });
-        const compacted = await compactConversation(conversationHistory, modelDef, config, linkedAbort.signal);
-        if (compacted) {
-          conversationHistory.length = 0;
-          conversationHistory.push(...compacted);
+    const readOnlyToolSet = createReadOnlyToolSet(toolCtxReadOnly, readOnlyToolCallHandler);
+    const READ_ONLY_MAX_STEPS = 20;
+    let attempt = 0;
+    let lastFinalText = "";
+
+    while (!linkedAbort.signal.aborted) {
+      try {
+        const prunedHistory = pruneConversation(conversationHistory);
+        let currentStreamedText = "";
+
+        const result = streamText({
+          model: languageModel,
+          system: systemPrompt,
+          messages: prunedHistory,
+          tools: readOnlyToolSet,
+          stopWhen: stepCountIs(READ_ONLY_MAX_STEPS),
+          abortSignal: linkedAbort.signal,
+          onError: ({ error }) => {
+            const err = error as { message?: string; statusCode?: number; responseBody?: string; data?: unknown };
+            writeAgentLog("ERROR", "Agent", "stream error", {
+              sessionId,
+              message: err.message ?? String(error),
+              statusCode: err.statusCode,
+            });
+          },
+        });
+
+        for await (const textDelta of result.textStream) {
+          if (linkedAbort.signal.aborted) break;
+          currentStreamedText += textDelta;
+          options.onMessage({
+            id: ulid(),
+            role: "assistant",
+            content: currentStreamedText,
+            isPartial: true,
+            timestamp: Date.now(),
+            sessionId,
+            agentMode: mode,
+          });
+        }
+
+        const finalText = await result.text;
+        const finishReason = await result.finishReason;
+        const response = await result.response;
+
+        const totalUsage = await result.totalUsage;
+        if (totalUsage) {
+          totalInputTokens += totalUsage.inputTokens ?? 0;
+          totalOutputTokens += totalUsage.outputTokens ?? 0;
+          totalCostUsd += computeCost(totalUsage, modelDef);
+        }
+
+        if (finalText) {
+          lastFinalText = finalText;
+          options.onMessage({
+            id: ulid(),
+            role: "assistant",
+            content: finalText,
+            isPartial: false,
+            timestamp: Date.now(),
+            sessionId,
+            agentMode: mode,
+            ...(!isAsk ? { planContent: finalText } : {}),
+          });
+        }
+
+        for (const msg of response.messages) {
+          conversationHistory.push(msg as ModelMessage);
+        }
+
+        attempt = 0;
+
+        if (finishReason !== "tool-calls") {
+          writeAgentLog("INFO", "Agent", `${mode} finished`, { sessionId, reason: finishReason });
+          break;
+        }
+      } catch (error: unknown) {
+        if (linkedAbort.signal.aborted) {
+          writeAgentLog("INFO", "Agent", `${mode} aborted`, { sessionId });
+          break;
+        }
+
+        const message = extractApiErrorMessage(error);
+        writeAgentLog("ERROR", "Agent", `${mode} loop error`, { sessionId, message });
+
+        attempt++;
+        const delay = parseRetryDelay(error, attempt);
+        if (delay !== null) {
+          writeAgentLog("INFO", "Agent", "retrying", { sessionId, attempt, delayMs: delay });
           options.onMessage({
             id: ulid(),
             role: "system",
-            content: "Context was too long — conversation has been summarized to continue.",
+            content: `Rate limited — retrying in ${Math.ceil(delay / 1000)}s (attempt ${attempt}/${RETRY_MAX_ATTEMPTS})...`,
             timestamp: Date.now(),
             sessionId,
           });
+          try {
+            await abortableSleep(delay, linkedAbort.signal);
+          } catch {
+            break;
+          }
           continue;
         }
-        options.onError({ sessionId, error: "Context overflow and compaction failed: " + message });
+
+        options.onError({ sessionId, error: message });
         break;
       }
+    }
 
-      attempt++;
-      const delay = parseRetryDelay(error, attempt);
-      if (delay !== null) {
-        writeAgentLog("INFO", "Agent", "retrying", { sessionId, attempt, delayMs: delay });
+    if (!isAsk && !lastFinalText && !linkedAbort.signal.aborted) {
+      const lastAssistant = conversationHistory.filter((m) => m.role === "assistant").pop();
+      if (lastAssistant) {
+        const content = typeof lastAssistant.content === "string"
+          ? lastAssistant.content
+          : JSON.stringify(lastAssistant.content);
+        if (content) {
+          options.onMessage({
+            id: ulid(),
+            role: "assistant",
+            content,
+            isPartial: false,
+            timestamp: Date.now(),
+            sessionId,
+            agentMode: mode,
+            planContent: content,
+          });
+        }
+      }
+    }
+  } else {
+    const toolCtx: ToolContext = {
+      sessionId,
+      workspacePath: options.workspacePath,
+      abortSignal: linkedAbort.signal,
+      onMetadata: () => {},
+      requestUserInput: async (toolName: string, input: unknown) => {
+        if (!options.canUseTool) return { denied: false, updatedInput: input };
+        const result = await options.canUseTool(sessionId, toolName, input);
+        if (result.behavior === "deny") return { denied: true, message: result.message };
+        return { denied: false, updatedInput: result.updatedInput };
+      },
+      onToolStart: (meta) => {
         options.onMessage({
-          id: ulid(),
-          role: "system",
-          content: `Rate limited — retrying in ${Math.ceil(delay / 1000)}s (attempt ${attempt}/${RETRY_MAX_ATTEMPTS})...`,
+          id: meta.toolCallId,
+          role: "tool",
+          content: "",
+          toolName: meta.toolName,
+          toolInput: meta.input,
+          toolStatus: "running",
           timestamp: Date.now(),
           sessionId,
+          toolCallId: meta.toolCallId,
         });
-        try {
-          await abortableSleep(delay, linkedAbort.signal);
-        } catch {
+      },
+    };
+
+    const toolCallHandler = (meta: ToolCallMetadata) => {
+      options.onMessage({
+        id: meta.toolCallId,
+        role: "tool",
+        content: typeof meta.output === "string" ? meta.output : JSON.stringify(meta.output),
+        toolName: meta.toolName,
+        toolInput: meta.input,
+        toolResult: meta.metadata,
+        toolStatus: "completed",
+        timestamp: Date.now(),
+        sessionId,
+        toolCallId: meta.toolCallId,
+      });
+    };
+
+    const toolSet = createToolSet(toolCtx, toolCallHandler);
+
+    let attempt = 0;
+
+    while (!linkedAbort.signal.aborted) {
+      try {
+        const prunedHistory = pruneConversation(conversationHistory);
+        let currentStreamedText = "";
+
+        const result = streamText({
+          model: languageModel,
+          system: systemPrompt,
+          messages: prunedHistory,
+          tools: toolSet,
+          stopWhen: stepCountIs(MAX_TOOL_STEPS),
+          abortSignal: linkedAbort.signal,
+          onError: ({ error }) => {
+            const err = error as { message?: string; statusCode?: number; responseBody?: string; data?: unknown };
+            writeAgentLog("ERROR", "Agent", "stream error", {
+              sessionId,
+              message: err.message ?? String(error),
+              statusCode: err.statusCode,
+              responseBody: err.responseBody ? (err.responseBody.length > 500 ? err.responseBody.slice(0, 500) + "…" : err.responseBody) : undefined,
+              data: err.data,
+            });
+          },
+        });
+
+        for await (const textDelta of result.textStream) {
+          if (linkedAbort.signal.aborted) break;
+          currentStreamedText += textDelta;
+          options.onMessage({
+            id: ulid(),
+            role: "assistant",
+            content: currentStreamedText,
+            isPartial: true,
+            timestamp: Date.now(),
+            sessionId,
+          });
+        }
+
+        const finalText = await result.text;
+        const finishReason = await result.finishReason;
+        const response = await result.response;
+
+        const totalUsage = await result.totalUsage;
+        if (totalUsage) {
+          const callInput = totalUsage.inputTokens ?? 0;
+          const callOutput = totalUsage.outputTokens ?? 0;
+          totalInputTokens += callInput;
+          totalOutputTokens += callOutput;
+          totalCostUsd += computeCost(totalUsage, modelDef);
+        }
+
+        if (finalText) {
+          options.onMessage({
+            id: ulid(),
+            role: "assistant",
+            content: finalText,
+            isPartial: false,
+            timestamp: Date.now(),
+            sessionId,
+          });
+        }
+
+        for (const msg of response.messages) {
+          conversationHistory.push(msg as ModelMessage);
+        }
+
+        attempt = 0;
+
+        if (finishReason !== "tool-calls") {
+          writeAgentLog("INFO", "Agent", "agent finished", { sessionId, reason: finishReason });
           break;
         }
-        continue;
-      }
 
-      options.onError({ sessionId, error: message });
-      break;
+      } catch (error: unknown) {
+        if (linkedAbort.signal.aborted) {
+          writeAgentLog("INFO", "Agent", "agent aborted", { sessionId });
+          break;
+        }
+
+        const message = extractApiErrorMessage(error);
+        const err = error as { message?: string; statusCode?: number; responseBody?: string; data?: unknown; stack?: string };
+        let dataStr: string | undefined;
+        if (err.data != null) {
+          try {
+            dataStr = JSON.stringify(err.data).slice(0, 500);
+          } catch {
+            dataStr = String(err.data).slice(0, 500);
+          }
+        }
+        writeAgentLog("ERROR", "Agent", "agent loop error", {
+          sessionId,
+          message,
+          statusCode: err.statusCode,
+          responseBody: err.responseBody ? (err.responseBody.length > 1000 ? err.responseBody.slice(0, 1000) + "…" : err.responseBody) : undefined,
+          data: dataStr,
+          stack: err.stack?.slice(0, 800),
+        });
+
+        if (isContextOverflow(error)) {
+          writeAgentLog("INFO", "Agent", "context overflow, attempting compaction", { sessionId });
+          const compacted = await compactConversation(conversationHistory, modelDef, config, linkedAbort.signal);
+          if (compacted) {
+            conversationHistory.length = 0;
+            conversationHistory.push(...compacted);
+            options.onMessage({
+              id: ulid(),
+              role: "system",
+              content: "Context was too long — conversation has been summarized to continue.",
+              timestamp: Date.now(),
+              sessionId,
+            });
+            continue;
+          }
+          options.onError({ sessionId, error: "Context overflow and compaction failed: " + message });
+          break;
+        }
+
+        attempt++;
+        const delay = parseRetryDelay(error, attempt);
+        if (delay !== null) {
+          writeAgentLog("INFO", "Agent", "retrying", { sessionId, attempt, delayMs: delay });
+          options.onMessage({
+            id: ulid(),
+            role: "system",
+            content: `Rate limited — retrying in ${Math.ceil(delay / 1000)}s (attempt ${attempt}/${RETRY_MAX_ATTEMPTS})...`,
+            timestamp: Date.now(),
+            sessionId,
+          });
+          try {
+            await abortableSleep(delay, linkedAbort.signal);
+          } catch {
+            break;
+          }
+          continue;
+        }
+
+        options.onError({ sessionId, error: message });
+        break;
+      }
     }
   }
 
@@ -688,7 +858,7 @@ async function compactConversation(
 }
 
 const capabilities = {
-  supportedModes: ["agent"] as const,
+  supportedModes: ["agent", "plan", "ask"] as const,
   supportsToolApproval: true,
   supportsImageAttachments: true,
   supportsResume: false,
