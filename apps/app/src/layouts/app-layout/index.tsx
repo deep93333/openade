@@ -9,7 +9,6 @@ import { AppTopBar } from "@/components/app-top-bar";
 import { BranchSwitcher } from "@/components/sidebar/branch-switcher";
 import { CreateBranchDialog } from "@/components/sidebar/create-branch-dialog";
 import { CommandPalette } from "@/components/command-palette";
-import { TerminalPanel } from "@/components/terminal-panel";
 import { ApiKeyDialog } from "@/components/api-key-dialog";
 import { AgentLogDrawer } from "@/components/agent-log-drawer";
 import { cn, TooltipProvider } from "@agentide/ui";
@@ -25,7 +24,6 @@ export const AppLayout = () => {
     activeView,
     setActiveView,
     centerPage,
-    terminalVisible,
     secondaryPane,
     hasSecondaryPane,
     openFileViewer,
@@ -63,16 +61,6 @@ export const AppLayout = () => {
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <AgentPanel />
         </div>
-        <div
-          className={cn(
-            "shrink-0 flex flex-col overflow-hidden border-t border-foreground/10 transition-[height] duration-200 ease-out",
-            terminalVisible
-              ? "h-[220px] min-h-[140px]"
-              : "h-0 min-h-0 opacity-0 pointer-events-none border-t-0"
-          )}
-        >
-          <TerminalPanel />
-        </div>
       </>
     );
 
@@ -81,7 +69,7 @@ export const AppLayout = () => {
       <div className="flex h-screen w-full min-w-0 flex-col overflow-hidden bg-tertiary dark:bg-background">
         <div className="flex min-h-0 min-w-0 flex-1 flex-row overflow-hidden bg-tertiary dark:bg-background">
           <Sidebar />
-          <Group orientation="horizontal" className="min-h-0 min-w-0 flex-1 bg-tertiary dark:bg-background">
+          <Group orientation="horizontal" className="min-h-0 min-w-0 flex-1 bg-tertiary dark:bg-background gap-0.5">
             <Panel id="main" minSize={360}>
               <div
                 className={cn(

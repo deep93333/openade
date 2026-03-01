@@ -87,11 +87,7 @@ function UserMessageContent({ content }: { content: string }) {
         p.type === "text" ? (
           <span key={i}>{p.value}</span>
         ) : (
-          <span
-            key={i}
-            data-type="mention"
-            className="inline-flex items-center rounded px-1 font-medium"
-          >
+          <span key={i} data-type="mention" className="font-medium text-accent">
             {p.label}
           </span>
         )
@@ -196,8 +192,8 @@ export const MessageBubble = ({ message, messageIndex }: MessageBubbleProps) => 
         className={cn(
           "max-w-2xl rounded-lg super-ellipse py-1 text-sm leading-relaxed flex-1 min-w-0",
           isUser
-            ? "bg-foreground/10 px-3 !text-white [&_[data-type=mention]]:bg-accent-hover [&_[data-type=mention]]:rounded [&_[data-type=mention]]:px-1"
-            : "bg-transparent w-full px-0 py-0 text-foreground [&_[data-type=mention]]:bg-accent/20 [&_[data-type=mention]]:text-accent-foreground [&_[data-type=mention]]:rounded [&_[data-type=mention]]:px-1"
+            ? "bg-foreground/10 px-3 !text-white [&_[data-type=mention]]:font-medium [&_[data-type=mention]]:text-accent"
+            : "bg-transparent w-full px-0 py-0 text-foreground [&_[data-type=mention]]:font-medium [&_[data-type=mention]]:text-accent"
         )}
       >
         {isUser ? (

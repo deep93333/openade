@@ -94,7 +94,7 @@ export function DiffViewer({ open, onOpenChange, filePath, className }: DiffView
           {revertLoading ? "Reverting…" : "Revert"}
         </Button>
         <Button size="icon-xs" variant="ghost" onClick={() => onOpenChange(false)}>
-          <CircleXIcon className="size-5" />
+          <CircleXIcon className="size-4" />
         </Button>
       </div>
       <div className="flex min-h-0 flex-1 flex-col overflow-auto select-text">

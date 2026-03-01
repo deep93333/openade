@@ -45,26 +45,6 @@ const playCompletionSound = (isError = false) => {
   }
 };
 
-const playSendSound = () => {
-  try {
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
-
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-
-    oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
-    oscillator.frequency.exponentialRampToValueAtTime(440, audioContext.currentTime + 0.08);
-    gainNode.gain.setValueAtTime(0.15, audioContext.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.08);
-    oscillator.start(audioContext.currentTime);
-    oscillator.stop(audioContext.currentTime + 0.08);
-  } catch (e) {
-    // Audio not supported or blocked
-  }
-};
-
 export const AgentPanel = () => {
   const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
 
@@ -85,7 +65,6 @@ export const AgentPanel = () => {
 
   const fetchModelOptions = useChatEditorStore((s) => s.fetchModelOptions);
   const prevStatusRef = useRef(threadStatus);
-  const prevMessageCountRef = useRef(activeThread?.messages.length ?? 0);
 
   useEffect(() => {
     fetchModelOptions();
@@ -110,20 +89,9 @@ export const AgentPanel = () => {
     prevStatusRef.current = threadStatus;
   }, [threadStatus, threadError]);
 
-  useEffect(() => {
-    const currentMessageCount = activeThread?.messages.length ?? 0;
-    const prevMessageCount = prevMessageCountRef.current;
-
-    if (currentMessageCount > prevMessageCount) {
-      playSendSound();
-    }
-
-    prevMessageCountRef.current = currentMessageCount;
-  }, [activeThread?.messages.length]);
-
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="flex-1 min-h-0 overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-hidden px-4">
         <MessageList />
       </div>
 

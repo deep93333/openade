@@ -39,6 +39,8 @@ function wrapTool(
         toolCallId,
       });
 
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
       const result = await def.execute(args, ctx);
       onToolCall?.({
         toolName: def.id,

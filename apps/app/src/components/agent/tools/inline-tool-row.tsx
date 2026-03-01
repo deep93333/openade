@@ -1,6 +1,26 @@
 import { useState, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CheckCircle2, ChevronRightIcon, LoaderCircle } from "lucide-react";
+import { cn } from "@agentide/ui";
+
+type TextShimmerProps = {
+  children: ReactNode;
+  className?: string;
+  duration?: number;
+};
+
+function TextShimmer({ children, className, duration = 1.5 }: TextShimmerProps) {
+  return (
+    <span
+      className={cn("shimmer-text", className)}
+      style={{
+        "--shimmer-duration": `${duration}s`,
+      } as React.CSSProperties}
+    >
+      {children}
+    </span>
+  );
+}
 
 const ROW_HEIGHT = 24;
 const CONNECTOR_HEIGHT = 8;
@@ -61,9 +81,10 @@ export const InlineToolRow = ({
           className="flex min-w-0 flex-1 items-center gap-1.5 text-left hover:text-foreground transition-colors"
         >
           <span className="flex shrink-0 items-center text-muted-foreground/70">{icon}</span>
-          <span className={isRunning ? "min-w-0 truncate shimmer-text" : "min-w-0 truncate"}>
-            {label}
-          </span>
+          <span className="flex shrink-0 items-center text-muted-foreground/70">{icon}</span>
+        
+            <TextShimmer className="min-w-0 truncate">{label}</TextShimmer>
+          
           <motion.span
             animate={{ rotate: open ? 90 : 0 }}
             transition={{ duration: 0.15 }}
@@ -75,9 +96,9 @@ export const InlineToolRow = ({
       ) : (
         <>
           <span className="flex shrink-0 items-center text-muted-foreground/70">{icon}</span>
-          <span className={isRunning ? "min-w-0 truncate shimmer-text" : "min-w-0 truncate"}>
-            {label}
-          </span>
+       
+            <TextShimmer className="min-w-0 truncate">{label}</TextShimmer>
+         
         </>
       )}
     </div>
@@ -110,7 +131,7 @@ export const InlineToolRow = ({
           className={`w-px min-w-px flex-1 min-h-px ${isLast ? "invisible" : "bg-border"}`}
         />
       </div>
-      <div className="flex min-w-0 flex-1 flex-col pl-2">
+      <div className="flex min-w-0 flex-1 flex-col -pl-4">
         {!isFirst && (
           <div
             className="shrink-0"

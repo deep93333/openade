@@ -1,6 +1,6 @@
 import { useUIStore } from "@/store/ui.store";
 import { Button } from "@agentide/ui";
-import { IconBrowser, IconLayoutSidebarRight, IconTerminal } from "@tabler/icons-react";
+import { IconBrowser, IconLayoutSidebarRight } from "@tabler/icons-react";
 import type { ReactNode } from "react";
 
 type AppTopBarProps = {
@@ -12,8 +12,6 @@ type AppTopBarProps = {
 export function AppTopBar({ title, left, right }: AppTopBarProps) {
   const rightPanelOpen = useUIStore((s) => s.rightPanelOpen);
   const setRightPanelOpen = useUIStore((s) => s.setRightPanelOpen);
-  const terminalVisible = useUIStore((s) => s.terminalVisible);
-  const setTerminalVisible = useUIStore((s) => s.setTerminalVisible);
   const webViewOpen = useUIStore((s) => s.webView.open);
   const openWebView = useUIStore((s) => s.openWebView);
 
@@ -26,16 +24,6 @@ export function AppTopBar({ title, left, right }: AppTopBarProps) {
       { <div className="not-draggable shrink-0 flex flex-row items-center gap-1">
         {right}
         <div className="flex flex-row items-center gap-1">
-        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setTerminalVisible(!terminalVisible)}
-                          aria-label={terminalVisible ? "Hide terminal" : "Show terminal"}
-                          title={terminalVisible ? "Hide terminal" : "Show terminal"}
-                          className={!terminalVisible ? "text-muted-foreground" : undefined}
-                        >
-                          <IconTerminal stroke={1.5} className="h-4 w-4" />
-                        </Button>
         <Button
                           variant="ghost"
                           size="icon"

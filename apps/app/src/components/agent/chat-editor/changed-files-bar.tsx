@@ -27,7 +27,7 @@ export const ChangedFilesBar = ({
   const requireApproval = useAgentStore((s) => s.requireApproval);
   const setRequireApproval = useAgentStore((s) => s.setRequireApproval);
   return (
-    <div className="mx-2 px-3 py-0.5 min-h-9 bg-tertiary/90 dark:bg-background backdrop-blur-xl ring-1 ring-foreground/10 rounded-t-xl text-xs text-muted-foreground">
+    <div className="mx-2 px-2 py-0.5 min-h-9 bg-tertiary/90 dark:bg-background backdrop-blur-xl shadow-popover translate-y-[1px]  rounded-t-xl text-xs text-muted-foreground">
       <div className="flex items-center gap-1.5 w-full">
         <button
           type="button"
@@ -53,7 +53,7 @@ export const ChangedFilesBar = ({
         </label>
       </div>
       {threadChangedFiles.length > 0 && isExpanded && (
-        <div className="max-h-[180px] my-1 overflow-y-auto bg-background/50 dark:bg-foreground/5 backdrop-blur-xl rounded-lg p-1 ring-1 ring-foreground/10">
+        <div className="max-h-[180px] mt-1 mb-2 overflow-y-auto bg-background/10 dark:bg-foreground/5 backdrop-blur-xl rounded-lg p-1 ring-1 ring-foreground/10">
           {threadChangedFiles.map((file) => (
             <button
               key={file.path}

@@ -11,9 +11,8 @@ import {
   ContextMenuTrigger,
   Button,
 } from "@agentide/ui";
-import { IconLoader } from "@tabler/icons-react";
 import { useWorkspaceItemContext } from "./workspace-item-context";
-import { threadLabel, getThreadStatusIcon, getTaskStatusIcon, getTaskStatusLabel, TASK_STATUSES } from "./utils";
+import { threadLabel, getTaskStatusIcon, getTaskStatusLabel, TASK_STATUSES } from "./utils";
 
 type WorkspaceThreadRowProps = {
   thread: ChatThread;
@@ -21,9 +20,8 @@ type WorkspaceThreadRowProps = {
 
 export function WorkspaceThreadRow({ thread }: WorkspaceThreadRowProps) {
   const { state, handlers } = useWorkspaceItemContext();
-  const { workspace, threads, activeThreadId, getThreadRuntime } = state;
+  const { threads, activeThreadId } = state;
 
-  const threadRuntime = getThreadRuntime(workspace.id, thread.id);
   const canDelete = threads.length > 1;
 
   return (
@@ -36,18 +34,9 @@ export function WorkspaceThreadRow({ thread }: WorkspaceThreadRowProps) {
             className="w-full justify-start gap-2 h-auto py-2"
           >
             <div className="flex items-center gap-2 min-w-0 flex-1">
-              {getThreadStatusIcon(threadRuntime.status)}
               <span className="min-w-0 truncate text-xs flex-1 text-left">
                 {threadLabel(thread)}
               </span>
-            </div>
-            <div className="flex items-center gap-1">
-              {threadRuntime.status === "running" && (
-                <IconLoader
-                  className="size-3.5 text-muted-foreground shrink-0 animate-spin"
-                  stroke={2}
-                />
-              )}
             </div>
           </Button>
         </div>

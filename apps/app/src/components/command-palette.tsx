@@ -17,7 +17,6 @@ import {
   IconPlayerStop,
   IconList,
   IconBrowser,
-  IconTerminal,
   IconFileText,
 } from "@tabler/icons-react";
 import { useAgentStore } from "@/store/agent.store";
@@ -47,8 +46,6 @@ export const CommandPalette = () => {
   const openCreateBranchDialog = useUIStore((s) => s.openCreateBranchDialog);
   const setCenterPage = useUIStore((s) => s.setCenterPage);
   const openWebView = useUIStore((s) => s.openWebView);
-  const terminalVisible = useUIStore((s) => s.terminalVisible);
-  const setTerminalVisible = useUIStore((s) => s.setTerminalVisible);
   const openAgentLogDrawer = useUIStore((s) => s.openAgentLogDrawer);
 
   useEffect(() => {
@@ -97,10 +94,6 @@ export const CommandPalette = () => {
     runAndClose(() => openWebView());
   };
 
-  const handleToggleTerminal = () => {
-    runAndClose(() => setTerminalVisible(!terminalVisible));
-  };
-
   return (
     <CommandDialog open={open} onOpenChange={setOpen}>
       <CommandInput placeholder="Type a command or search..." />
@@ -130,10 +123,6 @@ export const CommandPalette = () => {
           <CommandItem onSelect={handleOpenWebView}>
             <IconBrowser className="size-4 opacity-60" />
             <span>Open Web View</span>
-          </CommandItem>
-          <CommandItem onSelect={handleToggleTerminal}>
-            <IconTerminal className="size-4 opacity-60" />
-            <span>{terminalVisible ? "Hide Terminal" : "Show Terminal"}</span>
           </CommandItem>
           <CommandItem onSelect={() => runAndClose(openAgentLogDrawer)}>
             <IconFileText className="size-4 opacity-60" />

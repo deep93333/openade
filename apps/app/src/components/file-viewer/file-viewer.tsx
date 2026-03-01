@@ -237,7 +237,7 @@ export const FileViewer = ({
           variant="ghost"
           onClick={() => onOpenChange(false)}
         >
-          <CircleXIcon className="size-5" />
+          <CircleXIcon className="size-4" />
         </Button>
       </div>
       <div className="relative flex min-h-0 flex-1 flex-col">

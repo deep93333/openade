@@ -103,7 +103,7 @@ export const MessageList = () => {
 
         {streamingText && (
           <div className="flex gap-3 px-4 py-3 w-full">
-            <div className="max-w-2xl rounded-lg super-ellipse w-full px-0 py-0 text-foreground text-sm leading-relaxed [&_[data-type=mention]]:bg-accent/20 [&_[data-type=mention]]:text-accent-foreground [&_[data-type=mention]]:rounded [&_[data-type=mention]]:px-1">
+            <div className="max-w-2xl rounded-lg super-ellipse w-full px-0 py-0 text-foreground text-sm leading-relaxed [&_[data-type=mention]]:font-medium [&_[data-type=mention]]:text-accent">
               <div className="py-1">
                 <MarkdownMessage content={streamingText} />
                 <span className="inline-block h-4 w-1 animate-pulse bg-accent ml-1" />

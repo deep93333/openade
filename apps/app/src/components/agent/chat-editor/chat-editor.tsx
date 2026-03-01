@@ -297,7 +297,7 @@ export const ChatEditor = ({ embedded = false }: ChatEditorProps) => {
   const mentionExtension = useMemo(
     () =>
       Mention.configure({
-        HTMLAttributes: { class: "rounded bg-background shadow-card px-1 py-0.5 text-foreground/50" },
+        HTMLAttributes: { class: "font-medium text-accent" },
         suggestion: {
           char: "@",
           items: () => [],
@@ -547,7 +547,7 @@ export const ChatEditor = ({ embedded = false }: ChatEditorProps) => {
           <div className="relative z-10 w-full">
             {mentionListOverlay}
           </div>
-          <div className="rounded-xl w-full shadow-card overflow-hidden bg-background/50 dark:bg-secondary/50 dark:ring-1 dark:ring-foreground/10 dark:shadow-none backdrop-blur-xl relative">
+          <div className="rounded-xl w-full shadow-card bg-background dark:bg-background dark:ring-1 dark:ring-foreground/10 dark:shadow-none relative">
             <div className="flex flex-col w-full p-2">{editorRow}</div>
             <EmbeddedToolbar
               isRunning={isRunning}

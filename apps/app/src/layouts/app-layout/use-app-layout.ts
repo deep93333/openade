@@ -16,7 +16,6 @@ export function useAppLayout() {
   const activeView = useUIStore((s) => s.activeView);
   const setActiveView = useUIStore((s) => s.setActiveView);
   const centerPage = useUIStore((s) => s.centerPage);
-  const terminalVisible = useUIStore((s) => s.terminalVisible);
   const secondaryPane = useUIStore((s) => s.secondaryPane);
   const openFileViewer = useUIStore((s) => s.openFileViewer);
   const setSecondaryPaneOpen = useUIStore((s) => s.setSecondaryPaneOpen);
@@ -75,7 +74,6 @@ export function useAppLayout() {
     activeView,
     setActiveView,
     centerPage,
-    terminalVisible,
     secondaryPane,
     hasSecondaryPane,
     openFileViewer,
