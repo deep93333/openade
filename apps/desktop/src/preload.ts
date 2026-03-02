@@ -5,9 +5,11 @@ import type {
   AgentMessage,
   AgentResult,
   AgentStartParams,
+  ApiKeyProvider,
   AuthMethod,
   ChatData,
   SdkSessionIdPayload,
+  ThreadTitleParams,
   ToolApprovalRequest,
   ToolApprovalResponse,
 } from "@agentide/shared";
@@ -33,6 +35,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
     set: (apiKey: string | null) => ipcRenderer.invoke(IPC.MINIMAX_API_KEY_SET, apiKey),
     has: () => ipcRenderer.invoke(IPC.MINIMAX_API_KEY_HAS),
   },
+  apiKeys: {
+    get: (provider: ApiKeyProvider) => ipcRenderer.invoke(IPC.API_KEYS_GET, provider),
+    set: (provider: ApiKeyProvider, apiKey: string | null) =>
+      ipcRenderer.invoke(IPC.API_KEYS_SET, provider, apiKey),
+    has: (provider: ApiKeyProvider) => ipcRenderer.invoke(IPC.API_KEYS_HAS, provider),
+  },
   auth: {
     status: () => ipcRenderer.invoke(IPC.AUTH_STATUS),
     setMethod: (method: AuthMethod) => ipcRenderer.invoke(IPC.AUTH_SET_METHOD, method),
@@ -54,6 +62,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
     status: () => ipcRenderer.invoke(IPC.AGENT_STATUS),
 
     getModels: () => ipcRenderer.invoke(IPC.AGENT_GET_MODELS),
+
+    generateThreadTitle: (params: ThreadTitleParams) =>
+      ipcRenderer.invoke(IPC.AGENT_GENERATE_THREAD_TITLE, params),
 
     onMessage: (callback: (message: AgentMessage) => void) => {
       const handler = (_event: Electron.IpcRendererEvent, message: AgentMessage) => callback(message);

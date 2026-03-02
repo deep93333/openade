@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Button,
   Dialog,
@@ -13,10 +13,15 @@ import { useUIStore } from "@/store/ui.store";
 export const CreateBranchDialog = () => {
   const [newBranchName, setNewBranchName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const open = useUIStore((s) => s.createBranchDialog.open);
-  const workspaceId = useUIStore((s) => s.createBranchDialog.workspaceId);
+  const { open, workspaceId, query } = useUIStore((s) => s.createBranchDialog);
   const closeCreateBranchDialog = useUIStore((s) => s.closeCreateBranchDialog);
   const { createGitBranch } = useWorkspaceStore();
+
+  useEffect(() => {
+    if (open && query) {
+      setNewBranchName(query);
+    }
+  }, [open, query]);
 
   const handleOpenChange = (next: boolean) => {
     if (!next) {

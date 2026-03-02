@@ -1,13 +1,21 @@
-import { createAgentManager, createCustomAgentBackend } from "@agentide/agent";
+import {
+  createAgentManager,
+  createCustomAgentBackend,
+  generateThreadTitle as generateThreadTitleForBackend,
+  type AgentBackendConfig,
+} from "@agentide/agent";
+import type { ThreadTitleParams } from "@agentide/shared";
 import * as configStorage from "./config-storage";
 import { writeAgentLog } from "./agent-log";
 
-const backend = createCustomAgentBackend({
+const backendConfig: AgentBackendConfig = {
   getApiKey: () => configStorage.getApiKey(),
   getCodexApiKey: () => configStorage.getCodexApiKey(),
   getMinimaxApiKey: () => configStorage.getMinimaxApiKey(),
   writeAgentLog,
-});
+};
+
+const backend = createCustomAgentBackend(backendConfig);
 
 export const agentManager = createAgentManager({
   writeAgentLog,
@@ -20,4 +28,8 @@ export const agentManager = createAgentManager({
 
 export function getAllModels() {
   return agentManager.getAllModels();
+}
+
+export async function generateThreadTitle(params: ThreadTitleParams) {
+  return generateThreadTitleForBackend(backendConfig, params);
 }

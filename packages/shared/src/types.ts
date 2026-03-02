@@ -56,6 +56,47 @@ export type AgentMode = "ask" | "plan" | "agent";
 
 export type AgentProvider = "claude" | "codex" | "minimax";
 
+export type ApiKeyProvider = "claude" | "codex" | "minimax";
+
+export type ProviderConfig = {
+  id: ApiKeyProvider;
+  name: string;
+  icon: string;
+  keyPrefix?: string;
+  keyPlaceholder: string;
+  helpUrl?: string;
+  helpText?: string;
+};
+
+export const PROVIDER_CONFIGS: ProviderConfig[] = [
+  {
+    id: "claude",
+    name: "Claude",
+    icon: "IconUserCircle",
+    keyPrefix: "sk-ant-",
+    keyPlaceholder: "sk-ant-api03-...",
+    helpUrl: "https://console.anthropic.com/settings/keys",
+    helpText: "Get a key from console.anthropic.com",
+  },
+  {
+    id: "codex",
+    name: "Codex",
+    icon: "IconCode",
+    keyPrefix: "codex_",
+    keyPlaceholder: "codex_...",
+    helpUrl: "https://docs.anthropic.com/en/docs/claude-code/codex",
+    helpText: "Get a key from Codex settings",
+  },
+  {
+    id: "minimax",
+    name: "MiniMax",
+    icon: "IconCloud",
+    keyPlaceholder: "mk-...",
+    helpUrl: "https://platform.minimax.io/",
+    helpText: "Get a key from MiniMax platform",
+  },
+];
+
 export type AgentModelOption = {
   value: string;
   label: string;
@@ -73,6 +114,12 @@ export type AgentStartParams = {
   requireApproval?: boolean;
   resumeSessionId?: string;
   imageAttachments?: ImageAttachment[];
+};
+
+export type ThreadTitleParams = {
+  messages: AgentMessage[];
+  model?: string;
+  provider?: AgentProvider;
 };
 
 export type AgentErrorPayload = {

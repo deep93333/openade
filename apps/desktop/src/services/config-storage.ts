@@ -2,7 +2,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { app, safeStorage } from "electron";
-import type { AuthMethod } from "@agentide/shared";
+import type { ApiKeyProvider, AuthMethod } from "@agentide/shared";
 
 type AppConfig = {
   activeWorkspaceId: string | null;
@@ -172,6 +172,39 @@ export function hasCodexApiKey(): boolean {
 export function hasMinimaxApiKey(): boolean {
   const config = loadConfig();
   return !!config.encryptedMinimaxApiKey;
+}
+
+export function getApiKeyByProvider(provider: ApiKeyProvider): string | null {
+  switch (provider) {
+    case "claude":
+      return getApiKey();
+    case "codex":
+      return getCodexApiKey();
+    case "minimax":
+      return getMinimaxApiKey();
+  }
+}
+
+export function setApiKeyByProvider(provider: ApiKeyProvider, apiKey: string | null): void {
+  switch (provider) {
+    case "claude":
+      return setApiKey(apiKey);
+    case "codex":
+      return setCodexApiKey(apiKey);
+    case "minimax":
+      return setMinimaxApiKey(apiKey);
+  }
+}
+
+export function hasApiKeyByProvider(provider: ApiKeyProvider): boolean {
+  switch (provider) {
+    case "claude":
+      return hasApiKey();
+    case "codex":
+      return hasCodexApiKey();
+    case "minimax":
+      return hasMinimaxApiKey();
+  }
 }
 
 export function getAuthMethod(): AuthMethod {

@@ -6,12 +6,12 @@ import type {
   AgentStartParams,
   Checkpoint,
   FileTreeNode,
+  ThreadTitleParams,
   ToolApprovalResponse,
 } from "@agentide/shared";
 import { ulid } from "ulid";
-import { agentManager } from "./services/agent-manager";
+import { agentManager, generateThreadTitle, getAllModels } from "./services/agent-manager";
 import { getAgentLogPath, getAgentLogDir } from "./services/agent-log";
-import { getAllModels } from "./services/agent-manager";
 import * as chatStorage from "./services/chat-storage";
 import * as configStorage from "./services/config-storage";
 import { workspaceManager } from "./services/workspace-manager";
@@ -341,6 +341,18 @@ export const registerIpcHandlers = (): void => {
       return {
         success: false,
         error: error instanceof Error ? error.message : "Failed to get models",
+      };
+    }
+  });
+
+  ipcMain.handle(IPC.AGENT_GENERATE_THREAD_TITLE, async (_event, params: ThreadTitleParams) => {
+    try {
+      const title = await generateThreadTitle(params);
+      return { success: true, data: title };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to generate thread title",
       };
     }
   });
@@ -832,6 +844,32 @@ export const registerIpcHandlers = (): void => {
       return { success: true, data: configStorage.hasMinimaxApiKey() };
     } catch {
       return { success: false, error: "Failed to check MiniMax API key" };
+    }
+  });
+
+  ipcMain.handle(IPC.API_KEYS_GET, async (_event, provider: import("@agentide/shared").ApiKeyProvider) => {
+    try {
+      const key = configStorage.getApiKeyByProvider(provider);
+      return { success: true, data: key };
+    } catch {
+      return { success: false, error: `Failed to get API key for ${provider}` };
+    }
+  });
+
+  ipcMain.handle(IPC.API_KEYS_SET, async (_event, provider: import("@agentide/shared").ApiKeyProvider, apiKey: string | null) => {
+    try {
+      configStorage.setApiKeyByProvider(provider, apiKey);
+      return { success: true };
+    } catch {
+      return { success: false, error: `Failed to save API key for ${provider}` };
+    }
+  });
+
+  ipcMain.handle(IPC.API_KEYS_HAS, async (_event, provider: import("@agentide/shared").ApiKeyProvider) => {
+    try {
+      return { success: true, data: configStorage.hasApiKeyByProvider(provider) };
+    } catch {
+      return { success: false, error: `Failed to check API key for ${provider}` };
     }
   });
 

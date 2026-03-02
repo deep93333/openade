@@ -65,11 +65,13 @@ export const AgentPanel = () => {
 
   const clearError = useAgentStore((s) => s.clearError);
   const persistWorkspace = useAgentStore((s) => s.persistWorkspace);
+  const generateThreadTitle = useAgentStore((s) => s.generateThreadTitle);
 
   const openAgentLogDrawer = useUIStore((s) => s.openAgentLogDrawer);
 
   const fetchModelOptions = useChatEditorStore((s) => s.fetchModelOptions);
   const prevStatusRef = useRef(threadStatus);
+  const prevThreadIdRef = useRef(activeThread?.id ?? "");
 
   useEffect(() => {
     fetchModelOptions();
@@ -83,7 +85,9 @@ export const AgentPanel = () => {
 
   useEffect(() => {
     const prevStatus = prevStatusRef.current;
-    const wasRunning = prevStatus === "running";
+    const prevThreadId = prevThreadIdRef.current;
+    const currentThreadId = activeThread?.id ?? "";
+    const wasRunning = prevStatus === "running" && prevThreadId === currentThreadId;
     const isNowIdle = threadStatus === "idle";
     const isNowStopped = threadStatus === "stopped";
 
@@ -91,8 +95,13 @@ export const AgentPanel = () => {
       playCompletionSound(!!threadError);
     }
 
+    if (wasRunning && isNowIdle && activeWorkspaceId && activeThread) {
+      void generateThreadTitle(activeWorkspaceId, activeThread.id);
+    }
+
     prevStatusRef.current = threadStatus;
-  }, [threadStatus, threadError]);
+    prevThreadIdRef.current = currentThreadId;
+  }, [threadStatus, threadError, activeThread, activeWorkspaceId, generateThreadTitle]);
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">

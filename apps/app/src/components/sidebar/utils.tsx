@@ -11,6 +11,7 @@ import {
   IconProgress,
 } from "@tabler/icons-react";
 import { getTaskStatusLabel } from "@/components/shared/task-status-badge";
+import { normalizeUserMessageContentToText } from "@/utils/normalize-user-message";
 
 export const TASK_STATUSES: TaskStatus[] = [
   "backlog",
@@ -20,9 +21,12 @@ export const TASK_STATUSES: TaskStatus[] = [
 ];
 
 export function threadLabel(thread: ChatThread): string {
+  if (thread.title?.trim()) {
+    return normalizeUserMessageContentToText(thread.title).trim();
+  }
   const first = thread.messages.find((m) => m.role === "user");
   if (first?.content) {
-    const text = first.content.trim().replace(/\s+/g, " ");
+    const text = normalizeUserMessageContentToText(first.content).trim().replace(/\s+/g, " ");
     return text.length > 24 ? `${text.slice(0, 24)}…` : text;
   }
   return "New chat";

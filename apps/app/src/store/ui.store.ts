@@ -28,8 +28,8 @@ type UIStoreState = {
   closeWebView: () => void;
   setWebViewOpen: (open: boolean) => void;
 
-  createBranchDialog: { open: boolean; workspaceId: string | null };
-  openCreateBranchDialog: (workspaceId: string) => void;
+  createBranchDialog: { open: boolean; workspaceId: string | null; query: string | null };
+  openCreateBranchDialog: (workspaceId: string, query?: string) => void;
   closeCreateBranchDialog: () => void;
 
   apiKeyDialogOpen: boolean;
@@ -78,11 +78,11 @@ export const useUIStore = create<UIStoreState>()((set) => ({
       webView: { ...state.webView, open },
     })),
 
-  createBranchDialog: { open: false, workspaceId: null },
-  openCreateBranchDialog: (workspaceId) =>
-    set({ createBranchDialog: { open: true, workspaceId } }),
+  createBranchDialog: { open: false, workspaceId: null, query: null },
+  openCreateBranchDialog: (workspaceId, query) =>
+    set({ createBranchDialog: { open: true, workspaceId, query: query || null } }),
   closeCreateBranchDialog: () =>
-    set({ createBranchDialog: { open: false, workspaceId: null } }),
+    set({ createBranchDialog: { open: false, workspaceId: null, query: null } }),
 
   apiKeyDialogOpen: false,
   hasApiKey: false,

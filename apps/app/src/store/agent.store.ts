@@ -73,6 +73,7 @@ type AgentStoreState = {
   switchThread: (workspaceId: string, threadId: string) => void;
   deleteThread: (workspaceId: string, threadId: string) => Promise<void>;
   updateThreadTaskStatus: (workspaceId: string, threadId: string, taskStatus: TaskStatus) => Promise<void>;
+  generateThreadTitle: (workspaceId: string, threadId: string) => Promise<void>;
 
   startAgent: (
     workspaceId: string,
@@ -475,6 +476,50 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
         });
       }
     }
+  },
+
+  generateThreadTitle: async (workspaceId, threadId) => {
+    const ws = get().workspaces[workspaceId];
+    const thread = ws?.threads.find((t) => t.id === threadId);
+    if (!ws || !thread || thread.title?.trim()) return;
+
+    const firstUser = thread.messages.find((message) =>
+      message.role === "user" && message.content.trim()
+    );
+    if (!firstUser) return;
+
+    const lastAssistant = [...thread.messages]
+      .reverse()
+      .find((message) => message.role === "assistant" && message.content.trim());
+
+    const api = getElectronAPI();
+    if (!api?.agent?.generateThreadTitle) return;
+
+    const result = await api.agent.generateThreadTitle({
+      messages: lastAssistant ? [firstUser, lastAssistant] : [firstUser],
+      model: get().selectedModel,
+      provider: thread.provider ?? get().selectedProvider,
+    });
+    const title = result.success && result.data ? result.data.trim() : "";
+    if (!title) return;
+
+    set((s) => {
+      const ws = s.workspaces[workspaceId];
+      if (!ws) return s;
+      return {
+        workspaces: {
+          ...s.workspaces,
+          [workspaceId]: {
+            ...ws,
+            threads: ws.threads.map((t) =>
+              t.id === threadId && !t.title?.trim() ? { ...t, title } : t
+            ),
+          },
+        },
+      };
+    });
+
+    await get().persistWorkspace(workspaceId);
   },
 
   startAgent: async (workspaceId, prompt, options) => {

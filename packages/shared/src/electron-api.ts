@@ -6,6 +6,8 @@ import type {
   AgentSkillItem,
   AgentStartParams,
   AgentStatus,
+  ApiKeyProvider,
+  ThreadTitleParams,
   ChatData,
   Checkpoint,
   FileDiffContent,
@@ -40,6 +42,11 @@ export type ElectronAPI = {
     set: (apiKey: string | null) => Promise<IpcResult>;
     has: () => Promise<IpcResult<boolean>>;
   };
+  apiKeys: {
+    get: (provider: ApiKeyProvider) => Promise<IpcResult<string | null>>;
+    set: (provider: ApiKeyProvider, apiKey: string | null) => Promise<IpcResult>;
+    has: (provider: ApiKeyProvider) => Promise<IpcResult<boolean>>;
+  };
   auth: {
     status: () => Promise<IpcResult<import("./types.js").AuthStatus>>;
     setMethod: (method: import("./types.js").AuthMethod) => Promise<IpcResult>;
@@ -55,6 +62,7 @@ export type ElectronAPI = {
     stop: (sessionId: string) => Promise<IpcResult>;
     status: () => Promise<IpcResult<{ status: AgentStatus; sessionId?: string }>>;
     getModels: () => Promise<IpcResult<AgentModelOption[]>>;
+    generateThreadTitle: (params: ThreadTitleParams) => Promise<IpcResult<string | null>>;
     onMessage: (callback: (message: AgentMessage) => void) => () => void;
     onResult: (callback: (result: AgentResult) => void) => () => void;
     onError: (callback: (payload: AgentErrorPayload) => void) => () => void;

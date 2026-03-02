@@ -96,18 +96,18 @@ export const CommandPalette = () => {
 
   return (
     <CommandDialog open={open} onOpenChange={setOpen}>
-      <CommandInput placeholder="Type a command or search..." />
+      <CommandInput className="px-4" placeholder="Type a command or search..." />
       <CommandList>
         <CommandEmpty>No results found.</CommandEmpty>
 
         <CommandGroup heading="Chat">
           <CommandItem onSelect={handleNewChat} disabled={!activeWorkspace}>
-            <IconMessagePlus className="size-4 opacity-60" />
+            <IconMessagePlus stroke={1} className="size-4 opacity-60" />
             <span>New Chat</span>
           </CommandItem>
           {status === "running" && (
             <CommandItem onSelect={handleStopAgent}>
-              <IconPlayerStop className="size-4 opacity-60" />
+              <IconPlayerStop stroke={1} className="size-4 opacity-60" />
               <span>Stop Agent</span>
             </CommandItem>
           )}
@@ -117,15 +117,15 @@ export const CommandPalette = () => {
 
         <CommandGroup heading="View">
           <CommandItem onSelect={handleOpenTasks}>
-            <IconList className="size-4 opacity-60" />
+            <IconList stroke={1} className="size-4 opacity-60" />
             <span>Open Tasks</span>
           </CommandItem>
           <CommandItem onSelect={handleOpenWebView}>
-            <IconBrowser className="size-4 opacity-60" />
+            <IconBrowser stroke={1} className="size-4 opacity-60" />
             <span>Open Web View</span>
           </CommandItem>
           <CommandItem onSelect={() => runAndClose(openAgentLogDrawer)}>
-            <IconFileText className="size-4 opacity-60" />
+            <IconFileText stroke={1} className="size-4 opacity-60" />
             <span>Open Agent Log</span>
           </CommandItem>
         </CommandGroup>
@@ -137,7 +137,7 @@ export const CommandPalette = () => {
             onSelect={handleCreateBranch}
             disabled={!activeWorkspace}
           >
-            <IconGitBranch className="size-4 opacity-60" />
+            <IconGitBranch stroke={1} className="size-4 opacity-60" />
             <span>Create Branch</span>
           </CommandItem>
         </CommandGroup>
@@ -153,11 +153,11 @@ export const CommandPalette = () => {
                     key={w.id}
                     onSelect={() => handleSwitchWorkspace(w.id)}
                   >
-                    <IconFolderPlus className="size-4 opacity-60" />
+                    <IconFolderPlus stroke={1} className="size-4 opacity-60" />
                     <span>{w.name}</span>
-                    <CommandShortcut className="truncate max-w-[200px]">
+                    <span className="truncate text-muted-foreground text-xs max-w-[200px]">
                       {w.path}
-                    </CommandShortcut>
+                    </span>
                   </CommandItem>
                 ))}
             </CommandGroup>

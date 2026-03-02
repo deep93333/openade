@@ -10,7 +10,7 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { createMinimax } from "vercel-minimax-ai-provider";
 import { createToolSet, createReadOnlyToolSet, type ToolCallMetadata } from "./tools/registry.js";
 import { buildSystemPrompt, COMPACTION_PROMPT } from "./system-prompt.js";
-import type { AgentMessage, AgentMode, AgentProvider } from "@agentide/shared";
+import type { AgentMessage, AgentMode, AgentProvider, ThreadTitleParams } from "@agentide/shared";
 import type {
   AgentBackend,
   AgentBackendStartOptions,
@@ -30,6 +30,10 @@ export type AgentBackendConfig = {
 
 const TOOL_OUTPUT_LIMIT = 800;
 const ASSISTANT_MSG_LIMIT = 2000;
+const TITLE_INPUT_LIMIT = 1600;
+const TITLE_MAX_LENGTH = 80;
+const TITLE_PROMPT =
+  "Generate a concise thread title (max 6 words) that summarizes the user's request. Use title case. Return only the title with no quotes or trailing punctuation.";
 
 function cap(text: string, limit: number): string {
   return text.length > limit ? text.slice(0, limit) + "…" : text;
@@ -74,6 +78,26 @@ function summarizeExistingMessages(messages: AgentMessage[]): ModelMessage[] {
       content: "Understood, continuing.",
     } as ModelMessage,
   ];
+}
+
+function buildTitleContext(messages: AgentMessage[]): string | null {
+  const firstUser = messages.find((m) => m.role === "user" && m.content.trim());
+  if (!firstUser) return null;
+  const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant" && m.content.trim());
+  const parts = [`User: ${cap(firstUser.content, TITLE_INPUT_LIMIT)}`];
+  if (lastAssistant) {
+    parts.push(`Assistant: ${cap(lastAssistant.content, TITLE_INPUT_LIMIT)}`);
+  }
+  return parts.join("\n");
+}
+
+function cleanTitle(raw: string): string {
+  const firstLine = raw.split("\n")[0] ?? "";
+  const trimmed = firstLine.trim().replace(/^["'“”]+|["'“”]+$/g, "");
+  const collapsed = trimmed.replace(/\s+/g, " ");
+  const noTrailingPunctuation = collapsed.replace(/[.:;!?]+$/g, "");
+  if (noTrailingPunctuation.length <= TITLE_MAX_LENGTH) return noTrailingPunctuation;
+  return noTrailingPunctuation.slice(0, TITLE_MAX_LENGTH).trimEnd();
 }
 
 type LlmProvider = "anthropic" | "openai" | "minimax";
@@ -184,6 +208,14 @@ function resolveModel(modelValue: string | undefined): ModelDef {
   return MODELS.find((m) => m.value === modelValue) ?? MODELS[0];
 }
 
+function resolveModelForProvider(modelValue: string | undefined, provider: AgentProvider | undefined): ModelDef {
+  if (modelValue) return resolveModel(modelValue);
+  if (provider) {
+    return MODELS.find((m) => m.uiProvider === provider) ?? MODELS[0];
+  }
+  return MODELS[0];
+}
+
 function getProviderApiKey(provider: LlmProvider, config: AgentBackendConfig): string {
   if (provider === "anthropic") {
     const key = config.getApiKey();
@@ -212,6 +244,31 @@ function createLanguageModel(modelDef: ModelDef, config: AgentBackendConfig) {
   }
   const openai = createOpenAI({ apiKey });
   return openai(modelDef.apiModelId);
+}
+
+export async function generateThreadTitle(
+  config: AgentBackendConfig,
+  params: ThreadTitleParams,
+): Promise<string | null> {
+  const context = buildTitleContext(params.messages ?? []);
+  if (!context) return null;
+
+  const modelDef = resolveModelForProvider(params.model, params.provider);
+  const languageModel = createLanguageModel(modelDef, config);
+  const result = streamText({
+    model: languageModel,
+    messages: [
+      { role: "system", content: TITLE_PROMPT } as ModelMessage,
+      { role: "user", content: context } as ModelMessage,
+    ],
+    maxOutputTokens: 40,
+    temperature: 0.2,
+  });
+
+  const rawTitle = await result.text;
+  if (!rawTitle) return null;
+  const cleaned = cleanTitle(rawTitle);
+  return cleaned.length > 0 ? cleaned : null;
 }
 
 function estimateTokens(text: string): number {
