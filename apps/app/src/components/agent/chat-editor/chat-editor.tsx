@@ -10,6 +10,7 @@ import { useWorkspaceFiles } from "@/hooks/use-workspace-files";
 import { useAgentSkills } from "@/hooks/use-agent-skills";
 import { useSkillHint } from "@/hooks/use-skill-hint";
 import { useThreadChangedFiles } from "@/hooks/use-thread-changed-files";
+import { useGitUnstagedChanges } from "@/hooks/use-git-changes";
 import { filesToImageAttachments } from "@/utils/image-attachment";
 import { ArrowUpIcon, Button, ImageIcon, StopIcon } from "@agentide/ui";
 import { useAgentStore } from "@/store/agent.store";
@@ -87,21 +88,27 @@ export const ChatEditor = ({ embedded = false }: ChatEditorProps) => {
   });
 
   const threadChangedFiles = useThreadChangedFiles(threadMessages, activeWorkspace?.path ?? null);
+  const unstagedChanges = useGitUnstagedChanges();
+
+  const filteredThreadChangedFiles = useMemo(() => {
+    const unstagedPaths = new Set(unstagedChanges.map((c) => c.path));
+    return threadChangedFiles.filter((f) => unstagedPaths.has(f.path));
+  }, [threadChangedFiles, unstagedChanges]);
 
   const changedFilesSummary = useMemo(
     () =>
-      threadChangedFiles.reduce<{ added: number; deleted: number }>(
+      filteredThreadChangedFiles.reduce<{ added: number; deleted: number }>(
         (acc, file) => ({ added: acc.added + file.added, deleted: acc.deleted + file.deleted }),
         { added: 0, deleted: 0 }
       ),
-    [threadChangedFiles]
+    [filteredThreadChangedFiles]
   );
 
   useEffect(() => {
-    if (threadChangedFiles.length === 0 && isChangedFilesExpanded) {
+    if (filteredThreadChangedFiles.length === 0 && isChangedFilesExpanded) {
       setIsChangedFilesExpanded(false);
     }
-  }, [threadChangedFiles.length, isChangedFilesExpanded]);
+  }, [filteredThreadChangedFiles.length, isChangedFilesExpanded]);
 
   const placeholder = activeWorkspace ? CHAT_PLACEHOLDER : NO_WORKSPACE_PLACEHOLDER;
   const canSubmit = !!activeWorkspaceId && !isRunning;
@@ -605,7 +612,7 @@ export const ChatEditor = ({ embedded = false }: ChatEditorProps) => {
         <div>
           {activeWorkspace && (
             <ChangedFilesBar
-              threadChangedFiles={threadChangedFiles}
+              threadChangedFiles={filteredThreadChangedFiles}
               summary={changedFilesSummary}
               isExpanded={isChangedFilesExpanded}
               onToggleExpanded={() => setIsChangedFilesExpanded((prev) => !prev)}
