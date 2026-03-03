@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { IpcResult } from "@agentide/shared";
-import { MultiFileDiff } from "@pierre/diffs/react";
+import { File, MultiFileDiff } from "@pierre/diffs/react";
 import { Button, CircleXIcon, RotateIcon } from "@agentide/ui";
 import { IconLoader } from "@tabler/icons-react";
 import { getElectronAPI } from "@/lib/electron";
@@ -11,6 +11,11 @@ const DIFF_OPTIONS = {
   theme: { dark: "agentide-dark" as const, light: "agentide-dark" as const },
   diffStyle: "unified" as const,
   diffIndicators: "bars" as const,
+  disableFileHeader: true,
+};
+
+const FILE_OPTIONS = {
+  theme: { dark: "agentide-dark" as const, light: "agentide-dark" as const },
   disableFileHeader: true,
 };
 
@@ -38,6 +43,9 @@ export function DiffViewer({ open, onOpenChange, filePath, staged = false, class
   );
 
   const [diff, setDiff] = useState<DiffState>({ oldContent: "", newContent: "", loading: false, error: null });
+  const [fileContent, setFileContent] = useState<string | null>(null);
+  const [fileLoading, setFileLoading] = useState(false);
+  const [fileError, setFileError] = useState(false);
   const [revertLoading, setRevertLoading] = useState(false);
 
   const fetchDiff = useCallback(async (path: string, isStaged: boolean) => {
@@ -52,13 +60,47 @@ export function DiffViewer({ open, onOpenChange, filePath, staged = false, class
     }
   }, [activeWorkspace?.id]);
 
+  const fetchFileContent = useCallback(async (path: string) => {
+    const api = getElectronAPI();
+    if (!api?.filesystem?.readFile || !activeWorkspace?.path) return;
+    setFileLoading(true);
+    setFileContent(null);
+    setFileError(false);
+    const fullPath = `${activeWorkspace.path.replace(/[/\\]+$/, "")}/${path.replace(/^[/\\]+/, "")}`.replace(
+      /\\/g,
+      "/"
+    );
+    const result = await api.filesystem.readFile(fullPath);
+    setFileLoading(false);
+    if (result.success && result.data !== undefined) {
+      setFileContent(result.data);
+    } else {
+      setFileError(true);
+    }
+  }, [activeWorkspace?.path]);
+
   useEffect(() => {
     if (!open || !filePath) {
       setDiff({ oldContent: "", newContent: "", loading: false, error: null });
+      setFileContent(null);
+      setFileError(false);
       return;
     }
     fetchDiff(filePath, staged);
   }, [open, filePath, staged, fetchDiff, gitChangeVersion]);
+
+  useEffect(() => {
+    if (
+      !open ||
+      !filePath ||
+      diff.loading ||
+      diff.error ||
+      (diff.oldContent !== "" || diff.newContent !== "")
+    ) {
+      return;
+    }
+    fetchFileContent(filePath);
+  }, [open, filePath, diff.loading, diff.error, diff.oldContent, diff.newContent, fetchFileContent]);
 
   const handleRevert = useCallback(async () => {
     if (!filePath) return;
@@ -105,7 +147,21 @@ export function DiffViewer({ open, onOpenChange, filePath, staged = false, class
         ) : diff.error ? (
           <div className="px-4 py-8 text-sm text-destructive">{diff.error}</div>
         ) : diff.oldContent === "" && diff.newContent === "" ? (
-          <div className="px-4 py-8 text-sm text-muted-foreground">No diff available</div>
+          fileLoading ? (
+            <div className="flex justify-center items-center py-12 text-sm text-muted-foreground">
+              <IconLoader className="size-4 animate-spin mr-2" />
+              Loading file…
+            </div>
+          ) : fileContent !== null && !fileError ? (
+            <div className="pierre-file-viewer min-h-0 flex-1 overflow-auto bg-secondary">
+              <File
+                file={{ name, contents: fileContent }}
+                options={FILE_OPTIONS}
+              />
+            </div>
+          ) : (
+            <div className="px-4 py-8 text-sm text-muted-foreground">No diff available</div>
+          )
         ) : (
           <MultiFileDiff
             oldFile={{ name, contents: diff.oldContent }}
