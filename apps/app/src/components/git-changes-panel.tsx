@@ -136,7 +136,7 @@ function GroupedFileList({
   const groups = useMemo(() => groupByDirectory(files), [files]);
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col px-2">
       {groups.map((group) => (
         <div key={group.dir || "__root"}>
           {group.dir && (

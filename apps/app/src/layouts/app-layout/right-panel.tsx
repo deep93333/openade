@@ -19,7 +19,7 @@ export function RightPanel({ activeView, setActiveView, onFileSelect, showSepara
       {showSeparator && <Separator className={PANEL_SEPARATOR_CLASS} />}
       <Panel id="right-panel" minSize={220} maxSize={360} defaultSize={260}>
         <div className="flex min-h-0 h-full flex-col overflow-hidden">
-          <div className="flex shrink-0 items-center border-b px-2 border-foreground/5 h-12 drag-region gap-1">
+          <div className="flex shrink-0 items-center border-b px-2 border-foreground/5 h-[48px] drag-region gap-1">
             <Button
               variant={activeView === "files" ? "secondary" : "ghost"}
               size="sm"

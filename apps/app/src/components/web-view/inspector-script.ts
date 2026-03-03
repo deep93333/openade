@@ -233,6 +233,10 @@ export const getInspectorScript = (enabled: boolean) => `
     if (info.react.component) {
       html += ' <span class="react">&lt;' + info.react.component + '/&gt;</span>';
     }
+    if (info.react.source && info.react.source.fileName) {
+      const fileName = info.react.source.fileName.split(/[/\\\\]/).pop() || info.react.source.fileName;
+      html += ' <span class="dims">' + fileName + ':' + info.react.source.lineNumber + '</span>';
+    }
     html += '<span class="dims">' + rect.width + '×' + rect.height + '</span>';
     
     tooltip.innerHTML = html;

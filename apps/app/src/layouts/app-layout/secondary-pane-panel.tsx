@@ -13,9 +13,9 @@ type SecondaryPanePanelProps = {
 export function SecondaryPanePanel({ secondaryPane, onOpenChange }: SecondaryPanePanelProps) {
   return (
     <>
-      <Separator className={PANEL_SEPARATOR_CLASS} />
+      <Separator className={cn(PANEL_SEPARATOR_CLASS, "px-0.5")} />
       <Panel id="secondary" minSize={380} maxSize="60%" defaultSize={520}>
-        <div className={cn("my-2 mr-2 p-px h-[calc(100%-1rem)] overflow-hidden", CARD_CLASS)}>
+        <div className={cn("my-2 p-px h-[calc(100%-1rem)] overflow-hidden", CARD_CLASS)}>
           {secondaryPane.mode === "file" ? (
             <FileViewer
               open={secondaryPane.open}

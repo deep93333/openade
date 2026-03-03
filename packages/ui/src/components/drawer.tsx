@@ -232,7 +232,7 @@ function DrawerContent({ children, className, overlayClassName, ...props }: Draw
       >
         <BaseDrawer.Popup
           className={cn(
-            "relative flex flex-col bg-background shadow-popover dark:ring-1 dark:ring-foreground/10 overflow-hidden rounded-xl",
+            "relative flex flex-col bg-background ring-1 ring-foreground/10 overflow-hidden rounded-xl",
             "transition-transform duration-[450ms] ease-[cubic-bezier(0.32,0.72,0,1)]",
             "data-[swiping]:select-none",
             "data-[ending-style]:duration-[calc(var(--drawer-swipe-strength)*400ms)]",

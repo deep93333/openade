@@ -79,10 +79,19 @@ export const ElementInfoPanel = ({ element, onClose, onAddToChat }: ElementInfoP
 
   if (!element) return null;
 
+  const fileName = element.react.source?.fileName?.split(/[/\\]/).pop() ?? null;
+
   return (
     <div className="flex flex-col border-t border-border bg-background max-h-[300px] overflow-hidden">
       <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-secondary/50">
-        <span className="text-xs font-medium text-foreground">Element Inspector</span>
+        <span className="text-xs font-medium text-foreground truncate min-w-0">
+          Element Inspector
+          {fileName && (
+            <span className="text-muted-foreground font-normal ml-1.5">
+              • {fileName}
+            </span>
+          )}
+        </span>
         <div className="flex items-center gap-1">
           <button
             type="button"

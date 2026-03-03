@@ -18,7 +18,7 @@ export type WorkspaceItemHandlers = {
   handleSwitchThread: (threadId: string) => Promise<void>;
   handleDeleteThread: (threadId: string, e: React.MouseEvent) => void;
   handleTaskStatusChange: (threadId: string, taskStatus: TaskStatus) => Promise<void>;
-  handleWorkspaceSelect: (e: React.MouseEvent) => void;
+  handleWorkspaceSelect: (e: React.MouseEvent) => Promise<void>;
   handleRemoveWorkspaceClick: (e: React.MouseEvent) => void;
 };
 
@@ -101,11 +101,12 @@ export function useWorkspaceItem(workspace: Workspace) {
     await updateThreadTaskStatus(workspace.id, threadId, taskStatus);
   };
 
-  const handleWorkspaceSelect = (e: React.MouseEvent) => {
+  const handleWorkspaceSelect = async (e: React.MouseEvent) => {
     e.preventDefault();
     if (!isActive) {
       setCenterPage("chat");
-      selectWorkspace(workspace.id);
+      await selectWorkspace(workspace.id);
+      await loadWorkspace(workspace.id);
     }
   };
 

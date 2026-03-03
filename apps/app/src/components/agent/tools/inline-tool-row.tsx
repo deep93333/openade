@@ -131,7 +131,7 @@ export const InlineToolRow = ({
           className={`w-px min-w-px flex-1 min-h-px ${isLast ? "invisible" : "bg-border"}`}
         />
       </div>
-      <div className="flex min-w-0 flex-1 flex-col -pl-4">
+      <div className="flex min-w-0 flex-1 flex-col pl-0">
         {!isFirst && (
           <div
             className="shrink-0"

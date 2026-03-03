@@ -53,6 +53,15 @@ export const CommandPalette = () => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
         setOpen((prev) => !prev);
+        return;
+      }
+      if (e.key === "n" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        const workspaceId = useWorkspaceStore.getState().activeWorkspaceId;
+        if (!workspaceId) return;
+        useUIStore.getState().setCenterPage("chat");
+        const agent = useAgentStore.getState();
+        void agent.loadWorkspace(workspaceId).then(() => agent.startNewThread(workspaceId));
       }
     };
     document.addEventListener("keydown", down);
@@ -104,6 +113,7 @@ export const CommandPalette = () => {
           <CommandItem onSelect={handleNewChat} disabled={!activeWorkspace}>
             <IconMessagePlus stroke={1} className="size-4 opacity-60" />
             <span>New Chat</span>
+            <CommandShortcut>⌘N</CommandShortcut>
           </CommandItem>
           {status === "running" && (
             <CommandItem onSelect={handleStopAgent}>

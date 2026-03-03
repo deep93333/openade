@@ -7,7 +7,7 @@ import { WorkspaceItem } from "./workspace-item";
 import { CreateWorkspaceDialog } from "./create-workspace-dialog";
 import { cn } from "@/lib/cn";
 import { CostDisplay } from "../cost-display";
-import { IconBook, IconFolder, IconKey, IconPlus, IconList } from "@tabler/icons-react";
+import { IconBook, IconFolder, IconKey, IconPlus, IconList, IconSettings2 } from "@tabler/icons-react";
 
 export const Sidebar = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -94,23 +94,26 @@ export const Sidebar = () => {
           )}
         </div>
 
-        <div className="border-t border-foreground/5 px-4 py-3">
+        <div className="border-t border-foreground/5 pl-2 pr-4 py-2">
           <div className="flex items-center gap-2">
-            <div
-              className={`h-2 w-2 rounded-full ${status === "running" ? "bg-violet-500 animate-pulse" : status === "error" ? "bg-red-500" : "bg-zinc-400"}`}
-            />
-            <span className="text-[10px] font-medium text-muted-foreground capitalize">
-              {status}
-            </span>
-            <CostDisplay/>
-            <button
+          <Button
               type="button"
+              variant="ghost"
+              size="sm"
               onClick={() => useUIStore.getState().setApiKeyDialogOpen(true)}
-              className="ml-auto flex items-center justify-center size-6 rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
               title="API Key Settings"
             >
-              <IconKey className="size-3.5" stroke={1} />
-            </button>
+              <IconSettings2 className="size-3.5" stroke={1} />
+              Settings
+            </Button>
+           
+            <div className="flex flex-1"/>
+            <div
+              className={`h-2 w-2 rounded ${status === "running" ? "bg-violet-500 animate-pulse" : status === "error" ? "bg-red-500" : "bg-zinc-400"}`}
+            />
+            <span className="text-xs font-medium text-muted-foreground capitalize">
+              {status}
+            </span>
           </div>
         </div>
       </aside>

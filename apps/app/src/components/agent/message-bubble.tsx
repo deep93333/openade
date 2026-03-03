@@ -8,6 +8,7 @@ import {
   PlayIcon,
   RotateIcon,
 } from "@agentide/ui";
+import { CodeIcon } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useAgentStore } from "@/store/agent.store";
 import { useWorkspaceStore } from "@/store/workspace.store";
@@ -21,7 +22,9 @@ type MessageBubbleProps = {
   messageIndex: number;
 };
 
-type NormalizedPart = { type: "text"; value: string } | { type: "mention"; label: string; id: string };
+type NormalizedPart =
+  | { type: "text"; value: string }
+  | { type: "mention"; label: string; id: string; mentionType?: "element" };
 
 function unescapeHtml(html: string): string {
   return html
@@ -51,8 +54,25 @@ function normalizeUserContent(content: string): NormalizedPart[] {
         if (el.getAttribute?.("data-type") === "mention") {
           const id = el.getAttribute("data-id") ?? "";
           const labelAttr = el.getAttribute("data-label");
+          let mentionType: "element" | undefined =
+            el.getAttribute("data-mention-type") === "element" ? "element" : undefined;
+          if (!mentionType && id) {
+            try {
+              const parsed = JSON.parse(id);
+              if (parsed?.type === "element") mentionType = "element";
+            } catch {
+              /* not element */
+            }
+          }
           const label = (labelAttr ?? ((el.textContent?.trim() || id) || "@")).trim();
-          parts.push({ type: "mention", label: label.startsWith("@") ? label : `@${label}`, id });
+          const displayLabel =
+            mentionType === "element" ? label : label.startsWith("@") ? label : `@${label}`;
+          parts.push({
+            type: "mention",
+            label: displayLabel,
+            id,
+            ...(mentionType && { mentionType }),
+          });
           return;
         }
         for (const child of el.childNodes) walk(child);
@@ -88,7 +108,8 @@ function UserMessageContent({ content }: { content: string }) {
         p.type === "text" ? (
           <span key={i}>{p.value}</span>
         ) : (
-          <span key={i} data-type="mention" className="font-medium text-accent">
+          <span key={i} data-type="mention" className="font-medium text-accent inline-flex items-center gap-1">
+            {p.mentionType === "element" && <CodeIcon className="size-3 shrink-0 opacity-70" />}
             {p.label}
           </span>
         )

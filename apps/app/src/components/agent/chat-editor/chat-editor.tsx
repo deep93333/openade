@@ -16,7 +16,7 @@ import { useAgentStore } from "@/store/agent.store";
 import { useWorkspaceStore } from "@/store/workspace.store";
 import { useChatEditorStore } from "@/store/chat-editor.store";
 import { useUIStore } from "@/store/ui.store";
-import { useFileContextStore, type FileContext, type MentionFilePayload } from "@/store/file-context.store";
+import { useFileContextStore, type FileContext, type MentionFilePayload, type MentionElementPayload } from "@/store/file-context.store";
 import { FileMentionList } from "../file-mention-list";
 import { EditorArea } from "./editor-area";
 import { ChangedFilesBar } from "./changed-files-bar";
@@ -72,6 +72,7 @@ export const ChatEditor = ({ embedded = false }: ChatEditorProps) => {
   const isRunning = threadStatus === "running";
 
   const startAgent = useAgentStore((s) => s.startAgent);
+  const loadWorkspace = useAgentStore((s) => s.loadWorkspace);
   const stopAgent = useAgentStore((s) => s.stopAgent);
 
   const { modelOptions, imageAttachments, addImageAttachments, removeImageAttachment, clearImageAttachments } =
@@ -107,6 +108,7 @@ export const ChatEditor = ({ embedded = false }: ChatEditorProps) => {
 
   const setAddContextHandler = useFileContextStore((s) => s.setAddContextHandler);
   const setMentionFileHandler = useFileContextStore((s) => s.setMentionFileHandler);
+  const setMentionElementHandler = useFileContextStore((s) => s.setMentionElementHandler);
 
   const handleAddContextToChat = useCallback(
     (ctx: FileContext) => {
@@ -181,6 +183,38 @@ export const ChatEditor = ({ embedded = false }: ChatEditorProps) => {
     [activeWorkspace?.path]
   );
 
+  const mentionElementHandler = useCallback((payload: MentionElementPayload) => {
+    const insertMention = () => {
+      const editor = editorRef.current;
+      if (!editor) return;
+      const shortLabel =
+        payload.react.component
+          ? `<${payload.react.component} />`
+          : payload.id
+            ? `${payload.tagName}#${payload.id}`
+            : payload.classList.length > 0
+              ? `${payload.tagName}.${payload.classList.slice(0, 2).join(".")}`
+              : payload.selector;
+      const mentionId = JSON.stringify({
+        type: "element",
+        ...payload,
+      });
+      editor
+        .chain()
+        .focus()
+        .insertContent({
+          type: "mention",
+          attrs: {
+            id: mentionId,
+            label: shortLabel,
+          },
+        })
+        .insertContent(" ")
+        .run();
+    };
+    requestAnimationFrame(insertMention);
+  }, []);
+
   useEffect(() => {
     setAddContextHandler(handleAddContextToChat);
     return () => setAddContextHandler(null);
@@ -190,6 +224,11 @@ export const ChatEditor = ({ embedded = false }: ChatEditorProps) => {
     setMentionFileHandler(mentionFileHandler);
     return () => setMentionFileHandler(null);
   }, [setMentionFileHandler, mentionFileHandler]);
+
+  useEffect(() => {
+    setMentionElementHandler(mentionElementHandler);
+    return () => setMentionElementHandler(null);
+  }, [setMentionElementHandler, mentionElementHandler]);
 
   const handleMentionStart = useCallback((props: SuggestionProps<FileMentionItem, MentionNodeAttrs>) => {
     mentionStateRef.current.setMentionProps(props);
@@ -298,6 +337,32 @@ export const ChatEditor = ({ embedded = false }: ChatEditorProps) => {
     () =>
       Mention.configure({
         HTMLAttributes: { class: "font-medium text-accent-foreground", "data-type": "mention" },
+        renderHTML({ options, node }) {
+          const id = node.attrs.id ?? "";
+          let isElement = false;
+          try {
+            const parsed = JSON.parse(id);
+            isElement = parsed?.type === "element";
+          } catch {
+            /* not element */
+          }
+          const baseAttrs = {
+            ...options.HTMLAttributes,
+            "data-id": id,
+            "data-label": node.attrs.label ?? "",
+            ...(isElement && { "data-mention-type": "element" }),
+          };
+          const label = node.attrs.label ?? "";
+          if (isElement) {
+            return [
+              "span",
+              baseAttrs,
+              ["span", { class: "codicon codicon-code inline-block align-middle mr-1 opacity-70 text-[0.75em]" }],
+              label,
+            ];
+          }
+          return ["span", baseAttrs, label];
+        },
         suggestion: {
           char: "@",
           items: () => [],
@@ -410,25 +475,30 @@ export const ChatEditor = ({ embedded = false }: ChatEditorProps) => {
     fileInputRef.current?.click();
   }, []);
 
-  const handleSubmit = useCallback(() => {
+  const handleSubmit = useCallback(async () => {
     const ed = editorRef.current;
-    if (!ed || !activeWorkspaceId || isRunning) return;
+    if (!ed || isRunning) return;
+
+    const currentWorkspaceId = useWorkspaceStore.getState().activeWorkspaceId;
+    if (!currentWorkspaceId) return;
 
     const text = ed.getText().trim();
     const html = ed.getHTML();
     if (!text && imageAttachments.length === 0) return;
 
+    await loadWorkspace(currentWorkspaceId);
+
     const augmentedText = augmentWithSkillHint(ed, text);
     const images = imageAttachments.length ? imageAttachments : undefined;
 
-    startAgent(activeWorkspaceId, augmentedText, {
+    startAgent(currentWorkspaceId, augmentedText, {
       displayContent: html || undefined,
       imageAttachments: images,
     });
 
     ed.commands.clearContent();
     clearImageAttachments();
-  }, [activeWorkspaceId, isRunning, imageAttachments, augmentWithSkillHint, startAgent, clearImageAttachments]);
+  }, [isRunning, imageAttachments, augmentWithSkillHint, loadWorkspace, startAgent, clearImageAttachments]);
 
   const editor = useEditor({
     extensions: [StarterKit, Placeholder.configure({ placeholder }), mentionExtension],

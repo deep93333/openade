@@ -9,7 +9,7 @@ import { FileName, basename } from "@/components/primitives";
 
 const DIFF_OPTIONS = {
   theme: { dark: "agentide-dark" as const, light: "agentide-dark" as const },
-  diffStyle: "split" as const,
+  diffStyle: "unified" as const,
   diffIndicators: "bars" as const,
   disableFileHeader: true,
 };
@@ -80,7 +80,6 @@ export function DiffViewer({ open, onOpenChange, filePath, className }: DiffView
       <div className="flex h-10 items-center gap-2 border-b border-border px-3">
         <FileName
           path={filePath || ""}
-          nameClassName="font-mono text-sm font-medium text-foreground"
           className="min-w-0 flex-1"
         />
         <Button

@@ -62,7 +62,7 @@ export const AppLayout = () => {
       <div className="flex h-screen w-full min-w-0 flex-col overflow-hidden bg-tertiary dark:bg-background">
         <div className="flex min-h-0 min-w-0 flex-1 flex-row overflow-hidden bg-tertiary dark:bg-background">
           {leftPanelOpen && <Sidebar />}
-          <Group orientation="horizontal" className="min-h-0 min-w-0 flex-1 bg-tertiary dark:bg-background gap-0.5">
+          <Group orientation="horizontal" className="min-h-0 min-w-0 flex-1 bg-tertiary dark:bg-background gap-0">
             <Panel id="main" minSize={360}>
               <div
                 className={cn(
@@ -109,7 +109,6 @@ export const AppLayout = () => {
           open={apiKeyDialogOpen}
           onOpenChange={setApiKeyDialogOpen}
           onSaved={() => checkApiKey()}
-          dismissible={hasApiKey}
         />
         <AgentLogDrawer
           open={agentLogDrawerOpen}

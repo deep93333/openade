@@ -40,7 +40,7 @@ export function FileName({
       ) : (
         getFileTypeIcon(name)
       )}
-      <span className={cn("truncate", nameClassName)}>
+      <span className={cn("truncate text-xs", nameClassName)}>
         {name}
       </span>
       {dir && (

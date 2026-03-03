@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  Button,
   CircleXIcon,
   Drawer,
   DrawerBody,
@@ -19,8 +20,10 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { getElectronAPI } from "@/lib/electron";
+import { useFileContextStore } from "@/store/file-context.store";
 import { getInspectorScript } from "./inspector-script";
 import { ElementInfoPanel, type ElementInfo } from "./element-info-panel";
+import { IconBrowser, IconGlobe } from "@tabler/icons-react";
 
 const MIN_WIDTH = 400;
 const MAX_WIDTH = 1400;
@@ -47,6 +50,7 @@ export const WebViewDrawer = ({
   const [selectedElement, setSelectedElement] = useState<ElementInfo | null>(null);
   const webviewRef = useRef<Electron.WebviewTag | null>(null);
   const api = getElectronAPI();
+  const mentionElementInChat = useFileContextStore((s) => s.mentionElementInChat);
 
   const navigate = useCallback((targetUrl: string) => {
     let normalizedUrl = targetUrl.trim();
@@ -217,58 +221,53 @@ export const WebViewDrawer = ({
       maxWidth={MAX_WIDTH}
       defaultWidth={DEFAULT_WIDTH}
     >
-      <DrawerContent aria-label="Web view" overlayClassName="bg-black/90">
-        <DrawerHeader className="flex flex-col gap-2 px-2 py-2 border-b border-border">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1">
-              <GlobeIcon className="size-4 text-muted-foreground" />
-              <span className="truncate text-sm font-medium text-foreground max-w-[200px]">
-                {pageTitle || "Browser"}
-              </span>
-            </div>
-            <DrawerClose className="flex items-center justify-center size-8 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors">
-              <CircleXIcon className="size-5" />
-            </DrawerClose>
-          </div>
-
-          <form onSubmit={handleUrlSubmit} className="flex items-center gap-1">
+      <DrawerContent aria-label="Web view" className="bg-background" overlayClassName="bg-black/90">
+        <DrawerHeader className="flex flex-col gap-2 px-2 py-2 border-b border-border not-draggable">
+         
+<div className="flex items-center justify-between">
+  <div className="flex items-center gap-2 px-2">
+    <IconBrowser stroke={1} className="size-4 text-muted-foreground" />
+    <span className="truncate text-sm font-medium text-foreground max-w-[200px]">
+      {pageTitle || "Browser"}
+    </span>
+  </div>
+  <div className="flex flex-1"/>
+  <DrawerClose className="flex items-center justify-center size-6 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors">
+    <CircleXIcon className="size-5" />
+  </DrawerClose>
+</div>
+          <form onSubmit={handleUrlSubmit} className="flex items-center gap-2">
             <div className="flex items-center gap-0.5">
-              <button
-                type="button"
+              <Button
+                variant="ghost"
+                size="icon-xs"
                 onClick={handleGoBack}
                 disabled={!canGoBack}
-                className={cn(
-                  "flex items-center justify-center size-7 rounded-md transition-colors",
-                  canGoBack
-                    ? "hover:bg-secondary text-muted-foreground hover:text-foreground"
-                    : "text-muted-foreground/40 cursor-not-allowed"
-                )}
+                className={canGoBack ? "hover:bg-secondary text-muted-foreground hover:text-foreground" : "text-muted-foreground/40 cursor-not-allowed"}
               >
                 <ArrowLeftIcon className="size-4" />
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon-xs"
                 onClick={handleGoForward}
                 disabled={!canGoForward}
                 className={cn(
-                  "flex items-center justify-center size-7 rounded-md transition-colors",
                   canGoForward
                     ? "hover:bg-secondary text-muted-foreground hover:text-foreground"
                     : "text-muted-foreground/40 cursor-not-allowed"
                 )}
               >
                 <ArrowRightIcon className="size-4" />
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon-xs"
                 onClick={handleRefresh}
-                className={cn(
-                  "flex items-center justify-center size-7 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors",
-                  loading && "animate-spin"
-                )}
+                loading={loading}
               >
                 <RefreshCwIcon className="size-4" />
-              </button>
+              </Button>
             </div>
 
             <Input
@@ -278,35 +277,35 @@ export const WebViewDrawer = ({
               className="flex-1 h-7 text-sm font-mono bg-secondary border-0"
             />
 
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              size="icon-xs"
               onClick={toggleInspectMode}
-              className={cn(
-                "flex items-center justify-center size-7 rounded-md transition-colors",
-                inspectMode
-                  ? "bg-blue-500 text-white hover:bg-blue-600"
-                  : "hover:bg-secondary text-muted-foreground hover:text-foreground"
-              )}
+              className={inspectMode ? "bg-blue-500 text-white hover:bg-blue-600" : "hover:bg-secondary text-muted-foreground hover:text-foreground"}
               title={inspectMode ? "Exit inspect mode (Esc)" : "Inspect element"}
             >
               <CrosshairIcon className="size-4" />
-            </button>
-            <button
-              type="button"
+              </Button>
+            <Button
+              variant="ghost"
+              size="icon-xs"
               onClick={handleOpenDevTools}
-              className="flex items-center justify-center size-7 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+              className="hover:bg-secondary text-muted-foreground hover:text-foreground"
               title="Open DevTools"
             >
               <CodeIcon className="size-4" />
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="ghost"
+              size="icon-xs"
               onClick={handleOpenExternal}
-              className="flex items-center justify-center size-7 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+              className="hover:bg-secondary text-muted-foreground hover:text-foreground"
               title="Open in external browser"
             >
               <ExternalLinkIcon className="size-4" />
-            </button>
+            </Button>
+           
           </form>
 
           {inspectMode && (
@@ -315,9 +314,10 @@ export const WebViewDrawer = ({
               <span>Click on any element to inspect it. Press <kbd className="px-1.5 py-0.5 rounded bg-blue-500/20 font-mono">Esc</kbd> to exit.</span>
             </div>
           )}
+          
         </DrawerHeader>
 
-        <DrawerBody className="p-0 bg-white flex flex-col">
+        <DrawerBody className="p-0 flex flex-col">
           <div className="flex-1 min-h-0 relative">
             {api ? (
               <webview
@@ -338,6 +338,7 @@ export const WebViewDrawer = ({
             <ElementInfoPanel
               element={selectedElement}
               onClose={handleCloseElementPanel}
+              onAddToChat={mentionElementInChat}
             />
           )}
         </DrawerBody>
