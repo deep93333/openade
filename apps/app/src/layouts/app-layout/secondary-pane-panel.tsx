@@ -6,7 +6,7 @@ import { cn } from "@agentide/ui";
 import { CARD_CLASS, PANEL_SEPARATOR_CLASS } from "./constants";
 
 type SecondaryPanePanelProps = {
-  secondaryPane: { open: boolean; mode: SecondaryPaneMode; path: string | null };
+  secondaryPane: { open: boolean; mode: SecondaryPaneMode; path: string | null; staged?: boolean };
   onOpenChange: (open: boolean) => void;
 };
 
@@ -28,6 +28,7 @@ export function SecondaryPanePanel({ secondaryPane, onOpenChange }: SecondaryPan
               open={secondaryPane.open}
               onOpenChange={onOpenChange}
               filePath={secondaryPane.path}
+              staged={secondaryPane.staged}
               className="flex h-full min-h-0 flex-col"
             />
           )}

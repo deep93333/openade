@@ -25,11 +25,11 @@ type DiffViewerProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   filePath: string | null;
+  staged?: boolean;
   className?: string;
 };
 
-
-export function DiffViewer({ open, onOpenChange, filePath, className }: DiffViewerProps) {
+export function DiffViewer({ open, onOpenChange, filePath, staged = false, className }: DiffViewerProps) {
   const activeWorkspace = useWorkspaceStore((s) =>
     s.workspaces.find((w) => w.id === s.activeWorkspaceId) ?? null
   );
@@ -40,11 +40,11 @@ export function DiffViewer({ open, onOpenChange, filePath, className }: DiffView
   const [diff, setDiff] = useState<DiffState>({ oldContent: "", newContent: "", loading: false, error: null });
   const [revertLoading, setRevertLoading] = useState(false);
 
-  const fetchDiff = useCallback(async (path: string) => {
+  const fetchDiff = useCallback(async (path: string, isStaged: boolean) => {
     const api = getElectronAPI();
     if (!api?.workspace?.getFileDiffContent || !activeWorkspace?.id) return;
     setDiff({ oldContent: "", newContent: "", loading: true, error: null });
-    const result = await api.workspace.getFileDiffContent(activeWorkspace.id, path);
+    const result = await api.workspace.getFileDiffContent(activeWorkspace.id, path, isStaged);
     if (result.success && result.data) {
       setDiff({ oldContent: result.data.oldContent, newContent: result.data.newContent, loading: false, error: null });
     } else {
@@ -57,8 +57,8 @@ export function DiffViewer({ open, onOpenChange, filePath, className }: DiffView
       setDiff({ oldContent: "", newContent: "", loading: false, error: null });
       return;
     }
-    fetchDiff(filePath);
-  }, [open, filePath, fetchDiff, gitChangeVersion]);
+    fetchDiff(filePath, staged);
+  }, [open, filePath, staged, fetchDiff, gitChangeVersion]);
 
   const handleRevert = useCallback(async () => {
     if (!filePath) return;

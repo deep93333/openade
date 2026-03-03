@@ -323,10 +323,21 @@ export const GitChangesPanel = ({ className, onFileSelect: _onFileSelect }: GitC
     if (result?.success) load();
   }, [activeWorkspace?.id, load]);
 
-  const handleFileSelect = useCallback((path: string) => {
-    setSelectedPath(path);
-    openDiffViewer(path);
-  }, [openDiffViewer]);
+  const handleStagedFileSelect = useCallback(
+    (path: string) => {
+      setSelectedPath(path);
+      openDiffViewer(path, true);
+    },
+    [openDiffViewer]
+  );
+
+  const handleUnstagedFileSelect = useCallback(
+    (path: string) => {
+      setSelectedPath(path);
+      openDiffViewer(path, false);
+    },
+    [openDiffViewer]
+  );
 
   const handleCommit = useCallback(async () => {
     const api = getElectronAPI();
@@ -480,7 +491,7 @@ export const GitChangesPanel = ({ className, onFileSelect: _onFileSelect }: GitC
               <Section title="Staged" count={staged.length}>
                 <GroupedFileList
                   files={staged}
-                  onSelect={handleFileSelect}
+                  onSelect={handleStagedFileSelect}
                   selectedPath={selectedPath}
                   action="unstage"
                   onAction={handleUnstage}
@@ -512,7 +523,7 @@ export const GitChangesPanel = ({ className, onFileSelect: _onFileSelect }: GitC
               ) : (
                 <GroupedFileList
                   files={unstaged}
-                  onSelect={handleFileSelect}
+                  onSelect={handleUnstagedFileSelect}
                   selectedPath={selectedPath}
                   action="stage"
                   onAction={handleStage}

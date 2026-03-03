@@ -14,6 +14,7 @@ type UIStoreState = {
     open: boolean;
     mode: SecondaryPaneMode;
     path: string | null;
+    staged?: boolean;
   };
   webView: { open: boolean; url: string };
 
@@ -37,7 +38,7 @@ type UIStoreState = {
   setApiKeyDialogOpen: (open: boolean) => void;
   checkApiKey: () => Promise<void>;
 
-  openDiffViewer: (path: string) => void;
+  openDiffViewer: (path: string, staged?: boolean) => void;
 
   agentLogDrawerOpen: boolean;
   openAgentLogDrawer: () => void;
@@ -50,7 +51,7 @@ export const useUIStore = create<UIStoreState>()((set) => ({
   centerPage: "chat",
   leftPanelOpen: true,
   rightPanelOpen: false,
-  secondaryPane: { open: false, mode: "file", path: null },
+  secondaryPane: { open: false, mode: "file", path: null, staged: false },
   webView: { open: false, url: "http://localhost:3000" },
 
   setActiveView: (view) => set({ activeView: view }),
@@ -101,8 +102,8 @@ export const useUIStore = create<UIStoreState>()((set) => ({
     }
   },
 
-  openDiffViewer: (path) =>
-    set({ secondaryPane: { open: true, mode: "diff", path } }),
+  openDiffViewer: (path, staged) =>
+    set({ secondaryPane: { open: true, mode: "diff", path, staged: staged ?? false } }),
 
   agentLogDrawerOpen: false,
   openAgentLogDrawer: () => set({ agentLogDrawerOpen: true }),

@@ -18,7 +18,6 @@ export function useGitUnstagedChanges(): GitChangedFile[] {
   );
 
   const [changes, setChanges] = useState<GitUnstagedChange[]>([]);
-  const [loading, setLoading] = useState(false);
 
   const fetchChanges = useCallback(async () => {
     if (!workspaceId) {
@@ -32,7 +31,6 @@ export function useGitUnstagedChanges(): GitChangedFile[] {
       return;
     }
 
-    setLoading(true);
     try {
       const result = await api.workspace.getUnstagedChanges(workspaceId);
       if (result.success && result.data) {
@@ -42,8 +40,6 @@ export function useGitUnstagedChanges(): GitChangedFile[] {
       }
     } catch {
       setChanges([]);
-    } finally {
-      setLoading(false);
     }
   }, [workspaceId]);
 
