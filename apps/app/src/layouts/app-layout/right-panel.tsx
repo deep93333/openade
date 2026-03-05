@@ -1,7 +1,7 @@
 import { Panel, Separator } from "react-resizable-panels";
-import type { NavigationView } from "@/store/ui.store";
+import type { NavigationView } from "@/store/ui";
 import { FileTree } from "@/components/file-tree";
-import { GitChangesPanel } from "@/components/git-changes-panel";
+import { GitChangesPanel } from "@/components/gitpanel";
 import { Button, cn } from "@agentide/ui";
 import { IconExchange, IconFiles } from "@tabler/icons-react";
 import { PANEL_SEPARATOR_CLASS } from "./constants";
@@ -18,7 +18,7 @@ export function RightPanel({ activeView, setActiveView, onFileSelect, showSepara
     <>
       {showSeparator && <Separator className={PANEL_SEPARATOR_CLASS} />}
       <Panel id="right-panel" minSize={220} maxSize={360} defaultSize={260}>
-        <div className="flex min-h-0 h-full flex-col overflow-hidden">
+        <div className="flex flex-1 min-h-0 h-full flex-col overflow-hidden">
           <div className="flex shrink-0 items-center border-b px-2 border-foreground/5 h-[48px] drag-region gap-1">
             <Button
               variant={activeView === "files" ? "secondary" : "ghost"}

@@ -1,1 +1,2 @@
-export { TasksPage } from "./tasks-page";
+export { TasksPage, WorkspaceFilterDropdown } from "./page";
+export { TaskStatusIcon } from "./task-status-icon";

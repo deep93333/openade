@@ -1,2 +1,2 @@
-export { getToolComponent } from "./tool-registry";
+export { getToolComponent } from "./registry";
 export type { ToolComponentProps } from "./types";

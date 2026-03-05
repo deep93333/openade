@@ -5,11 +5,17 @@ import {
   type ModelMessage,
   type LanguageModelUsage,
 } from "ai";
-import { createAnthropic } from "@ai-sdk/anthropic";
-import { createOpenAI } from "@ai-sdk/openai";
-import { createMinimax } from "vercel-minimax-ai-provider";
 import { createToolSet, createReadOnlyToolSet, type ToolCallMetadata } from "./tools/registry.js";
 import { buildSystemPrompt, COMPACTION_PROMPT } from "./system-prompt.js";
+import {
+  MODELS,
+  resolveModel,
+  resolveModelForProvider,
+  createLanguageModel,
+  type ModelDef,
+  type AgentBackendConfig,
+} from "./models.js";
+import { addCacheControl } from "./cache.js";
 import type { AgentMessage, AgentMode, AgentProvider, ThreadTitleParams } from "@agentide/shared";
 import type {
   AgentBackend,
@@ -17,23 +23,14 @@ import type {
 } from "./agent-backend-types.js";
 import type { ToolContext } from "./tools/tool-types.js";
 
-export type AgentBackendConfig = {
-  getApiKey: () => string | null;
-  getCodexApiKey: () => string | null;
-  getMinimaxApiKey: () => string | null;
-  writeAgentLog?: (
-    level: "INFO" | "WARN" | "ERROR",
-    source: string,
-    ...args: unknown[]
-  ) => void;
-};
+export type { AgentBackendConfig } from "./models.js";
 
 const TOOL_OUTPUT_LIMIT = 800;
 const ASSISTANT_MSG_LIMIT = 2000;
 const TITLE_INPUT_LIMIT = 1600;
 const TITLE_MAX_LENGTH = 80;
 const TITLE_PROMPT =
-  "Generate a concise thread title (max 6 words) that summarizes the user's request. Use title case. Return only the title with no quotes or trailing punctuation.";
+  "Generate a concise thread title (max 6 words) that summarizes the user's request or what the agent is doing. Use title case. If tool context is provided, consider what the tool is doing (e.g., 'Reading files', 'Running tests', 'Editing code'). Return only the title with no quotes or trailing punctuation.";
 
 function cap(text: string, limit: number): string {
   return text.length > limit ? text.slice(0, limit) + "…" : text;
@@ -84,9 +81,14 @@ function buildTitleContext(messages: AgentMessage[]): string | null {
   const firstUser = messages.find((m) => m.role === "user" && m.content.trim());
   if (!firstUser) return null;
   const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant" && m.content.trim());
+  const toolMessage = messages.find((m) => m.role === "tool" && m.toolName);
+
   const parts = [`User: ${cap(firstUser.content, TITLE_INPUT_LIMIT)}`];
   if (lastAssistant) {
     parts.push(`Assistant: ${cap(lastAssistant.content, TITLE_INPUT_LIMIT)}`);
+  }
+  if (toolMessage?.toolName) {
+    parts.push(`Tool: ${toolMessage.toolName}`);
   }
   return parts.join("\n");
 }
@@ -100,97 +102,6 @@ function cleanTitle(raw: string): string {
   return noTrailingPunctuation.slice(0, TITLE_MAX_LENGTH).trimEnd();
 }
 
-type LlmProvider = "anthropic" | "openai" | "minimax";
-
-type ModelDef = {
-  value: string;
-  label: string;
-  llmProvider: LlmProvider;
-  apiModelId: string;
-  uiProvider: AgentProvider;
-  inputPricePer1k?: number;
-  outputPricePer1k?: number;
-};
-
-const MODELS: ModelDef[] = [
-  { value: "claude-sonnet-4-6", label: "Claude Sonnet 4.6", llmProvider: "anthropic", apiModelId: "claude-sonnet-4-6", uiProvider: "claude" },
-  { value: "claude-opus-4-6", label: "Claude Opus 4.6", llmProvider: "anthropic", apiModelId: "claude-opus-4-6", uiProvider: "claude" },
-  { value: "claude-haiku-4-5", label: "Claude Haiku 4.5", llmProvider: "anthropic", apiModelId: "claude-haiku-4-5-20251001", uiProvider: "claude" },
-  {
-    value: "gpt-5.2",
-    label: "GPT-5.2",
-    llmProvider: "openai",
-    apiModelId: "gpt-5.2",
-    uiProvider: "codex",
-    inputPricePer1k: 1.75 / 1000,
-    outputPricePer1k: 14 / 1000,
-  },
-  {
-    value: "gpt-5-mini",
-    label: "GPT-5 Mini",
-    llmProvider: "openai",
-    apiModelId: "gpt-5-mini",
-    uiProvider: "codex",
-    inputPricePer1k: 0.25 / 1000,
-    outputPricePer1k: 2 / 1000,
-  },
-  {
-    value: "gpt-5.2-codex",
-    label: "GPT-5.2 Codex",
-    llmProvider: "openai",
-    apiModelId: "gpt-5.2-codex",
-    uiProvider: "codex",
-    inputPricePer1k: 1.75 / 1000,
-    outputPricePer1k: 14 / 1000,
-  },
-  {
-    value: "gpt-5.3-codex",
-    label: "GPT-5.3 Codex",
-    llmProvider: "openai",
-    apiModelId: "gpt-5.3-codex",
-    uiProvider: "codex",
-    inputPricePer1k: 1.75 / 1000,
-    outputPricePer1k: 14 / 1000,
-  },
-  {
-    value: "gpt-5.1-codex-mini",
-    label: "GPT-5.1 Codex Mini",
-    llmProvider: "openai",
-    apiModelId: "gpt-5.1-codex-mini",
-    uiProvider: "codex",
-    inputPricePer1k: 0.25 / 1000,
-    outputPricePer1k: 2 / 1000,
-  },
-  {
-    value: "minimax-m2",
-    label: "MiniMax M2",
-    llmProvider: "minimax",
-    apiModelId: "MiniMax-M2",
-    uiProvider: "minimax",
-  },
-  {
-    value: "minimax-m2.1",
-    label: "MiniMax M2.1",
-    llmProvider: "minimax",
-    apiModelId: "MiniMax-M2.1",
-    uiProvider: "minimax",
-  },
-  {
-    value: "minimax-m2.1-lightning",
-    label: "MiniMax M2.1 Lightning",
-    llmProvider: "minimax",
-    apiModelId: "MiniMax-M2.1-lightning",
-    uiProvider: "minimax",
-  },
-  {
-    value: "minimax-m2.5",
-    label: "MiniMax M2.5",
-    llmProvider: "minimax",
-    apiModelId: "MiniMax-M2.5",
-    uiProvider: "minimax",
-  },
-];
-
 const RETRY_INITIAL_DELAY = 2000;
 const RETRY_BACKOFF_FACTOR = 2;
 const RETRY_MAX_DELAY = 30_000;
@@ -202,49 +113,6 @@ const PRUNE_MIN_SAVINGS = 20_000;
 const CHARS_PER_TOKEN_ESTIMATE = 4;
 
 const activeSessions = new Map<string, AbortController>();
-
-function resolveModel(modelValue: string | undefined): ModelDef {
-  if (!modelValue) return MODELS[0];
-  return MODELS.find((m) => m.value === modelValue) ?? MODELS[0];
-}
-
-function resolveModelForProvider(modelValue: string | undefined, provider: AgentProvider | undefined): ModelDef {
-  if (modelValue) return resolveModel(modelValue);
-  if (provider) {
-    return MODELS.find((m) => m.uiProvider === provider) ?? MODELS[0];
-  }
-  return MODELS[0];
-}
-
-function getProviderApiKey(provider: LlmProvider, config: AgentBackendConfig): string {
-  if (provider === "anthropic") {
-    const key = config.getApiKey();
-    if (!key) throw new Error("Anthropic API key not set. Configure it in Settings → Authentication.");
-    return key;
-  }
-  if (provider === "minimax") {
-    const key = config.getMinimaxApiKey();
-    if (!key) throw new Error("MiniMax API key not set. Configure it in Settings → Authentication.");
-    return key;
-  }
-  const key = config.getCodexApiKey();
-  if (!key) throw new Error("OpenAI API key not set. Configure it in Settings → Authentication (Codex).");
-  return key;
-}
-
-function createLanguageModel(modelDef: ModelDef, config: AgentBackendConfig) {
-  const apiKey = getProviderApiKey(modelDef.llmProvider, config);
-  if (modelDef.llmProvider === "anthropic") {
-    const anthropic = createAnthropic({ apiKey });
-    return anthropic(modelDef.apiModelId);
-  }
-  if (modelDef.llmProvider === "minimax") {
-    const minimax = createMinimax({ apiKey });
-    return minimax(modelDef.apiModelId);
-  }
-  const openai = createOpenAI({ apiKey });
-  return openai(modelDef.apiModelId);
-}
 
 export async function generateThreadTitle(
   config: AgentBackendConfig,
@@ -284,6 +152,19 @@ function computeCost(usage: LanguageModelUsage, modelDef: ModelDef): number {
   const outputRate =
     modelDef.outputPricePer1k ??
     (modelDef.llmProvider === "anthropic" ? 0.015 : modelDef.llmProvider === "minimax" ? 0.0008 : 0.010);
+
+  const cacheRead = usage.inputTokenDetails?.cacheReadTokens ?? 0;
+  const cacheWrite = usage.inputTokenDetails?.cacheWriteTokens ?? 0;
+
+  if (modelDef.llmProvider === "anthropic" && (cacheRead > 0 || cacheWrite > 0)) {
+    const uncachedTokens = inputTokens - cacheRead - cacheWrite;
+    const inputCost =
+      uncachedTokens * inputRate +
+      cacheRead * inputRate * 0.1 +
+      cacheWrite * inputRate * 1.25;
+    return (inputCost + outputTokens * outputRate) / 1000;
+  }
+
   return (inputTokens * inputRate + outputTokens * outputRate) / 1000;
 }
 
@@ -441,7 +322,23 @@ function extractApiErrorMessage(error: unknown): string {
     return `API request failed with status ${err.statusCode}`;
   }
 
-  return error instanceof Error ? error.message : String(error);
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  if (error && typeof error === "object") {
+    const obj = error as Record<string, unknown>;
+    if (typeof obj.message === "string") return obj.message;
+    if (typeof obj.error === "string") return obj.error;
+    if (obj.error && typeof (obj.error as Record<string, unknown>).message === "string") {
+      return (obj.error as Record<string, unknown>).message as string;
+    }
+    try {
+      const str = JSON.stringify(error);
+      return str.length > 500 ? str.slice(0, 500) + "…" : str;
+    } catch {
+      return "Unknown error";
+    }
+  }
+  return String(error);
 }
 
 function noopLog(
@@ -480,6 +377,8 @@ async function runAgent(
   let totalCostUsd = 0;
   let totalInputTokens = 0;
   let totalOutputTokens = 0;
+  let totalCacheReadTokens = 0;
+  let totalCacheWriteTokens = 0;
 
   const conversationHistory: ModelMessage[] = options.existingMessages?.length
     ? summarizeExistingMessages(options.existingMessages)
@@ -503,8 +402,8 @@ async function runAgent(
 
   conversationHistory.push({ role: "user", content: userContent } as ModelMessage);
 
-  if (mode === "ask" || mode === "plan") {
-    const isAsk = mode === "ask";
+  if (mode === "ask" || mode === "plan" || mode === "agent_review") {
+    const isAsk = mode === "ask" || mode === "agent_review";
     const toolCtxReadOnly: ToolContext = {
       sessionId,
       workspacePath: options.workspacePath,
@@ -558,13 +457,18 @@ async function runAgent(
           tools: readOnlyToolSet,
           stopWhen: stepCountIs(READ_ONLY_MAX_STEPS),
           abortSignal: linkedAbort.signal,
+          prepareStep: ({ messages, model }) => ({
+            messages: addCacheControl({ messages, model }),
+          }),
           onError: ({ error }) => {
             const err = error as { message?: string; statusCode?: number; responseBody?: string; data?: unknown };
+            const message = extractApiErrorMessage(error);
             writeAgentLog("ERROR", "Agent", "stream error", {
               sessionId,
               message: err.message ?? String(error),
               statusCode: err.statusCode,
             });
+            options.onError({ sessionId, error: message });
           },
         });
 
@@ -590,6 +494,8 @@ async function runAgent(
         if (totalUsage) {
           totalInputTokens += totalUsage.inputTokens ?? 0;
           totalOutputTokens += totalUsage.outputTokens ?? 0;
+          totalCacheReadTokens += totalUsage.inputTokenDetails?.cacheReadTokens ?? 0;
+          totalCacheWriteTokens += totalUsage.inputTokenDetails?.cacheWriteTokens ?? 0;
           totalCostUsd += computeCost(totalUsage, modelDef);
         }
 
@@ -604,6 +510,7 @@ async function runAgent(
             sessionId,
             agentMode: mode,
             ...(!isAsk ? { planContent: finalText } : {}),
+            ...(mode === "agent_review" ? { reviewContent: finalText } : {}),
           });
         }
 
@@ -695,6 +602,10 @@ async function runAgent(
           toolCallId: meta.toolCallId,
         });
       },
+      subAgent: {
+        languageModel,
+        systemPrompt,
+      },
     };
 
     const toolCallHandler = (meta: ToolCallMetadata) => {
@@ -728,8 +639,12 @@ async function runAgent(
           tools: toolSet,
           stopWhen: stepCountIs(MAX_TOOL_STEPS),
           abortSignal: linkedAbort.signal,
+          prepareStep: ({ messages, model }) => ({
+            messages: addCacheControl({ messages, model }),
+          }),
           onError: ({ error }) => {
             const err = error as { message?: string; statusCode?: number; responseBody?: string; data?: unknown };
+            const message = extractApiErrorMessage(error);
             writeAgentLog("ERROR", "Agent", "stream error", {
               sessionId,
               message: err.message ?? String(error),
@@ -737,6 +652,7 @@ async function runAgent(
               responseBody: err.responseBody ? (err.responseBody.length > 500 ? err.responseBody.slice(0, 500) + "…" : err.responseBody) : undefined,
               data: err.data,
             });
+            options.onError({ sessionId, error: message });
           },
         });
 
@@ -763,6 +679,8 @@ async function runAgent(
           const callOutput = totalUsage.outputTokens ?? 0;
           totalInputTokens += callInput;
           totalOutputTokens += callOutput;
+          totalCacheReadTokens += totalUsage.inputTokenDetails?.cacheReadTokens ?? 0;
+          totalCacheWriteTokens += totalUsage.inputTokenDetails?.cacheWriteTokens ?? 0;
           totalCostUsd += computeCost(totalUsage, modelDef);
         }
 
@@ -865,6 +783,8 @@ async function runAgent(
     totalCostUsd,
     inputTokens: totalInputTokens,
     outputTokens: totalOutputTokens,
+    cacheReadTokens: totalCacheReadTokens,
+    cacheWriteTokens: totalCacheWriteTokens,
   });
 
   options.onResult({
@@ -873,6 +793,8 @@ async function runAgent(
     totalCostUsd,
     inputTokens: totalInputTokens,
     outputTokens: totalOutputTokens,
+    cacheReadTokens: totalCacheReadTokens,
+    cacheWriteTokens: totalCacheWriteTokens,
   });
 }
 

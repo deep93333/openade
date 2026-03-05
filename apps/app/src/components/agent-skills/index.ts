@@ -1,1 +1,1 @@
-export { AgentSkills } from "./agent-skills";
+export { AgentSkills } from "./skills";

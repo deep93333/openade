@@ -1,4 +1,4 @@
-import { BrowserWindow, app } from "electron";
+import { BrowserWindow, Menu, app } from "electron";
 import path from "node:path";
 import fs from "node:fs";
 
@@ -144,6 +144,17 @@ export const createLogWindow = (): BrowserWindow => {
   });
 
   logWindow.loadFile(getLogViewerPath());
+
+  logWindow.webContents.on("context-menu", (_e, params) => {
+    Menu.buildFromTemplate([
+      {
+        label: "Inspect Element",
+        click: () => {
+          logWindow?.webContents.inspectElement(params.x, params.y);
+        },
+      },
+    ]).popup();
+  });
 
   logWindow.on("closed", () => {
     logWindow = null;

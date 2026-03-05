@@ -3,17 +3,15 @@ import type { ChatThread } from "@agentide/shared";
 import {
   IconAlertCircle,
   IconCircle,
-  IconCircleCheckFilled,
-  IconCircleDotted,
-  IconCircleDot,
   IconPlayerPause,
   IconPlayerPlay,
-  IconProgress,
 } from "@tabler/icons-react";
-import { getTaskStatusLabel } from "@/components/shared/task-status-badge";
+import { getTaskStatusLabel } from "@/components/shared/badge";
+import { TaskStatusIcon } from "@/components/tasks/task-status-icon";
 import { normalizeUserMessageContentToText } from "@/utils/normalize-user-message";
 
 export const TASK_STATUSES: TaskStatus[] = [
+  "brainstorm",
   "backlog",
   "in_progress",
   "in_review",
@@ -47,17 +45,7 @@ export function getThreadStatusIcon(status: AgentStatus) {
 }
 
 export function getTaskStatusIcon(status: TaskStatus) {
-  switch (status) {
-    case "in_progress":
-      return <IconProgress className="size-4 text-accent shrink-0" stroke={2} />;
-    case "in_review":
-      return <IconCircleDot className="size-4 text-amber-700 shrink-0" stroke={2} />;
-    case "completed":
-      return <IconCircleCheckFilled className="size-4 text-indigo-500 shrink-0" stroke={2} />;
-    case "backlog":
-    default:
-      return <IconCircleDotted className="size-4 text-muted-foreground shrink-0" stroke={2} />;
-  }
+  return <TaskStatusIcon status={status} />;
 }
 
 export { getTaskStatusLabel };

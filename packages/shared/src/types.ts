@@ -9,7 +9,7 @@ export type AuthStatus = {
   cliEmail?: string;
 };
 
-export type TaskStatus = "backlog" | "in_progress" | "in_review" | "completed";
+export type TaskStatus = "brainstorm" | "backlog" | "planning" | "in_progress" | "agent_review" | "in_review" | "completed";
 
 export type AgentMessageRole = "user" | "assistant" | "system" | "tool";
 
@@ -41,6 +41,7 @@ export type AgentMessage = {
   outputTokens?: number;
   costUsd?: number;
   planContent?: string;
+  reviewContent?: string;
   agentMode?: AgentMode;
 };
 
@@ -52,7 +53,7 @@ export type Workspace = {
   branch?: string;
 };
 
-export type AgentMode = "ask" | "plan" | "agent";
+export type AgentMode = "ask" | "plan" | "agent" | "agent_review";
 
 export type AgentProvider = "claude" | "codex" | "minimax";
 
@@ -125,6 +126,7 @@ export type ThreadTitleParams = {
 export type AgentErrorPayload = {
   sessionId: string;
   error: string;
+  workspaceId?: string;
 };
 
 export type SdkSessionIdPayload = {
@@ -157,6 +159,8 @@ export type AgentResult = {
   totalCostUsd?: number;
   inputTokens?: number;
   outputTokens?: number;
+  cacheReadTokens?: number;
+  cacheWriteTokens?: number;
 };
 
 export type Checkpoint = {
@@ -178,6 +182,7 @@ export type ChatThread = {
   title?: string;
   sdkSessionId?: string;
   provider?: AgentProvider;
+  model?: string;
   checkpoints?: Checkpoint[];
   taskStatus?: TaskStatus;
   inputTokens?: number;
@@ -233,4 +238,5 @@ export type GitStagedChange = {
 export type FileDiffContent = {
   oldContent: string;
   newContent: string;
+  patch?: string;
 };

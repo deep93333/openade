@@ -14,7 +14,8 @@
     "clean": "rm -rf apps/app/dist apps/desktop/dist packages/shared/dist packages/agent/dist",
     "format": "biome format --write .",
     "format:check": "biome format .",
-    "test": "bun run --filter @agentide/desktop test && bun run --filter @agentide/app test"
+    "test": "bun run --filter @agentide/desktop test && bun run --filter @agentide/app test",
+    "dev:static": "bun run --filter @agentide/agent build && bun run --filter @agentide/shared build && bun run --filter @agentide/app build && bun run --filter @agentide/desktop dev:static"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",

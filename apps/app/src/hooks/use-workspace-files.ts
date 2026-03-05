@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { FileTreeNode } from "@agentide/shared";
 import { getElectronAPI } from "@/lib/electron";
-import { useWorkspaceStore } from "@/store/workspace.store";
+import { useWorkspaceStore } from "@/store/workspace";
 
 function flattenBreadthFirst(
   tree: FileTreeNode,

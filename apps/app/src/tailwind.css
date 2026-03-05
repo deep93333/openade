@@ -907,3 +907,8 @@ button {
   transform: translateY(-500px);
   will-change: transform, opacity, filter, background-color;
 }
+
+@keyframes task-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}

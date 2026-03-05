@@ -222,13 +222,14 @@ export class GitService {
     workspacePath: string,
     relativePath: string,
     staged = false
-  ): Promise<{ oldContent: string; newContent: string }> {
+  ): Promise<{ oldContent: string; newContent: string; patch?: string }> {
     const fullPath = path.join(workspacePath, relativePath);
     const git = this.getGit(workspacePath);
-    
+
     let oldContent = "";
     let newContent = "";
-    
+    let patch = "";
+
     if (staged) {
       try {
         oldContent = await git.show([`HEAD:${relativePath}`]);
@@ -239,6 +240,11 @@ export class GitService {
         newContent = await git.show([`:${relativePath}`]);
       } catch {
         newContent = "";
+      }
+      try {
+        patch = await git.diff(["--cached", "--", relativePath]);
+      } catch {
+        patch = "";
       }
     } else {
       try {
@@ -257,9 +263,14 @@ export class GitService {
       } catch {
         newContent = "";
       }
+      try {
+        patch = await git.diff(["--", relativePath]);
+      } catch {
+        patch = "";
+      }
     }
-    
-    return { oldContent, newContent };
+
+    return { oldContent, newContent, patch };
   }
 
   async revertUnstagedFile(workspacePath: string, relativePath: string): Promise<void> {

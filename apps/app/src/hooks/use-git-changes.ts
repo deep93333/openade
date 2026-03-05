@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { getElectronAPI } from "@/lib/electron";
-import { useWorkspaceStore } from "@/store/workspace.store";
+import { useWorkspaceStore } from "@/store/workspace";
 import type { GitUnstagedChange } from "@agentide/shared";
 
 export type GitChangedFile = {

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { LanguageModel } from "ai";
 
 export type UserInputResponse = {
   updatedInput?: unknown;
@@ -12,6 +13,11 @@ export type ToolStartMeta = {
   toolCallId: string;
 };
 
+export type SubAgentCapability = {
+  languageModel: LanguageModel;
+  systemPrompt: string;
+};
+
 export type ToolContext = {
   sessionId: string;
   workspacePath: string;
@@ -19,6 +25,7 @@ export type ToolContext = {
   onMetadata: (meta: Record<string, unknown>) => void;
   requestUserInput: (toolName: string, input: unknown) => Promise<UserInputResponse>;
   onToolStart?: (meta: ToolStartMeta) => void;
+  subAgent?: SubAgentCapability;
 };
 
 export type ToolResult = {

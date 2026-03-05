@@ -1,7 +1,7 @@
 import { useEffect } from "react";
-import { useWorkspaceStore } from "@/store/workspace.store";
-import { useAgentStore } from "@/store/agent.store";
-import { useUIStore } from "@/store/ui.store";
+import { useWorkspaceStore } from "@/store/workspace";
+import { useAgentStore } from "@/store/agent";
+import { useUIStore } from "@/store/ui";
 import { getElectronAPI } from "@/lib/electron";
 
 export function useAppLayout() {
@@ -9,6 +9,8 @@ export function useAppLayout() {
     s.workspaces.find((w) => w.id === s.activeWorkspaceId) ?? null
   );
   const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
+  const fetchWorkspaces = useWorkspaceStore((s) => s.fetchWorkspaces);
+  const initializeActiveWorkspace = useWorkspaceStore((s) => s.initializeActiveWorkspace);
   const initAgentListeners = useAgentStore((s) => s.initListeners);
   const teardownAgentListeners = useAgentStore((s) => s.teardownListeners);
   const pendingToolApprovals = useAgentStore((s) => s.pendingToolApprovals);
@@ -28,6 +30,14 @@ export function useAppLayout() {
   const hasApiKey = useUIStore((s) => s.hasApiKey);
   const agentLogDrawerOpen = useUIStore((s) => s.agentLogDrawerOpen);
   const setAgentLogDrawerOpen = useUIStore((s) => s.setAgentLogDrawerOpen);
+
+  useEffect(() => {
+    const init = async () => {
+      await fetchWorkspaces();
+      await initializeActiveWorkspace();
+    };
+    init();
+  }, [fetchWorkspaces, initializeActiveWorkspace]);
 
   useEffect(() => {
     checkApiKey();

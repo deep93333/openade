@@ -1,33 +1,23 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@agentide/ui";
-import { useWorkspaceStore } from "@/store/workspace.store";
-import { useAgentStore } from "@/store/agent.store";
-import { useUIStore } from "@/store/ui.store";
-import { WorkspaceItem } from "./workspace-item";
-import { CreateWorkspaceDialog } from "./create-workspace-dialog";
+import { useWorkspaceStore } from "@/store/workspace";
+import { useAgentStore } from "@/store/agent";
+import { useUIStore } from "@/store/ui";
+import { WorkspaceItem } from "./item";
+import { CreateWorkspaceDialog } from "./project";
 import { cn } from "@/lib/cn";
-import { CostDisplay } from "../cost-display";
+import { CostDisplay } from "../cost";
 import { IconBook, IconFolder, IconKey, IconPlus, IconList, IconSettings2 } from "@tabler/icons-react";
 
 export const Sidebar = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const workspaces = useWorkspaceStore((s) => s.workspaces);
-  const fetchWorkspaces = useWorkspaceStore((s) => s.fetchWorkspaces);
-  const initializeActiveWorkspace = useWorkspaceStore((s) => s.initializeActiveWorkspace);
   const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
   const status = useAgentStore((s) =>
     activeWorkspaceId ? s.getActiveRuntime(activeWorkspaceId).status : "idle"
   );
   const centerPage = useUIStore((s) => s.centerPage);
   const setCenterPage = useUIStore((s) => s.setCenterPage);
-
-  useEffect(() => {
-    const init = async () => {
-      await fetchWorkspaces();
-      await initializeActiveWorkspace();
-    };
-    init();
-  }, [fetchWorkspaces, initializeActiveWorkspace]);
 
   return (
     <>

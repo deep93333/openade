@@ -2,7 +2,7 @@ import type { Editor } from "@tiptap/react";
 import { EditorContent } from "@tiptap/react";
 import type { ImageAttachment } from "@agentide/shared";
 import { ImageIcon } from "@agentide/ui";
-import { ImageAttachmentList } from "../image-attachment-preview";
+import { ImageAttachmentList } from "../attachments";
 import { cn } from "@/lib/cn";
 
 type EditorAreaProps = {

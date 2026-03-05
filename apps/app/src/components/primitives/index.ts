@@ -1,2 +1,2 @@
-export { FileName, basename, parentDir } from "./file-name";
-export { DiffStats } from "./diff-stats";
+export { FileName, basename, parentDir } from "./filename";
+export { DiffStats } from "./stats";

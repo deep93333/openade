@@ -1,4 +1,4 @@
-import { BrowserWindow, nativeTheme, app } from "electron";
+import { BrowserWindow, Menu, nativeTheme, app } from "electron";
 import path from "node:path";
 
 let appWindow: BrowserWindow | null = null;
@@ -13,7 +13,7 @@ const getAppDistPath = (): string => {
   return path.resolve(__dirname, "..", "..", "app", "dist");
 };
 
-const getAppUrl = (route: string = "/"): string => {
+export const getAppUrl = (route: string = "/"): string => {
   if (!useStaticApp) {
     return `http://localhost:3010${route}`;
   }
@@ -51,6 +51,17 @@ export const createAppWindow = (): BrowserWindow => {
   if (process.env.NODE_ENV === "development") {
     appWindow.webContents.openDevTools({ mode: "detach" });
   }
+
+  appWindow.webContents.on("context-menu", (_e, params) => {
+    Menu.buildFromTemplate([
+      {
+        label: "Inspect Element",
+        click: () => {
+          appWindow?.webContents.inspectElement(params.x, params.y);
+        },
+      },
+    ]).popup();
+  });
 
   appWindow.on("closed", () => {
     appWindow = null;

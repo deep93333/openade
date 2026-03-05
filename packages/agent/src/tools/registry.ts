@@ -11,6 +11,7 @@ import { todoWriteTool } from "./todowrite.js";
 import { deleteTool } from "./delete.js";
 import { readLintsTool } from "./readlints.js";
 import { askQuestionTool } from "./ask-question.js";
+import { delegateTool } from "./delegate.js";
 import type { ToolContext, ToolDefinition } from "./tool-types.js";
 
 export type ToolCallMetadata = {
@@ -59,7 +60,7 @@ export function createToolSet(
   ctx: ToolContext,
   onToolCall?: (meta: ToolCallMetadata) => void,
 ): ToolSet {
-  return {
+  const tools: ToolSet = {
     bash: wrapTool(bashTool, ctx, onToolCall),
     read: wrapTool(readTool, ctx, onToolCall),
     write: wrapTool(writeTool, ctx, onToolCall),
@@ -72,6 +73,12 @@ export function createToolSet(
     readlints: wrapTool(readLintsTool, ctx, onToolCall),
     ask_question: wrapTool(askQuestionTool, ctx, onToolCall),
   };
+
+  if (ctx.subAgent) {
+    tools.delegate = wrapTool(delegateTool, ctx, onToolCall);
+  }
+
+  return tools;
 }
 
 export function createReadOnlyToolSet(
@@ -88,7 +95,7 @@ export function createReadOnlyToolSet(
 }
 
 export function getToolIds(): string[] {
-  return [bashTool, readTool, writeTool, editTool, globTool, grepTool, lsTool, todoWriteTool, deleteTool, readLintsTool, askQuestionTool].map(
+  return [bashTool, readTool, writeTool, editTool, globTool, grepTool, lsTool, todoWriteTool, deleteTool, readLintsTool, askQuestionTool, delegateTool].map(
     (t) => t.id,
   );
 }

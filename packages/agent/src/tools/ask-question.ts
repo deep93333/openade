@@ -19,7 +19,7 @@ export const askQuestionParameters = z.object({
 
 export const askQuestionTool: ToolDefinition<typeof askQuestionParameters> = {
   id: "ask_question",
-  description: `Ask the user structured multiple-choice questions. Use when you need specific input to proceed (e.g., choosing between approaches, confirming options). Returns the user's selected answers.`,
+  description: `Ask the user structured multiple-choice questions. Use when you need specific input to proceed (e.g., choosing between approaches, confirming options). Set multiSelect: true when multiple options may apply. The user can always type a custom free-text answer in addition to the predefined options. Returns the user's selected and/or typed answers.`,
   parameters: askQuestionParameters,
   async execute(args, ctx): Promise<ToolResult> {
     const response = await ctx.requestUserInput("ask_question", args);

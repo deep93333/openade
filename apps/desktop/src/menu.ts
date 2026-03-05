@@ -53,6 +53,8 @@ export const setApplicationMenu = (): void => {
         { role: "zoomOut" as const },
         { type: "separator" as const },
         { role: "togglefullscreen" as const },
+        { role: "toggleDevTools" as const },
+        { type: "separator" as const },
         {
           label: "Agent Log",
           accelerator: isMac ? "Cmd+Shift+L" : "Ctrl+Shift+L",

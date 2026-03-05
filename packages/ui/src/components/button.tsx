@@ -22,7 +22,7 @@ const buttonVariants = cva(
         destructive:
           "bg-destructive text-white [&_.shortcut]:text-white/70 hover:bg-destructive-hover",
         bordered:
-          "bg-base-background dark:bg-secondary hover:bg-base-background dark:hover:bg-secondary text-foreground/90 hover:text-foreground [&_[data-shortcut='true']]:text-foreground/50 shadow-button dark:hover:opacity-80",
+          "bg-base-background dark:bg-background hover:bg-base-background dark:hover:bg-background text-foreground/90 hover:text-foreground [&_[data-shortcut='true']]:text-foreground/50 shadow-button dark:hover:opacity-80",
         secondary:
           "bg-foreground/10 text-foreground/90 hover:text-foreground hover:bg-foreground/15 [&_[data-shortcut='true']]:text-foreground/50",
         ghost:
@@ -35,10 +35,10 @@ const buttonVariants = cva(
           "bg-white/90 text-black hover:bg-white/80 [&_svg]:text-black backdrop-blur-[24px]",
       },
       size: {
-        default: "h-7.5 px-3 py-2 has-[>svg]:px-2 rounded-lg! text-sm",
-        sm: "h-7 rounded-lg! gap-1.5 px-2.5 has-[>svg]:px-2 text-xs",
-        lg: "h-10 rounded-xl! px-4 has-[>svg]:px-3 text-sm",
-        xs: "h-6 rounded-md! gap-1.5 px-2.5 has-[>svg]:px-2 text-xs",
+        default: "h-7.5 px-3 py-2 has-[>svg]:px-2 rounded-lg text-sm",
+        sm: "h-7 rounded-lg gap-1.5 px-2.5 has-[>svg]:px-2 text-xs",
+        lg: "h-10 rounded-xl px-4 has-[>svg]:px-3 text-sm",
+        xs: "h-6 rounded-md gap-1.5 px-2.5 has-[>svg]:px-2 text-xs",
         icon: "size-8 rounded-md",
         "icon-sm": "size-7 rounded-md",
         "icon-xs": "size-6 rounded-md",

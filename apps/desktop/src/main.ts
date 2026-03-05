@@ -3,6 +3,7 @@ import fixPath from "fix-path";
 import { createAppWindow } from "./windows/app-window";
 import { registerIpcHandlers } from "./ipc";
 import { setApplicationMenu } from "./menu";
+import { createTray } from "./tray";
 
 fixPath();
 
@@ -10,6 +11,7 @@ app.whenReady().then(() => {
   registerIpcHandlers();
   setApplicationMenu();
   createAppWindow();
+  createTray();
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {

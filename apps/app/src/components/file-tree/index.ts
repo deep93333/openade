@@ -1,2 +1,2 @@
-export { FileTree } from "./file-tree";
-export { FileTreeItem } from "./file-tree-item";
+export { FileTree } from "./tree";
+export { FileTreeItem } from "./item";

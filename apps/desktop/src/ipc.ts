@@ -284,7 +284,10 @@ export const registerIpcHandlers = (): void => {
           window.webContents.send(IPC.AGENT_RESULT, result);
         },
         onError: (payload) => {
-          window.webContents.send(IPC.AGENT_ERROR, payload);
+          window.webContents.send(IPC.AGENT_ERROR, {
+            ...payload,
+            workspaceId: params.workspaceId,
+          });
         },
         onSdkSessionId: (sdkSessionId) => {
           if (params.activeThreadId) {

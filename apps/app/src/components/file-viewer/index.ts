@@ -1,1 +1,1 @@
-export { FileViewer } from "./file-viewer";
+export { FileViewer } from "./viewer";

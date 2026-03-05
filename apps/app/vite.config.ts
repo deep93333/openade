@@ -13,6 +13,7 @@ export default defineConfig(({ mode }) => {
       alias: {
         "@": resolve("src"),
       },
+      dedupe: ["react", "react-dom"],
     },
     build: {
       outDir: "dist",
