@@ -304,7 +304,7 @@ export const PopoverChatEditor = ({
             <EditorContent
               editor={editor}
               className={cn(
-                "w-full [&_.tiptap]:min-h-[32px] [&_.tiptap]:px-2 [&_.tiptap]:py-1.5 [&_.tiptap]:text-sm [&_.tiptap]:text-foreground [&_.tiptap]:outline-none [&_.tiptap]:caret-accent [&_.tiptap]:cursor-text",
+                "w-full [&_.tiptap]:min-h-[32px] [&_.tiptap]:max-h-[100px] [&_.tiptap]:overflow-y-auto [&_.tiptap]:px-2 [&_.tiptap]:py-1.5 [&_.tiptap]:text-sm [&_.tiptap]:text-foreground [&_.tiptap]:outline-none [&_.tiptap]:caret-accent [&_.tiptap]:cursor-text",
                 "[&_.tiptap_.ProseMirror]:caret-accent [&_.tiptap_.ProseMirror]:cursor-text",
                 "[&_.tiptap_.is-editor-empty:first-child::before]:text-muted-foreground [&_.tiptap_.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_.tiptap_.is-editor-empty:first-child::before]:float-left [&_.tiptap_.is-editor-empty:first-child::before]:pointer-events-none [&_.tiptap_.is-editor-empty:first-child::before]:h-0"
               )}

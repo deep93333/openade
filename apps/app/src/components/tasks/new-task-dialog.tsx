@@ -250,7 +250,7 @@ function TaskBacklogEditor({ workspacePath, placeholder, onTextChange, editorRef
         },
         attributes: {
           class:
-            "min-h-[140px] w-full text-base outline-none",
+            "min-h-[100px] max-h-[100px] w-full overflow-y-auto text-base outline-none",
         },
       },
       onUpdate: ({ editor: current }) => {

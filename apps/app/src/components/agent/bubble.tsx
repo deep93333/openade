@@ -78,11 +78,23 @@ function formatTokens(n: number): string {
   return n.toString();
 }
 
-function MessageUsageFooter({ message }: { message: AgentMessage }) {
+function MessageUsageFooter({
+  message,
+  copyAction,
+}: {
+  message: AgentMessage;
+  copyAction?: {
+    onCopy: () => void;
+    copied: boolean;
+  };
+}) {
   const input = message.inputTokens ?? 0;
   const output = message.outputTokens ?? 0;
   const cost = message.costUsd ?? 0;
-  if (input === 0 && output === 0 && cost === 0) return null;
+  const hasUsage = input > 0 || output > 0 || cost > 0;
+
+  if (!hasUsage && !copyAction) return null;
+
   return (
     <div className="mt-1.5 flex items-center gap-3 text-[11px] text-muted-foreground">
       {(input > 0 || output > 0) && (
@@ -96,6 +108,17 @@ function MessageUsageFooter({ message }: { message: AgentMessage }) {
         <span className="tabular-nums">
           ${cost < 0.01 ? cost.toFixed(4) : cost.toFixed(3)}
         </span>
+      )}
+      {copyAction && (
+        <Button
+          size="icon-sm"
+          variant="ghost"
+          className="h-6 w-6 text-muted-foreground"
+          onClick={copyAction.onCopy}
+          aria-label={copyAction.copied ? "Copied" : "Copy markdown"}
+        >
+          {copyAction.copied ? <IconCheck className="size-3.5" /> : <CopyIcon className="size-3.5" />}
+        </Button>
       )}
     </div>
   );
@@ -299,7 +322,17 @@ export const MessageBubble = ({ message, messageIndex, isPreview = false }: Mess
         )}
         {isPlanMessage && !isPreview && <PlanBuildFooter message={message} />}
         {isReviewMessage && !isPreview && <ReviewFooter message={message} />}
-        <MessageUsageFooter message={message} />
+        <MessageUsageFooter
+          message={message}
+          copyAction={
+            !isUser && message.content
+              ? {
+                  onCopy: handleCopyMarkdown,
+                  copied,
+                }
+              : undefined
+          }
+        />
       </div>
       {isUser && !isPreview && checkpoint && activeWorkspace && (
         <DropdownMenu>
@@ -338,17 +371,6 @@ export const MessageBubble = ({ message, messageIndex, isPreview = false }: Mess
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      )}
-      {!isUser && !isPreview && message.content && (
-        <Button
-          size="icon-sm"
-          variant="ghost"
-          className="opacity-0 group-hover:opacity-100 shrink-0 h-7 w-7"
-          onClick={handleCopyMarkdown}
-          aria-label={copied ? "Copied" : "Copy markdown"}
-        >
-          {copied ? <IconCheck className="size-3.5" /> : <CopyIcon className="size-3.5" />}
-        </Button>
       )}
     </div>
   );
