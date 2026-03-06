@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
 import type { ChatThread } from "@agentide/shared";
 import {
   Button,
@@ -9,10 +9,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  Textarea,
 } from "@agentide/ui";
-import { IconFile, IconPencil, IconPlayerPlay, IconProgress, IconRobot } from "@tabler/icons-react";
-import { useAgentStore } from "@/store/agent";
+import { IconFile, IconPlayerPlay, IconProgress, IconRobot } from "@tabler/icons-react";
 import { useWorkspaceStore } from "@/store/workspace";
 import { useThreadChangedFiles } from "@/hooks/use-thread-changed-files";
 import { DiffStackViewer } from "@/components/diff";
@@ -21,13 +19,13 @@ import type { WorkspaceTask } from "./task-utils";
 import { MarkdownMessage } from "../agent/markdown";
 
 type PlanDialogState = {
-  task: { workspaceId: string; workspaceName: string; thread: ChatThread };
+  task: { workspaceName: string; thread: ChatThread };
   isGenerating: boolean;
   onStartAgent: () => void;
 };
 
 type ReviewDialogState = {
-  task: { workspaceId: string; workspaceName: string; thread: ChatThread };
+  task: { workspaceName: string; thread: ChatThread };
   isGenerating: boolean;
 };
 
@@ -56,34 +54,6 @@ function PlanPreviewDialog({ open, onOpenChange, state }: PlanPreviewDialogProps
     (m) => m.role === "assistant" && m.planContent
   );
   const hasPlan = !!planMessage?.planContent;
-  const updateMessageContent = useAgentStore((s) => s.updateMessageContent);
-
-  const [isEditing, setIsEditing] = useState(false);
-  const [editValue, setEditValue] = useState("");
-
-  useEffect(() => {
-    if (!open) setIsEditing(false);
-  }, [open]);
-
-  const handleStartEdit = () => {
-    setEditValue(planMessage?.planContent ?? "");
-    setIsEditing(true);
-  };
-
-  const handleSave = async () => {
-    if (!planMessage) return;
-    await updateMessageContent(
-      state.task.workspaceId,
-      state.task.thread.id,
-      planMessage.id,
-      { planContent: editValue, content: editValue }
-    );
-    setIsEditing(false);
-  };
-
-  const handleCancel = () => {
-    setIsEditing(false);
-  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -100,13 +70,6 @@ function PlanPreviewDialog({ open, onOpenChange, state }: PlanPreviewDialogProps
             <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
               Generating plan…
             </div>
-          ) : isEditing ? (
-            <Textarea
-              value={editValue}
-              onChange={(e) => setEditValue(e.target.value)}
-              className="w-full h-full min-h-[200px] resize-none font-mono text-sm"
-              autoFocus
-            />
           ) : hasPlan ? (
             <MarkdownMessage content={planMessage!.planContent ?? ""} />
           ) : (
@@ -116,38 +79,20 @@ function PlanPreviewDialog({ open, onOpenChange, state }: PlanPreviewDialogProps
           )}
         </DialogBody>
         <DialogFooter className="border-t border-border px-4 py-3 shrink-0">
-          {isEditing ? (
-            <>
-              <Button variant="secondary" size="sm" onClick={handleCancel}>
-                Cancel
-              </Button>
-              <Button size="sm" onClick={handleSave}>
-                Save
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button variant="secondary" size="sm" onClick={() => onOpenChange(false)}>
-                Close
-              </Button>
-              {hasPlan && !state.isGenerating && (
-                <Button variant="secondary" size="sm" onClick={handleStartEdit}>
-                  <IconPencil className="size-3.5 mr-1.5" />
-                  Edit
-                </Button>
-              )}
-              <Button
-                size="sm"
-                disabled={!hasPlan || state.isGenerating}
-                onClick={() => {
-                  onOpenChange(false);
-                  state.onStartAgent();
-                }}
-              >
-                Start Agent
-              </Button>
-            </>
-          )}
+          <Button variant="secondary" size="sm" onClick={() => onOpenChange(false)}>
+            Close
+          </Button>
+          <Button
+            size="sm"
+
+            disabled={!hasPlan || state.isGenerating}
+            onClick={() => {
+              onOpenChange(false);
+              state.onStartAgent();
+            }}
+          >
+            Start Agent
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -165,34 +110,6 @@ function ReviewPreviewDialog({ open, onOpenChange, state }: ReviewPreviewDialogP
     (m) => m.role === "assistant" && m.reviewContent
   );
   const hasReview = !!reviewMessage?.reviewContent;
-  const updateMessageContent = useAgentStore((s) => s.updateMessageContent);
-
-  const [isEditing, setIsEditing] = useState(false);
-  const [editValue, setEditValue] = useState("");
-
-  useEffect(() => {
-    if (!open) setIsEditing(false);
-  }, [open]);
-
-  const handleStartEdit = () => {
-    setEditValue(reviewMessage?.reviewContent ?? "");
-    setIsEditing(true);
-  };
-
-  const handleSave = async () => {
-    if (!reviewMessage) return;
-    await updateMessageContent(
-      state.task.workspaceId,
-      state.task.thread.id,
-      reviewMessage.id,
-      { reviewContent: editValue, content: editValue }
-    );
-    setIsEditing(false);
-  };
-
-  const handleCancel = () => {
-    setIsEditing(false);
-  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -204,19 +121,12 @@ function ReviewPreviewDialog({ open, onOpenChange, state }: ReviewPreviewDialogP
           </DialogTitle>
           <DialogDescription>{state.task.workspaceName}</DialogDescription>
         </DialogHeader>
-        <DialogBody className="flex-1 min-h-0 overflow-y-auto flex flex-col items-center justify-center px-4 py-3">
+        <DialogBody className="flex-1 min-h-0 pt-10 overflow-y-auto flex flex-col items-center justify-center px-4 py-3">
           {state.isGenerating && !hasReview ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
               <IconProgress className="size-4 animate-pulse shrink-0" stroke={2} />
               Generating review…
             </div>
-          ) : isEditing ? (
-            <Textarea
-              value={editValue}
-              onChange={(e) => setEditValue(e.target.value)}
-              className="w-full h-full min-h-[200px] resize-none font-mono text-sm self-stretch"
-              autoFocus
-            />
           ) : hasReview ? (
             <MarkdownMessage content={reviewMessage!.reviewContent ?? ""} />
           ) : (
@@ -225,30 +135,7 @@ function ReviewPreviewDialog({ open, onOpenChange, state }: ReviewPreviewDialogP
             </p>
           )}
         </DialogBody>
-        <DialogFooter className="border-t border-border px-4 py-3 shrink-0">
-          {isEditing ? (
-            <>
-              <Button variant="secondary" size="sm" onClick={handleCancel}>
-                Cancel
-              </Button>
-              <Button size="sm" onClick={handleSave}>
-                Save
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button variant="secondary" size="sm" onClick={() => onOpenChange(false)}>
-                Close
-              </Button>
-              {hasReview && !state.isGenerating && (
-                <Button variant="secondary" size="sm" onClick={handleStartEdit}>
-                  <IconPencil className="size-3.5 mr-1.5" />
-                  Edit
-                </Button>
-              )}
-            </>
-          )}
-        </DialogFooter>
+       
       </DialogContent>
     </Dialog>
   );
@@ -341,13 +228,13 @@ const EMPTY_TASK: WorkspaceTask = {
 };
 
 const EMPTY_PLAN_STATE: PlanDialogState = {
-  task: { workspaceId: "", workspaceName: "", thread: EMPTY_TASK.thread },
+  task: { workspaceName: "", thread: EMPTY_TASK.thread },
   isGenerating: false,
   onStartAgent: () => {},
 };
 
 const EMPTY_REVIEW_STATE: ReviewDialogState = {
-  task: { workspaceId: "", workspaceName: "", thread: EMPTY_TASK.thread },
+  task: { workspaceName: "", thread: EMPTY_TASK.thread },
   isGenerating: false,
 };
 
@@ -365,7 +252,7 @@ export function TaskDialogProvider({ children }: { children: React.ReactNode }) 
 
   const openPlanPreview = useCallback(
     (task: WorkspaceTask, isGenerating: boolean, onStartAgent: () => void) => {
-      setPlanState({ task: { workspaceId: task.workspaceId, workspaceName: task.workspaceName, thread: task.thread }, isGenerating, onStartAgent });
+      setPlanState({ task: { workspaceName: task.workspaceName, thread: task.thread }, isGenerating, onStartAgent });
       setPlanOpen(true);
     },
     []
@@ -373,7 +260,7 @@ export function TaskDialogProvider({ children }: { children: React.ReactNode }) 
 
   const openReviewPreview = useCallback(
     (task: WorkspaceTask, isGenerating: boolean) => {
-      setReviewState({ task: { workspaceId: task.workspaceId, workspaceName: task.workspaceName, thread: task.thread }, isGenerating });
+      setReviewState({ task: { workspaceName: task.workspaceName, thread: task.thread }, isGenerating });
       setReviewOpen(true);
     },
     []
