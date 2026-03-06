@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useWorkspaceStore } from "@/store/workspace";
 import { useAgentStore } from "@/store/agent";
 import { cn, Button } from "@agentide/ui";
-import { IconBrowser, IconInfoCircle, IconLayoutSidebar, IconLayoutSidebarRight, IconPlus } from "@tabler/icons-react";
+import { IconBook, IconList, IconPlus, IconSettings2 } from "@tabler/icons-react";
 import { useUIStore } from "@/store/ui";
 import { CreateWorkspaceDialog } from "./sidebar/project";
 import type { ReactNode } from "react";
@@ -85,14 +85,14 @@ function GitStatusBadge() {
 export function AppTopBar({ left, right }: AppTopBarProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  const leftPanelOpen = useUIStore((s) => s.leftPanelOpen);
-  const setLeftPanelOpen = useUIStore((s) => s.setLeftPanelOpen);
   const rightPanelOpen = useUIStore((s) => s.rightPanelOpen);
   const setRightPanelOpen = useUIStore((s) => s.setRightPanelOpen);
   const webViewOpen = useUIStore((s) => s.webView.open);
   const openWebView = useUIStore((s) => s.openWebView);
   const infoPanelOpen = useUIStore((s) => s.infoPanelOpen);
   const setInfoPanelOpen = useUIStore((s) => s.setInfoPanelOpen);
+  const centerPage = useUIStore((s) => s.centerPage);
+  const setCenterPage = useUIStore((s) => s.setCenterPage);
 
   const workspaces = useWorkspaceStore((s) => s.workspaces);
   const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
@@ -107,16 +107,6 @@ export function AppTopBar({ left, right }: AppTopBarProps) {
   return (
     <div className="flex h-10 draggable shrink-0 items-center justify-between gap-2 pl-20 pr-2 drag-region">
       <div className="flex min-w-0 flex-1 items-center gap-2">
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          onClick={() => setLeftPanelOpen(!leftPanelOpen)}
-          aria-label={leftPanelOpen ? "Collapse left sidebar" : "Expand left sidebar"}
-          className="not-draggable shrink-0"
-        >
-          <IconLayoutSidebar stroke={1} className="h-4 w-4" />
-        </Button>
-
         {workspaces.length > 0 ? (
           <div className=" flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto scrollbar-none">
             <div className="flex flex-row not-draggable  bg-foreground/5 rounded-full p-0.5 items-center gap-0.5">
@@ -158,8 +148,41 @@ export function AppTopBar({ left, right }: AppTopBarProps) {
       <div className="not-draggable shrink-0 flex flex-row items-center gap-1">
         {right}
         <GitStatusBadge />
-        
-        {/* Right panel tabs */}
+        <div className="flex flex-row bg-foreground/5 rounded-full p-0.5 items-center gap-0.5">
+          <Button
+            variant={centerPage === "skills" ? "bordered" : "ghost"}
+            size="xs"
+            rounded="full"
+            onClick={() => setCenterPage("skills")}
+            aria-label="Open skills"
+            title="Skills"
+          >
+            <IconBook stroke={1} className="size-4" />
+            Skills
+          </Button>
+          <Button
+            variant={centerPage === "tasks" ? "bordered" : "ghost"}
+            size="xs"
+            rounded="full"
+            onClick={() => setCenterPage("tasks")}
+            aria-label="Open tasks"
+            title="Tasks"
+          >
+            <IconList stroke={1} className="size-4" />
+            Tasks
+          </Button>
+          <Button
+            variant="ghost"
+            size="xs"
+            rounded="full"
+            onClick={() => useUIStore.getState().setApiKeyDialogOpen(true)}
+            aria-label="Open settings"
+            title="Settings"
+          >
+            <IconSettings2 stroke={1} className="size-4" />
+            Settings
+          </Button>
+        </div>
         <div className="flex flex-row bg-foreground/5 rounded-full p-0.5 items-center gap-0.5">
           <Button
             variant={webViewOpen ? "bordered" : "ghost"}

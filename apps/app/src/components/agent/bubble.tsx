@@ -2,15 +2,16 @@ import { useState } from "react";
 import type { AgentMessage } from "@agentide/shared";
 import {
   Button,
+  CopyIcon,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
   PlayIcon,
-  RotateIcon,
   Textarea,
+  RotateIcon,
 } from "@agentide/ui";
-import { IconPencil } from "@tabler/icons-react";
+import { IconCheck, IconPencil } from "@tabler/icons-react";
 import { cn } from "@/lib/cn";
 import { UserMessagePreview } from "./mention-chip";
 import { useAgentStore } from "@/store/agent";
@@ -252,6 +253,7 @@ function ReviewFooter({ message }: { message: AgentMessage }) {
 }
 
 export const MessageBubble = ({ message, messageIndex, isPreview = false }: MessageBubbleProps) => {
+  const [copied, setCopied] = useState(false);
   const isUser = message.role === "user";
   const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
   const activeThread = useAgentStore((s) =>
@@ -270,6 +272,12 @@ export const MessageBubble = ({ message, messageIndex, isPreview = false }: Mess
   const codeRestoreAvailable = checkpoint ? isCodeRestoreAvailable(checkpoint) : false;
   const isPlanMessage = !isUser && !!message.planContent && !message.isPartial;
   const isReviewMessage = !isUser && !!message.reviewContent && !message.isPartial;
+
+  const handleCopyMarkdown = async () => {
+    await navigator.clipboard.writeText(message.content);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   return (
     <div className={cn("flex gap-3 px-4 py-3 w-full min-w-0 group", isPreview && "max-w-full")}>
@@ -330,6 +338,17 @@ export const MessageBubble = ({ message, messageIndex, isPreview = false }: Mess
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+      )}
+      {!isUser && !isPreview && message.content && (
+        <Button
+          size="icon-sm"
+          variant="ghost"
+          className="opacity-0 group-hover:opacity-100 shrink-0 h-7 w-7"
+          onClick={handleCopyMarkdown}
+          aria-label={copied ? "Copied" : "Copy markdown"}
+        >
+          {copied ? <IconCheck className="size-3.5" /> : <CopyIcon className="size-3.5" />}
+        </Button>
       )}
     </div>
   );

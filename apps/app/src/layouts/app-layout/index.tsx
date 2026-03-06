@@ -1,5 +1,4 @@
   import { Group, Panel } from "react-resizable-panels";
-  import { Sidebar } from "@/components/sidebar";
   import { AgentPanel } from "@/components/agent/panel";
   import { InfoPanel } from "@/components/agent/info-panel";
   import { ToolApprovalBar } from "@/components/agent/approval";
@@ -22,7 +21,6 @@
   export const AppLayout = () => {
     const {
       activeWorkspace,
-      leftPanelOpen,
       rightPanelOpen,
       activeView,
       setActiveView,
@@ -65,8 +63,6 @@
         <div className="flex h-screen w-full min-w-0 flex-col overflow-hidden bg-tertiary dark:bg-background">
           <AppTopBar />
           <div className="flex min-h-0 min-w-0 gap-1 flex-1 flex-row overflow-hidden bg-tertiary dark:bg-background">
-            {leftPanelOpen && <Sidebar />}
-
             <Group orientation="horizontal" className="min-h-0 min-w-0 gap-1.5 px-1.5 pb-1.5 flex-1 bg-tertiary dark:bg-background gap-0">
               <Panel id="main" minSize={360}>
                 <div
