@@ -11,14 +11,20 @@
   import { CommandPalette } from "@/components/palette";
   import { ApiKeyDialog } from "@/components/apikeys";
   import { AgentLogDrawer } from "@/components/logdrawer";
-  import { cn, TooltipProvider } from "@agentide/ui";
+  import { cn, TooltipProvider, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Button } from "@agentide/ui";
   import { SecondaryPanePanel } from "./secondary-pane-panel";
   import { RightPanel } from "./right-panel";
   import { useAppLayout } from "./use-app-layout";
   import { CARD_CLASS } from "./constants";
   import { useUIStore } from "@/store/ui";
+  import { useWorkspaceStore } from "@/store/workspace";
+  import type { Workspace } from "@agentide/shared";
+  import { useState } from "react";
 
   export const AppLayout = () => {
+    const [workspaceToRemove, setWorkspaceToRemove] = useState<Workspace | null>(null);
+    const deleteWorkspace = useWorkspaceStore((s) => s.deleteWorkspace);
+
     const {
       activeWorkspace,
       rightPanelOpen,
@@ -43,6 +49,12 @@
     const infoPanelOpen = useUIStore((s) => s.infoPanelOpen);
     const setInfoPanelOpen = useUIStore((s) => s.setInfoPanelOpen);
 
+    const handleConfirmRemoveWorkspace = async () => {
+      if (!workspaceToRemove) return;
+      await deleteWorkspace(workspaceToRemove.id);
+      setWorkspaceToRemove(null);
+    };
+
     const showPanelGap = hasSecondaryPane || rightPanelOpen;
     const mainContent =
       centerPage === "skills" ? (
@@ -61,7 +73,7 @@
     return (
       <TooltipProvider>
         <div className="flex h-screen w-full min-w-0 flex-col overflow-hidden bg-tertiary dark:bg-background">
-          <AppTopBar />
+          <AppTopBar onRemoveWorkspace={setWorkspaceToRemove} />
           <div className="flex min-h-0 min-w-0 gap-1 flex-1 flex-row overflow-hidden bg-tertiary dark:bg-background">
             <Group orientation="horizontal" className="min-h-0 min-w-0 gap-1.5 px-1.5 pb-1.5 flex-1 bg-tertiary dark:bg-background gap-0">
               <Panel id="main" minSize={360}>
@@ -102,6 +114,26 @@
           </div>
 
           <WebViewDrawer open={webView.open} onOpenChange={setWebViewOpen} initialUrl={webView.url} />
+          <Dialog open={workspaceToRemove !== null} onOpenChange={(open) => !open && setWorkspaceToRemove(null)}>
+            <DialogContent className="sm:max-w-[300px] flex flex-col gap-2 p-3">
+              <DialogHeader>
+                <DialogTitle>Remove workspace</DialogTitle>
+              </DialogHeader>
+              <DialogDescription>
+                {workspaceToRemove
+                  ? `Remove "${workspaceToRemove.name}" from the workspace tabs? Your project files are not deleted.`
+                  : undefined}
+              </DialogDescription>
+              <DialogFooter>
+                <Button type="button" className="w-full" variant="secondary" onClick={() => setWorkspaceToRemove(null)}>
+                  Cancel
+                </Button>
+                <Button type="button" className="w-full" variant="destructive" onClick={handleConfirmRemoveWorkspace}>
+                  Remove
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
           <CreateBranchDialog />
           <CommandPalette />
           {globalPendingApproval && (

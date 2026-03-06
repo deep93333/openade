@@ -2,15 +2,17 @@ import { useState } from "react";
 import { useWorkspaceStore } from "@/store/workspace";
 import { useAgentStore } from "@/store/agent";
 import { cn, Button } from "@agentide/ui";
-import { IconBook, IconList, IconPlus, IconSettings2 } from "@tabler/icons-react";
+import { IconBook, IconList, IconPlus, IconSettings2, IconX } from "@tabler/icons-react";
 import { useUIStore } from "@/store/ui";
 import { CreateWorkspaceDialog } from "./sidebar/project";
 import type { ReactNode } from "react";
 import { useGitStatus } from "@/hooks/use-git-changes";
+import type { Workspace } from "@agentide/shared";
 
 type AppTopBarProps = {
   left?: ReactNode;
   right?: ReactNode;
+  onRemoveWorkspace?: (workspace: Workspace) => void;
 };
 
 function GitStatusBadge() {
@@ -82,15 +84,13 @@ function GitStatusBadge() {
   );
 }
 
-export function AppTopBar({ left, right }: AppTopBarProps) {
+export function AppTopBar({ left, right, onRemoveWorkspace }: AppTopBarProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const rightPanelOpen = useUIStore((s) => s.rightPanelOpen);
   const setRightPanelOpen = useUIStore((s) => s.setRightPanelOpen);
   const webViewOpen = useUIStore((s) => s.webView.open);
   const openWebView = useUIStore((s) => s.openWebView);
-  const infoPanelOpen = useUIStore((s) => s.infoPanelOpen);
-  const setInfoPanelOpen = useUIStore((s) => s.setInfoPanelOpen);
   const centerPage = useUIStore((s) => s.centerPage);
   const setCenterPage = useUIStore((s) => s.setCenterPage);
 
@@ -111,32 +111,53 @@ export function AppTopBar({ left, right }: AppTopBarProps) {
         {workspaces.length > 0 ? (
           <div className=" flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto scrollbar-none">
             <div className="flex flex-row not-draggable  bg-foreground/5 rounded-full p-0.5 items-center gap-0.5">
-            {workspaces.map((ws) => {
-              const isActive = ws.id === activeWorkspaceId;
-              const unreadCount = (agentWorkspaces[ws.id]?.threads ?? []).reduce((count, thread) => {
-                const updatedAt = thread.updatedAt ?? thread.createdAt;
-                const lastReadAt = thread.lastReadAt ?? thread.createdAt;
-                return updatedAt > lastReadAt ? count + 1 : count;
-              }, 0);
-              return (
-                <Button
-                  key={ws.id}
-                  type="button"
-                  size="xs"
-                  rounded="full"
-                  className="rounded-full!"
-                  variant={isActive ? "bordered" : "ghost"}
-                  onClick={() => handleSelectWorkspace(ws.id)}
-                >
-                  <span className="max-w-[160px] truncate">{ws.name}</span>
-                  {unreadCount > 0 ? (
-                    <span className="ml-1 inline-flex min-w-4 items-center justify-center rounded-full bg-accent px-1.5 text-[10px] leading-4 text-foreground shadow-card">
-                      {unreadCount}
+              {workspaces.map((ws) => {
+                const isActive = ws.id === activeWorkspaceId;
+                const unreadCount = (agentWorkspaces[ws.id]?.threads ?? []).reduce((count, thread) => {
+                  const updatedAt = thread.updatedAt ?? thread.createdAt;
+                  const lastReadAt = thread.lastReadAt ?? thread.createdAt;
+                  return updatedAt > lastReadAt ? count + 1 : count;
+                }, 0);
+                return (
+                  <Button
+                    key={ws.id}
+                    type="button"
+                    size="xs"
+                    rounded="full"
+                    className={cn("group hover:pr-0.5 rounded-full! gap-0 overflow-hidden", isActive && unreadCount > 0 &&"pr-0.5")}
+                    variant={isActive ? "bordered" : "ghost"}
+                    onClick={() => handleSelectWorkspace(ws.id)}
+                  >
+                    <span className="max-w-[160px] truncate">{ws.name}</span>
+                    {unreadCount > 0 ? (
+                      <span className="ml-1 inline-flex min-w-4 items-center justify-center rounded-full bg-accent px-1.5 text-[10px] leading-4 text-foreground shadow-card">
+                        {unreadCount}
+                      </span>
+                    ) : null}
+                    <span className="w-0 overflow-hidden opacity-0 transition-all duration-150 group-hover:ml-1 group-hover:w-5 group-hover:opacity-100">
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        className="flex size-5 items-center justify-center rounded-full hover:bg-foreground/10"
+                        aria-label={`Remove ${ws.name}`}
+                        title={`Remove ${ws.name}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onRemoveWorkspace?.(ws);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key !== "Enter" && e.key !== " ") return;
+                          e.preventDefault();
+                          e.stopPropagation();
+                          onRemoveWorkspace?.(ws);
+                        }}
+                      >
+                        <IconX stroke={1.75} className="size-3.5" />
+                      </span>
                     </span>
-                  ) : null}
-                </Button>
-              );
-            })}
+                  </Button>
+                );
+              })}
             </div>
             <Button
               variant="ghost"
@@ -204,16 +225,6 @@ export function AppTopBar({ left, right }: AppTopBarProps) {
             title="Browser"
           >
             Browser
-          </Button>
-          <Button
-            variant={infoPanelOpen ? "bordered" : "ghost"}
-            size="xs"
-            rounded="full"
-            onClick={() => setInfoPanelOpen(!infoPanelOpen)}
-            aria-label={infoPanelOpen ? "Close thread info" : "View thread info"}
-            title="Thread Inspector"
-          >
-            Info
           </Button>
           <Button
             variant={rightPanelOpen ? "bordered" : "ghost"}
