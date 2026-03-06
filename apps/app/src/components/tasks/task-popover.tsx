@@ -103,7 +103,7 @@ function TaskThreadPreview({ thread, workspaceId, workspacePath, currentModel, o
         <div className="flex items-center gap-1">
           {isRunning && (
             <Button
-              variant="destructive"
+              variant="secondary"
               size="xs"
               onClick={() => void stopAgent(workspaceId)}
               aria-label="Stop agent"
@@ -193,6 +193,7 @@ export function TaskThreadDialog({
             <div className="flex items-center gap-1">
               {isRunning && (
                 <Button
+                  variant="secondary"
                   size="xs"
                   onClick={() => void stopAgent(workspaceId)}
                   aria-label="Stop agent"
