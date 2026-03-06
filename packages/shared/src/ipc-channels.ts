@@ -4,6 +4,7 @@ export const IPC = {
   AGENT_STATUS: "agent:status",
   AGENT_GET_MODELS: "agent:get-models",
   AGENT_GENERATE_THREAD_TITLE: "agent:generate-thread-title",
+  AGENT_GENERATE_COMMIT_MESSAGE: "agent:generate-commit-message",
   AGENT_MESSAGE: "agent:message",
   AGENT_RESULT: "agent:result",
   AGENT_ERROR: "agent:error",

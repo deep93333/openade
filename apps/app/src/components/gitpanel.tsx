@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { ElectronAPI, GitStagedChange, GitUnstagedChange, IpcResult } from "@agentide/shared";
+import type {
+  AgentProvider,
+  CommitMessageGeneratorFile,
+  ElectronAPI,
+  GitStagedChange,
+  GitUnstagedChange,
+  IpcResult,
+} from "@agentide/shared";
 import {
   Button,
   PlusIcon,
@@ -16,11 +23,13 @@ import {
   IconLoader,
   IconMinus,
   IconRefresh,
+  IconSparkles,
   IconUpload,
 } from "@tabler/icons-react";
 import { getElectronAPI } from "@/lib/electron";
 import { useWorkspaceStore } from "@/store/workspace";
 import { useUIStore } from "@/store/ui";
+import { useChatEditorStore } from "@/store/editor";
 import { FileName, basename, DiffStats } from "@/components/primitives";
 
 type GitChangesPanelProps = {
@@ -199,6 +208,37 @@ function Section({ title, count, defaultOpen = true, headerAction, children }: S
 
 type CommitStep = "changes" | "push";
 
+const MAX_COMMIT_MESSAGE_CONTEXT_FILES = 8;
+const MAX_COMMIT_MESSAGE_PATCH_CHARS = 1200;
+const MAX_COMMIT_MESSAGE_TOTAL_PATCH_CHARS = 4000;
+
+function clipPatchForCommitMessage(patch: string): string {
+  const normalized = patch.trim();
+  if (!normalized) return "";
+
+  const lines = normalized.split("\n");
+  const kept: string[] = [];
+  let budget = MAX_COMMIT_MESSAGE_PATCH_CHARS;
+
+  for (const line of lines) {
+    const isMetadata =
+      line.startsWith("diff --git") ||
+      line.startsWith("index ") ||
+      line.startsWith("--- ") ||
+      line.startsWith("+++ ") ||
+      line.startsWith("@@");
+    const isChange = line.startsWith("+") || line.startsWith("-");
+    if (!isMetadata && !isChange) continue;
+
+    const next = line.length + 1;
+    if (kept.length > 0 && budget - next < 0) break;
+    kept.push(line);
+    budget -= next;
+  }
+
+  return kept.join("\n");
+}
+
 export const GitChangesPanel = ({ className, onFileSelect: _onFileSelect }: GitChangesPanelProps) => {
   const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
   const activeWorkspace = useWorkspaceStore((s) =>
@@ -209,6 +249,7 @@ export const GitChangesPanel = ({ className, onFileSelect: _onFileSelect }: GitC
   );
   const openDiffViewer = useUIStore((s) => s.openDiffViewer);
   const initializeGitRepository = useWorkspaceStore((s) => s.initializeGitRepository);
+  const modelOptions = useChatEditorStore((s) => s.modelOptions);
 
   const [staged, setStaged] = useState<GitStagedChange[]>([]);
   const [unstaged, setUnstaged] = useState<GitUnstagedChange[]>([]);
@@ -222,14 +263,21 @@ export const GitChangesPanel = ({ className, onFileSelect: _onFileSelect }: GitC
   const [revertLoading, setRevertLoading] = useState<string | null>(null);
   const [commitMessage, setCommitMessage] = useState("");
   const [commitLoading, setCommitLoading] = useState(false);
+  const [commitMessageLoading, setCommitMessageLoading] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
   const [step, setStep] = useState<CommitStep>("changes");
   const [commitError, setCommitError] = useState<string | null>(null);
+  const [commitMessageModel, setCommitMessageModel] = useState("");
+  const [commitMessageProvider, setCommitMessageProvider] = useState<AgentProvider | "">("");
   const [aheadCount, setAheadCount] = useState(0);
   const hasLoadedOnceRef = useRef(false);
 
   const totalCount = staged.length + unstaged.length;
   const totalAdded = useMemo(() => [...staged, ...unstaged].reduce((s, c) => s + c.added, 0), [staged, unstaged]);
+  const commitMessageModelOptions = useMemo(
+    () => modelOptions.map((option) => ({ value: option.value, label: option.label, provider: option.provider })),
+    [modelOptions]
+  );
   const totalDeleted = useMemo(() => [...staged, ...unstaged].reduce((s, c) => s + c.deleted, 0), [staged, unstaged]);
   const totalStagedAdded = useMemo(() => staged.reduce((s, c) => s + c.added, 0), [staged]);
   const totalStagedDeleted = useMemo(() => staged.reduce((s, c) => s + c.deleted, 0), [staged]);
@@ -282,6 +330,22 @@ export const GitChangesPanel = ({ className, onFileSelect: _onFileSelect }: GitC
   useEffect(() => {
     load();
   }, [load, gitChangeVersion]);
+
+  useEffect(() => {
+    const api = getElectronAPI();
+    if (!api?.settings) return;
+
+    let cancelled = false;
+    void api.settings.get().then((result) => {
+      if (!result.success || !result.data || cancelled) return;
+      setCommitMessageModel(result.data.commitMessageModel ?? "");
+      setCommitMessageProvider(result.data.commitMessageProvider ?? "");
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleStage = useCallback(async (path: string) => {
     const api = getElectronAPI();
@@ -340,6 +404,68 @@ export const GitChangesPanel = ({ className, onFileSelect: _onFileSelect }: GitC
     },
     [openDiffViewer]
   );
+
+  const handleGenerateCommitMessage = useCallback(async () => {
+    const api = getElectronAPI();
+    if (!api?.agent?.generateCommitMessage || !api.workspace.getFileDiffContent || !activeWorkspace?.id || staged.length === 0) return;
+
+    setCommitMessageLoading(true);
+    setCommitError(null);
+
+    try {
+      const filesForContext = staged.slice(0, MAX_COMMIT_MESSAGE_CONTEXT_FILES);
+      let remainingPatchBudget = MAX_COMMIT_MESSAGE_TOTAL_PATCH_CHARS;
+
+      const files = (await Promise.all(
+        filesForContext.map(async (file): Promise<CommitMessageGeneratorFile> => {
+          let patch = "";
+          if (remainingPatchBudget > 0) {
+            const diffResult = await api.workspace.getFileDiffContent(activeWorkspace.id, file.path, true);
+            if (diffResult.success && diffResult.data?.patch) {
+              patch = clipPatchForCommitMessage(diffResult.data.patch).slice(0, remainingPatchBudget);
+              remainingPatchBudget -= patch.length;
+            }
+          }
+
+          return {
+            path: file.path,
+            added: file.added,
+            deleted: file.deleted,
+            patch,
+          };
+        })
+      )).filter((file) => file.added > 0 || file.deleted > 0 || file.patch);
+
+      const selectedCommitModel = commitMessageModel || undefined;
+      const selectedCommitProvider =
+        commitMessageProvider ||
+        commitMessageModelOptions.find((option) => option.value === selectedCommitModel)?.provider ||
+        "claude";
+
+      const result = await api.agent.generateCommitMessage({
+        files,
+        model: selectedCommitModel,
+        provider: selectedCommitProvider,
+      });
+
+      const message = result.success && result.data ? result.data.trim() : "";
+      if (message) {
+        setCommitMessage(message);
+      } else if (!result.success && result.error) {
+        setCommitError(result.error);
+      }
+    } catch (err) {
+      setCommitError(err instanceof Error ? err.message : "Failed to generate commit message");
+    } finally {
+      setCommitMessageLoading(false);
+    }
+  }, [
+    activeWorkspace?.id,
+    commitMessageModel,
+    commitMessageModelOptions,
+    commitMessageProvider,
+    staged,
+  ]);
 
   const handleCommit = useCallback(async () => {
     const api = getElectronAPI();
@@ -486,7 +612,7 @@ export const GitChangesPanel = ({ className, onFileSelect: _onFileSelect }: GitC
               {commitError && (
                 <p className="text-xxs  text-destructive mt-1">{commitError}</p>
               )}
-              <div className="flex items-center justify-between mt-1">
+              <div className="flex items-center justify-between mt-1 gap-2">
                 <span className="text-xxs  text-muted-foreground inline-flex items-center gap-1">
                   {staged.length} staged
                   {(totalStagedAdded > 0 || totalStagedDeleted > 0) && (
@@ -496,16 +622,29 @@ export const GitChangesPanel = ({ className, onFileSelect: _onFileSelect }: GitC
                     </>
                   )}
                 </span>
-                <Button
-                  size="xs"
-                  onClick={handleCommit}
-                  disabled={staged.length === 0 || !commitMessage.trim() || commitLoading}
-                  loading={commitLoading}
-                  className="gap-1"
-                >
-                  <IconGitCommit className="size-3" />
-                  Commit
-                </Button>
+                <div className="flex items-center gap-1">
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    onClick={handleGenerateCommitMessage}
+                    disabled={staged.length === 0 || commitLoading || commitMessageLoading}
+                    loading={commitMessageLoading}
+                    className="gap-1"
+                  >
+                    <IconSparkles className="size-3" />
+                    Generate
+                  </Button>
+                  <Button
+                    size="xs"
+                    onClick={handleCommit}
+                    disabled={staged.length === 0 || !commitMessage.trim() || commitLoading}
+                    loading={commitLoading}
+                    className="gap-1"
+                  >
+                    <IconGitCommit className="size-3" />
+                    Commit
+                  </Button>
+                </div>
               </div>
             </div>
           </div>

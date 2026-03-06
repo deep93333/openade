@@ -5,6 +5,7 @@ import type {
   AgentMessage,
   AgentResult,
   AgentStartParams,
+  CommitMessageParams,
   ApiKeyProvider,
   AuthMethod,
   ChatData,
@@ -78,6 +79,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
     generateThreadTitle: (params: ThreadTitleParams) =>
       ipcRenderer.invoke(IPC.AGENT_GENERATE_THREAD_TITLE, params),
+
+    generateCommitMessage: (params: CommitMessageParams) =>
+      ipcRenderer.invoke(IPC.AGENT_GENERATE_COMMIT_MESSAGE, params),
 
     onMessage: (callback: (message: AgentMessage) => void) => {
       const handler = (_event: Electron.IpcRendererEvent, message: AgentMessage) => callback(message);

@@ -1,9 +1,9 @@
 import { ipcMain } from "electron";
 import { IPC } from "@agentide/shared";
-import type { AgentStartParams, ThreadTitleParams, ToolApprovalResponse } from "@agentide/shared";
+import type { AgentStartParams, CommitMessageParams, ThreadTitleParams, ToolApprovalResponse } from "@agentide/shared";
 import type { ToolApprovalResult } from "@agentide/agent";
 import { ulid } from "ulid";
-import { agentManager, generateThreadTitle, getAllModels } from "../services/agent-manager";
+import { agentManager, generateCommitMessage, generateThreadTitle, getAllModels } from "../services/agent-manager";
 import * as chatStorage from "../services/chat-storage";
 import * as configStorage from "../services/config-storage";
 import { gitService } from "../services/git-service";
@@ -139,6 +139,15 @@ export function registerAgentHandlers(): void {
       return { success: true, data: title };
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : "Failed to generate thread title" };
+    }
+  });
+
+  ipcMain.handle(IPC.AGENT_GENERATE_COMMIT_MESSAGE, async (_event, params: CommitMessageParams) => {
+    try {
+      const message = await generateCommitMessage(params);
+      return { success: true, data: message };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : "Failed to generate commit message" };
     }
   });
 

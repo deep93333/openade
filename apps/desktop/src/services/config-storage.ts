@@ -11,6 +11,8 @@ type AppConfig = {
   encryptedMinimaxApiKey: string | null;
   authMethod: AuthMethod;
   mcpServers: MCPServerConfig[];
+  commitMessageModel?: string;
+  commitMessageProvider?: GlobalSettings["commitMessageProvider"];
 };
 
 const getConfigPath = (): string => {
@@ -29,6 +31,8 @@ const DEFAULT_CONFIG: AppConfig = {
   encryptedMinimaxApiKey: null,
   authMethod: "claude_login",
   mcpServers: [],
+  commitMessageModel: undefined,
+  commitMessageProvider: undefined,
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -114,6 +118,16 @@ function loadConfig(): AppConfig {
             .map((server) => normalizeMCPServerConfig(server))
             .filter((server): server is MCPServerConfig => server !== null)
         : [],
+      commitMessageModel:
+        typeof data?.commitMessageModel === "string" && data.commitMessageModel.trim()
+          ? data.commitMessageModel
+          : undefined,
+      commitMessageProvider:
+        data?.commitMessageProvider === "claude" ||
+        data?.commitMessageProvider === "codex" ||
+        data?.commitMessageProvider === "minimax"
+          ? data.commitMessageProvider
+          : undefined,
     };
   } catch {
     return { ...DEFAULT_CONFIG };
@@ -279,7 +293,11 @@ export function getAuthMethod(): AuthMethod {
 
 export function getGlobalSettings(): GlobalSettings {
   const config = loadConfig();
-  return { mcpServers: config.mcpServers };
+  return {
+    mcpServers: config.mcpServers,
+    commitMessageModel: config.commitMessageModel,
+    commitMessageProvider: config.commitMessageProvider,
+  };
 }
 
 export function setGlobalSettings(settings: GlobalSettings): void {
@@ -288,6 +306,8 @@ export function setGlobalSettings(settings: GlobalSettings): void {
     config.mcpServers = settings.mcpServers
       .map((server) => normalizeMCPServerConfig(server))
       .filter((server): server is MCPServerConfig => server !== null);
+    config.commitMessageModel = settings.commitMessageModel?.trim() || undefined;
+    config.commitMessageProvider = settings.commitMessageProvider;
     saveConfig(config);
   } catch {
     // ignore

@@ -6,7 +6,7 @@ export type {
   ProviderCapabilities,
 } from "./agent-backend-types.js";
 export { createAgentManager } from "./agent-manager.js";
-export { createCustomAgentBackend, generateThreadTitle } from "./custom-agent-backend.js";
+export { createCustomAgentBackend, generateThreadTitle, generateCommitMessage } from "./custom-agent-backend.js";
 export { createAgentLogger, logAgentEvent, createFileAgentLogger, formatAgentLogEntry } from "./logger.js";
 export type { AgentManagerOptions, AgentManager } from "./agent-manager.js";
 export type { AgentBackendConfig } from "./models.js";

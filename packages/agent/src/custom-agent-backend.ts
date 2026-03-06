@@ -26,7 +26,7 @@ import {
   extractApiErrorMessage,
   RETRY_MAX_ATTEMPTS,
 } from "./streaming.js";
-import type { AgentMessage, AgentMode, AgentProvider, ThreadTitleParams } from "@agentide/shared";
+import type { AgentMessage, AgentMode, AgentProvider, CommitMessageParams, ThreadTitleParams } from "@agentide/shared";
 import type {
   AgentBackend,
   AgentBackendStartOptions,
@@ -39,8 +39,14 @@ const TOOL_OUTPUT_LIMIT = 800;
 const ASSISTANT_MSG_LIMIT = 2000;
 const TITLE_INPUT_LIMIT = 1600;
 const TITLE_MAX_LENGTH = 80;
+const COMMIT_MESSAGE_MAX_LENGTH = 72;
+const COMMIT_MESSAGE_PATCH_LIMIT = 1200;
+const COMMIT_MESSAGE_TOTAL_PATCH_LIMIT = 4000;
+const COMMIT_MESSAGE_FILE_LIMIT = 12;
 const TITLE_PROMPT =
   "Generate a concise thread title (max 6 words) that summarizes the user's request or what the agent is doing. Use title case. If tool context is provided, consider what the tool is doing (e.g., 'Reading files', 'Running tests', 'Editing code'). Return only the title with no quotes or trailing punctuation.";
+const COMMIT_MESSAGE_PROMPT =
+  "Generate one short git commit message that summarizes the staged changes. Return only the commit message, no quotes, no bullets, no explanation. Keep it under 72 characters. Prefer an imperative style like 'Add', 'Fix', 'Refactor', 'Update', or 'Remove'. Focus on the main user-visible or structural change, not low-level patch details.";
 
 function cap(text: string, limit: number): string {
   return text.length > limit ? text.slice(0, limit) + "…" : text;
@@ -112,6 +118,43 @@ function cleanTitle(raw: string): string {
   return noTrailingPunctuation.slice(0, TITLE_MAX_LENGTH).trimEnd();
 }
 
+function cleanCommitMessage(raw: string): string {
+  const firstLine = raw.split("\n")[0] ?? "";
+  const trimmed = firstLine.trim().replace(/^["'“”]+|["'“”]+$/g, "");
+  const collapsed = trimmed.replace(/\s+/g, " ");
+  const noTrailingPunctuation = collapsed.replace(/[.:;!?]+$/g, "");
+  if (noTrailingPunctuation.length <= COMMIT_MESSAGE_MAX_LENGTH) return noTrailingPunctuation;
+  return noTrailingPunctuation.slice(0, COMMIT_MESSAGE_MAX_LENGTH).trimEnd();
+}
+
+function buildCommitMessageContext(params: CommitMessageParams): string | null {
+  if (!params.files.length) return null;
+
+  const fileLines: string[] = [];
+  const patchSections: string[] = [];
+  let totalPatchChars = 0;
+
+  for (const file of params.files.slice(0, COMMIT_MESSAGE_FILE_LIMIT)) {
+    fileLines.push(`- ${file.path} (+${file.added}/-${file.deleted})`);
+
+    const patch = file.patch?.trim();
+    if (!patch) continue;
+
+    const remaining = COMMIT_MESSAGE_TOTAL_PATCH_LIMIT - totalPatchChars;
+    if (remaining <= 0) break;
+
+    const clippedPatch = cap(patch, Math.min(COMMIT_MESSAGE_PATCH_LIMIT, remaining));
+    totalPatchChars += clippedPatch.length;
+    patchSections.push(`File: ${file.path}\n${clippedPatch}`);
+  }
+
+  return [
+    `Files changed (${Math.min(params.files.length, COMMIT_MESSAGE_FILE_LIMIT)} shown):`,
+    fileLines.join("\n"),
+    patchSections.length > 0 ? `\nPatch excerpts:\n\n${patchSections.join("\n\n")}` : "",
+  ].join("\n");
+}
+
 const MAX_TOOL_STEPS = 75;
 
 const activeSessions = new Map<string, AbortController>();
@@ -138,6 +181,31 @@ export async function generateThreadTitle(
   const rawTitle = await result.text;
   if (!rawTitle) return null;
   const cleaned = cleanTitle(rawTitle);
+  return cleaned.length > 0 ? cleaned : null;
+}
+
+export async function generateCommitMessage(
+  config: AgentBackendConfig,
+  params: CommitMessageParams,
+): Promise<string | null> {
+  const context = buildCommitMessageContext(params);
+  if (!context) return null;
+
+  const modelDef = resolveModelForProvider(params.model, params.provider);
+  const languageModel = createLanguageModel(modelDef, config);
+  const result = streamText({
+    model: languageModel,
+    messages: [
+      { role: "system", content: COMMIT_MESSAGE_PROMPT } as ModelMessage,
+      { role: "user", content: context } as ModelMessage,
+    ],
+    maxOutputTokens: 40,
+    temperature: 0.2,
+  });
+
+  const rawMessage = await result.text;
+  if (!rawMessage) return null;
+  const cleaned = cleanCommitMessage(rawMessage);
   return cleaned.length > 0 ? cleaned : null;
 }
 

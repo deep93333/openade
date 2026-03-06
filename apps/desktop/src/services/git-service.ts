@@ -273,6 +273,15 @@ export class GitService {
     return { oldContent, newContent, patch };
   }
 
+  async getStagedPatch(workspacePath: string, relativePath: string): Promise<string> {
+    const git = this.getGit(workspacePath);
+    try {
+      return await git.diff(["--cached", "--", relativePath]);
+    } catch {
+      return "";
+    }
+  }
+
   async revertUnstagedFile(workspacePath: string, relativePath: string): Promise<void> {
     const git = this.getGit(workspacePath);
     await git.checkout(["--", relativePath]);

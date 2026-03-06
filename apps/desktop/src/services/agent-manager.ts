@@ -1,10 +1,11 @@
 import {
   createAgentManager,
   createCustomAgentBackend,
+  generateCommitMessage as generateCommitMessageForBackend,
   generateThreadTitle as generateThreadTitleForBackend,
   type AgentBackendConfig,
 } from "@agentide/agent";
-import type { ThreadTitleParams } from "@agentide/shared";
+import type { CommitMessageParams, ThreadTitleParams } from "@agentide/shared";
 import * as configStorage from "./config-storage";
 import { agentLogger } from "./agent-log";
 
@@ -32,4 +33,8 @@ export function getAllModels() {
 
 export async function generateThreadTitle(params: ThreadTitleParams) {
   return generateThreadTitleForBackend(backendConfig, params);
+}
+
+export async function generateCommitMessage(params: CommitMessageParams) {
+  return generateCommitMessageForBackend(backendConfig, params);
 }

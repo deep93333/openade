@@ -8,6 +8,7 @@ import type {
   AgentStatus,
   ApiKeyProvider,
   ThreadTitleParams,
+  CommitMessageParams,
   ChatData,
   Checkpoint,
   FileDiffContent,
@@ -76,6 +77,7 @@ export type ElectronAPI = {
     status: () => Promise<IpcResult<{ status: AgentStatus; sessionId?: string }>>;
     getModels: () => Promise<IpcResult<AgentModelOption[]>>;
     generateThreadTitle: (params: ThreadTitleParams) => Promise<IpcResult<string | null>>;
+    generateCommitMessage: (params: CommitMessageParams) => Promise<IpcResult<string | null>>;
     onMessage: (callback: (message: AgentMessage) => void) => () => void;
     onResult: (callback: (result: AgentResult) => void) => () => void;
     onError: (callback: (payload: AgentErrorPayload) => void) => () => void;

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { PROVIDER_CONFIGS } from "@agentide/shared";
 import {
   Button,
@@ -7,12 +7,18 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
 } from "@agentide/ui";
 import { getElectronAPI } from "@/lib/electron";
+import { useChatEditorStore } from "@/store/editor";
 import { MCPSettings } from "./mcp-settings";
 import { ProviderKeyInput } from "./providerkey";
 
@@ -29,8 +35,15 @@ export const ApiKeyDialog = ({
 }: ApiKeyDialogProps) => {
   const [maskedKeys, setMaskedKeys] = useState<Record<string, string | null>>({});
   const [activeProviderTab, setActiveProviderTab] = useState<string>(PROVIDER_CONFIGS[0]?.id ?? "claude");
+  const [commitMessageModel, setCommitMessageModel] = useState("");
+  const [commitMessageProvider, setCommitMessageProvider] = useState<string>("");
 
   const api = getElectronAPI();
+  const modelOptions = useChatEditorStore((s) => s.modelOptions);
+  const commitMessageModelOptions = useMemo(
+    () => modelOptions.map((option) => ({ value: option.value, label: option.label, provider: option.provider })),
+    [modelOptions]
+  );
 
   const refreshMaskedKeys = useCallback(async () => {
     if (!api?.apiKeys) return;
@@ -58,7 +71,43 @@ export const ApiKeyDialog = ({
     refreshMaskedKeys();
   }, [open, refreshMaskedKeys]);
 
+  useEffect(() => {
+    if (!open || !api?.settings) return;
+
+    let cancelled = false;
+    void api.settings.get().then((result) => {
+      if (!result.success || !result.data || cancelled) return;
+      setCommitMessageModel(result.data.commitMessageModel ?? "");
+      setCommitMessageProvider(result.data.commitMessageProvider ?? "");
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [api, open]);
+
   const activeProvider = PROVIDER_CONFIGS.find((p) => p.id === activeProviderTab);
+
+  const handleCommitMessageModelChange = useCallback(async (value: string) => {
+    if (!api?.settings) return;
+
+    const selected = commitMessageModelOptions.find((option) => option.value === value);
+    const nextModel = value === "__default__" ? "" : value;
+    const nextProvider = value === "__default__" ? "" : (selected?.provider ?? "");
+
+    setCommitMessageModel(nextModel);
+    setCommitMessageProvider(nextProvider);
+
+    const current = await api.settings.get();
+    if (!current.success || !current.data) return;
+
+    await api.settings.set({
+      ...current.data,
+      commitMessageModel: nextModel || undefined,
+      commitMessageProvider: nextProvider || undefined,
+    });
+    onSaved?.();
+  }, [api, commitMessageModelOptions, onSaved]);
 
   return (
     <Dialog open={open} onOpenChange={(o) => onOpenChange(o)}>
@@ -77,6 +126,28 @@ export const ApiKeyDialog = ({
             <TabsTrigger value="providers">Providers</TabsTrigger>
             <TabsTrigger value="mcp">MCP Servers</TabsTrigger>
           </TabsList>
+
+          <div className="flex items-center gap-3 rounded-lg border border-border/60 bg-muted/20 px-4 py-3">
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-medium">Commit message model</div>
+              <div className="text-xs text-muted-foreground">
+                Choose which model generates short git commit messages from staged diffs.
+              </div>
+            </div>
+            <Select value={commitMessageModel || "__default__"} onValueChange={(value) => void handleCommitMessageModelChange(value)}>
+              <SelectTrigger className="w-[240px]">
+                <SelectValue placeholder="Use default model" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__default__">Use default model</SelectItem>
+                {commitMessageModelOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           <TabsContent value="providers" className="min-h-0 flex-1">
             <div className="flex h-full gap-4 pt-2">

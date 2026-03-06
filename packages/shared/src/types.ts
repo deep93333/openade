@@ -11,6 +11,8 @@ export type AuthStatus = {
 
 export type GlobalSettings = {
   mcpServers: MCPServerConfig[];
+  commitMessageModel?: string;
+  commitMessageProvider?: AgentProvider;
 };
 
 export type TaskStatus = "brainstorm" | "backlog" | "planning" | "in_progress" | "agent_review" | "in_review" | "completed" | "archived";
@@ -155,6 +157,19 @@ export type AgentStartParams = {
 
 export type ThreadTitleParams = {
   messages: AgentMessage[];
+  model?: string;
+  provider?: AgentProvider;
+};
+
+export type CommitMessageGeneratorFile = {
+  path: string;
+  added: number;
+  deleted: number;
+  patch?: string;
+};
+
+export type CommitMessageParams = {
+  files: CommitMessageGeneratorFile[];
   model?: string;
   provider?: AgentProvider;
 };
