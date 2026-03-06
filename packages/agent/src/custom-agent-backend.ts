@@ -3,9 +3,10 @@ import {
   streamText,
   stepCountIs,
   type ModelMessage,
-  type LanguageModelUsage,
+  type ToolSet,
 } from "ai";
-import { createToolSet, createReadOnlyToolSet, type ToolCallMetadata } from "./tools/registry.js";
+import { createToolSet, createReadOnlyToolSet, createPlanningToolSet, type ToolCallMetadata } from "./tools/registry.js";
+import { closeMCPToolRuntimes, createMCPToolRuntimes } from "./tools/mcp.js";
 import { buildSystemPrompt, COMPACTION_PROMPT } from "./system-prompt.js";
 import {
   MODELS,
@@ -16,6 +17,15 @@ import {
   type AgentBackendConfig,
 } from "./models.js";
 import { addCacheControl } from "./cache.js";
+import {
+  computeCost,
+  parseRetryDelay,
+  isContextOverflow,
+  abortableSleep,
+  pruneConversation,
+  extractApiErrorMessage,
+  RETRY_MAX_ATTEMPTS,
+} from "./streaming.js";
 import type { AgentMessage, AgentMode, AgentProvider, ThreadTitleParams } from "@agentide/shared";
 import type {
   AgentBackend,
@@ -102,15 +112,7 @@ function cleanTitle(raw: string): string {
   return noTrailingPunctuation.slice(0, TITLE_MAX_LENGTH).trimEnd();
 }
 
-const RETRY_INITIAL_DELAY = 2000;
-const RETRY_BACKOFF_FACTOR = 2;
-const RETRY_MAX_DELAY = 30_000;
-const RETRY_MAX_ATTEMPTS = 10;
 const MAX_TOOL_STEPS = 75;
-
-const PRUNE_PROTECT_TOKENS = 40_000;
-const PRUNE_MIN_SAVINGS = 20_000;
-const CHARS_PER_TOKEN_ESTIMATE = 4;
 
 const activeSessions = new Map<string, AbortController>();
 
@@ -139,223 +141,17 @@ export async function generateThreadTitle(
   return cleaned.length > 0 ? cleaned : null;
 }
 
-function estimateTokens(text: string): number {
-  return Math.ceil(text.length / CHARS_PER_TOKEN_ESTIMATE);
-}
-
-function computeCost(usage: LanguageModelUsage, modelDef: ModelDef): number {
-  const inputTokens = usage.inputTokens ?? 0;
-  const outputTokens = usage.outputTokens ?? 0;
-  const inputRate =
-    modelDef.inputPricePer1k ??
-    (modelDef.llmProvider === "anthropic" ? 0.003 : modelDef.llmProvider === "minimax" ? 0.0002 : 0.002);
-  const outputRate =
-    modelDef.outputPricePer1k ??
-    (modelDef.llmProvider === "anthropic" ? 0.015 : modelDef.llmProvider === "minimax" ? 0.0008 : 0.010);
-
-  const cacheRead = usage.inputTokenDetails?.cacheReadTokens ?? 0;
-  const cacheWrite = usage.inputTokenDetails?.cacheWriteTokens ?? 0;
-
-  if (modelDef.llmProvider === "anthropic" && (cacheRead > 0 || cacheWrite > 0)) {
-    const uncachedTokens = inputTokens - cacheRead - cacheWrite;
-    const inputCost =
-      uncachedTokens * inputRate +
-      cacheRead * inputRate * 0.1 +
-      cacheWrite * inputRate * 1.25;
-    return (inputCost + outputTokens * outputRate) / 1000;
-  }
-
-  return (inputTokens * inputRate + outputTokens * outputRate) / 1000;
-}
-
-function parseRetryDelay(error: unknown, attempt: number): number | null {
-  const err = error as {
-    statusCode?: number;
-    isRetryable?: boolean;
-    responseHeaders?: Record<string, string>;
-  };
-
-  const status = err.statusCode;
-  const isRetryable =
-    err.isRetryable === true ||
-    status === 429 ||
-    status === 503 ||
-    status === 529;
-
-  if (!isRetryable) return null;
-  if (attempt >= RETRY_MAX_ATTEMPTS) return null;
-
-  const headers = err.responseHeaders;
-  if (headers) {
-    const retryAfterMs = headers["retry-after-ms"];
-    if (retryAfterMs) {
-      const ms = parseFloat(retryAfterMs);
-      if (!isNaN(ms)) return ms;
-    }
-    const retryAfter = headers["retry-after"];
-    if (retryAfter) {
-      const secs = parseFloat(retryAfter);
-      if (!isNaN(secs)) return Math.ceil(secs * 1000);
-      const date = Date.parse(retryAfter) - Date.now();
-      if (!isNaN(date) && date > 0) return Math.ceil(date);
-    }
-  }
-
-  return Math.min(
-    RETRY_INITIAL_DELAY * Math.pow(RETRY_BACKOFF_FACTOR, attempt - 1),
-    RETRY_MAX_DELAY,
-  );
-}
-
-function isContextOverflow(error: unknown): boolean {
-  const msg = (error as { message?: string })?.message ?? String(error);
-  const patterns = [
-    /prompt is too long/i,
-    /exceeds the context window/i,
-    /input token count.*exceeds the maximum/i,
-    /maximum context length/i,
-    /context[_ ]length[_ ]exceeded/i,
-    /reduce the length of the messages/i,
-  ];
-  return patterns.some((p) => p.test(msg));
-}
-
-async function abortableSleep(ms: number, signal: AbortSignal): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (signal.aborted) {
-      reject(new DOMException("Aborted", "AbortError"));
-      return;
-    }
-    const timer = setTimeout(() => {
-      signal.removeEventListener("abort", onAbort);
-      resolve();
-    }, ms);
-    function onAbort() {
-      clearTimeout(timer);
-      reject(new DOMException("Aborted", "AbortError"));
-    }
-    signal.addEventListener("abort", onAbort, { once: true });
-  });
-}
-
-function pruneConversation(messages: ModelMessage[]): ModelMessage[] {
-  let totalToolTokens = 0;
-  const toolResultIndices: { index: number; tokens: number }[] = [];
-
-  for (let i = messages.length - 1; i >= 0; i--) {
-    const msg = messages[i];
-    if (msg.role === "tool") {
-      const content = typeof msg.content === "string"
-        ? msg.content
-        : JSON.stringify(msg.content);
-      const tokens = estimateTokens(content);
-      totalToolTokens += tokens;
-      toolResultIndices.push({ index: i, tokens });
-    }
-  }
-
-  if (totalToolTokens <= PRUNE_PROTECT_TOKENS + PRUNE_MIN_SAVINGS) {
-    return messages;
-  }
-
-  let kept = 0;
-  const toPrune = new Set<number>();
-  for (const entry of toolResultIndices) {
-    kept += entry.tokens;
-    if (kept > PRUNE_PROTECT_TOKENS) {
-      toPrune.add(entry.index);
-    }
-  }
-
-  if (toPrune.size === 0) return messages;
-
-  return messages.map((msg, i) => {
-    if (!toPrune.has(i)) return msg;
-    if (msg.role === "tool" && Array.isArray(msg.content)) {
-      const pruned = {
-        ...msg,
-        content: msg.content.map((part) => {
-          if (part && typeof part === "object" && "output" in part) {
-            return {
-              ...part,
-              output: { type: "text" as const, value: "[Old tool result content cleared]" },
-            };
-          }
-          return part;
-        }),
-      };
-      return pruned as unknown as ModelMessage;
-    }
-    return msg;
-  });
-}
-
-function extractApiErrorMessage(error: unknown): string {
-  const err = error as {
-    message?: string;
-    statusCode?: number;
-    responseBody?: string;
-    data?: { error?: { message?: string; type?: string } };
-  };
-
-  if (err.data?.error?.message) {
-    const apiMsg = err.data.error.message;
-    const type = err.data.error.type ?? "";
-    const status = err.statusCode ? ` (${err.statusCode})` : "";
-    return `${type}${status}: ${apiMsg}`;
-  }
-
-  if (err.responseBody) {
-    try {
-      const body = JSON.parse(err.responseBody);
-      if (body?.error?.message) {
-        return `API error (${err.statusCode ?? "unknown"}): ${body.error.message}`;
-      }
-    } catch {}
-  }
-
-  if (err.message && err.message !== "No output generated. Check the stream for errors.") {
-    return err.message;
-  }
-
-  if (err.statusCode) {
-    return `API request failed with status ${err.statusCode}`;
-  }
-
-  if (error instanceof Error) return error.message;
-  if (typeof error === "string") return error;
-  if (error && typeof error === "object") {
-    const obj = error as Record<string, unknown>;
-    if (typeof obj.message === "string") return obj.message;
-    if (typeof obj.error === "string") return obj.error;
-    if (obj.error && typeof (obj.error as Record<string, unknown>).message === "string") {
-      return (obj.error as Record<string, unknown>).message as string;
-    }
-    try {
-      const str = JSON.stringify(error);
-      return str.length > 500 ? str.slice(0, 500) + "…" : str;
-    } catch {
-      return "Unknown error";
-    }
-  }
-  return String(error);
-}
-
-function noopLog(
-  _level: "INFO" | "WARN" | "ERROR",
-  _source: string,
-  ..._args: unknown[]
-): void {}
+import { createAgentLogger, logAgentEvent } from "./logger.js";
 
 async function runAgent(
   config: AgentBackendConfig,
   options: AgentBackendStartOptions,
 ): Promise<void> {
-  const writeAgentLog = config.writeAgentLog ?? noopLog;
+  const logger = createAgentLogger(config.logger);
   const sessionId = options.sessionId;
   const modelDef = resolveModel(options.model);
 
-  writeAgentLog("INFO", "Agent", "runAgent start", {
+  logAgentEvent(logger, "INFO", "Agent", "runAgent start", {
     sessionId,
     model: modelDef.value,
     llmProvider: modelDef.llmProvider,
@@ -379,6 +175,7 @@ async function runAgent(
   let totalOutputTokens = 0;
   let totalCacheReadTokens = 0;
   let totalCacheWriteTokens = 0;
+  const mcpRuntimes = await createMCPToolRuntimes(options.mcpServers);
 
   const conversationHistory: ModelMessage[] = options.existingMessages?.length
     ? summarizeExistingMessages(options.existingMessages)
@@ -402,28 +199,37 @@ async function runAgent(
 
   conversationHistory.push({ role: "user", content: userContent } as ModelMessage);
 
-  if (mode === "ask" || mode === "plan" || mode === "agent_review") {
-    const isAsk = mode === "ask" || mode === "agent_review";
-    const toolCtxReadOnly: ToolContext = {
-      sessionId,
-      workspacePath: options.workspacePath,
-      abortSignal: linkedAbort.signal,
-      onMetadata: () => {},
-      requestUserInput: async () => ({ denied: false, updatedInput: undefined }),
-      onToolStart: (meta) => {
-        options.onMessage({
-          id: meta.toolCallId,
-          role: "tool",
-          content: "",
-          toolName: meta.toolName,
-          toolInput: meta.input,
-          toolStatus: "running",
-          timestamp: Date.now(),
-          sessionId,
-          toolCallId: meta.toolCallId,
-        });
-      },
-    };
+  try {
+    if (mode === "ask" || mode === "plan" || mode === "agent_review") {
+      const isAsk = mode === "ask" || mode === "agent_review";
+      const toolCtxReadOnly: ToolContext = {
+        sessionId,
+        workspacePath: options.workspacePath,
+        abortSignal: linkedAbort.signal,
+        onMetadata: () => {},
+        requestUserInput: mode === "plan"
+          ? async (toolName: string, input: unknown) => {
+              if (!options.canUseTool) return { denied: false, updatedInput: input };
+              const result = await options.canUseTool(sessionId, toolName, input);
+              if (result.behavior === "deny") return { denied: true, message: result.message };
+              return { denied: false, updatedInput: result.updatedInput };
+            }
+          : async () => ({ denied: false, updatedInput: undefined }),
+        onToolStart: (meta) => {
+          options.onMessage({
+            id: meta.toolCallId,
+            role: "tool",
+            content: "",
+            toolName: meta.toolName,
+            toolInput: meta.input,
+            toolStatus: "running",
+            timestamp: Date.now(),
+            sessionId,
+            toolCallId: meta.toolCallId,
+          });
+        },
+        mcpTools: mcpRuntimes,
+      };
 
     const readOnlyToolCallHandler = (meta: ToolCallMetadata) => {
       options.onMessage({
@@ -440,7 +246,9 @@ async function runAgent(
       });
     };
 
-    const readOnlyToolSet = createReadOnlyToolSet(toolCtxReadOnly, readOnlyToolCallHandler);
+    const readOnlyToolSet = mode === "plan"
+      ? createPlanningToolSet(toolCtxReadOnly, readOnlyToolCallHandler)
+      : createReadOnlyToolSet(toolCtxReadOnly, readOnlyToolCallHandler);
     const READ_ONLY_MAX_STEPS = 20;
     let attempt = 0;
     let lastFinalText = "";
@@ -463,7 +271,7 @@ async function runAgent(
           onError: ({ error }) => {
             const err = error as { message?: string; statusCode?: number; responseBody?: string; data?: unknown };
             const message = extractApiErrorMessage(error);
-            writeAgentLog("ERROR", "Agent", "stream error", {
+            logAgentEvent(logger, "ERROR", "Agent", "stream error", {
               sessionId,
               message: err.message ?? String(error),
               statusCode: err.statusCode,
@@ -521,22 +329,22 @@ async function runAgent(
         attempt = 0;
 
         if (finishReason !== "tool-calls") {
-          writeAgentLog("INFO", "Agent", `${mode} finished`, { sessionId, reason: finishReason });
+          logAgentEvent(logger, "INFO", "Agent", `${mode} finished`, { sessionId, reason: finishReason });
           break;
         }
       } catch (error: unknown) {
         if (linkedAbort.signal.aborted) {
-          writeAgentLog("INFO", "Agent", `${mode} aborted`, { sessionId });
+          logAgentEvent(logger, "INFO", "Agent", `${mode} aborted`, { sessionId });
           break;
         }
 
         const message = extractApiErrorMessage(error);
-        writeAgentLog("ERROR", "Agent", `${mode} loop error`, { sessionId, message });
+        logAgentEvent(logger, "ERROR", "Agent", `${mode} loop error`, { sessionId, message });
 
         attempt++;
         const delay = parseRetryDelay(error, attempt);
         if (delay !== null) {
-          writeAgentLog("INFO", "Agent", "retrying", { sessionId, attempt, delayMs: delay });
+          logAgentEvent(logger, "INFO", "Agent", "retrying", { sessionId, attempt, delayMs: delay });
           options.onMessage({
             id: ulid(),
             role: "system",
@@ -606,6 +414,7 @@ async function runAgent(
         languageModel,
         systemPrompt,
       },
+      mcpTools: mcpRuntimes,
     };
 
     const toolCallHandler = (meta: ToolCallMetadata) => {
@@ -645,7 +454,7 @@ async function runAgent(
           onError: ({ error }) => {
             const err = error as { message?: string; statusCode?: number; responseBody?: string; data?: unknown };
             const message = extractApiErrorMessage(error);
-            writeAgentLog("ERROR", "Agent", "stream error", {
+            logAgentEvent(logger, "ERROR", "Agent", "stream error", {
               sessionId,
               message: err.message ?? String(error),
               statusCode: err.statusCode,
@@ -702,13 +511,13 @@ async function runAgent(
         attempt = 0;
 
         if (finishReason !== "tool-calls") {
-          writeAgentLog("INFO", "Agent", "agent finished", { sessionId, reason: finishReason });
+          logAgentEvent(logger, "INFO", "Agent", "agent finished", { sessionId, reason: finishReason });
           break;
         }
 
       } catch (error: unknown) {
         if (linkedAbort.signal.aborted) {
-          writeAgentLog("INFO", "Agent", "agent aborted", { sessionId });
+          logAgentEvent(logger, "INFO", "Agent", "agent aborted", { sessionId });
           break;
         }
 
@@ -722,7 +531,7 @@ async function runAgent(
             dataStr = String(err.data).slice(0, 500);
           }
         }
-        writeAgentLog("ERROR", "Agent", "agent loop error", {
+        logAgentEvent(logger, "ERROR", "Agent", "agent loop error", {
           sessionId,
           message,
           statusCode: err.statusCode,
@@ -732,7 +541,7 @@ async function runAgent(
         });
 
         if (isContextOverflow(error)) {
-          writeAgentLog("INFO", "Agent", "context overflow, attempting compaction", { sessionId });
+          logAgentEvent(logger, "INFO", "Agent", "context overflow, attempting compaction", { sessionId });
           const compacted = await compactConversation(conversationHistory, modelDef, config, linkedAbort.signal);
           if (compacted) {
             conversationHistory.length = 0;
@@ -753,7 +562,7 @@ async function runAgent(
         attempt++;
         const delay = parseRetryDelay(error, attempt);
         if (delay !== null) {
-          writeAgentLog("INFO", "Agent", "retrying", { sessionId, attempt, delayMs: delay });
+          logAgentEvent(logger, "INFO", "Agent", "retrying", { sessionId, attempt, delayMs: delay });
           options.onMessage({
             id: ulid(),
             role: "system",
@@ -773,12 +582,14 @@ async function runAgent(
         break;
       }
     }
+    }
+  } finally {
+    options.abortSignal.removeEventListener("abort", onExternalAbort);
+    activeSessions.delete(sessionId);
+    await closeMCPToolRuntimes(mcpRuntimes);
   }
 
-  options.abortSignal.removeEventListener("abort", onExternalAbort);
-  activeSessions.delete(sessionId);
-
-  writeAgentLog("INFO", "Agent", "session result", {
+  logAgentEvent(logger, "INFO", "Agent", "session result", {
     sessionId,
     totalCostUsd,
     inputTokens: totalInputTokens,
@@ -804,7 +615,7 @@ async function compactConversation(
   config: AgentBackendConfig,
   signal: AbortSignal,
 ): Promise<ModelMessage[] | null> {
-  const writeAgentLog = config.writeAgentLog ?? noopLog;
+  const logger = createAgentLogger(config.logger);
   try {
     const languageModel = createLanguageModel(modelDef, config);
     const compactionMessages: ModelMessage[] = [
@@ -829,7 +640,7 @@ async function compactConversation(
       } as ModelMessage,
     ];
   } catch (err: unknown) {
-    writeAgentLog("ERROR", "Agent", "compaction failed", {
+    logAgentEvent(logger, "ERROR", "Agent", "compaction failed", {
       error: err instanceof Error ? err.message : String(err),
     });
     return null;

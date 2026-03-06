@@ -198,7 +198,7 @@ function TaskBacklogEditor({ workspacePath, placeholder, onTextChange, editorRef
       Mention.configure({
         HTMLAttributes: {
             class:
-              "inline-flex items-center gap-0.5 rounded-md bg-accent/20 border border-accent/30 px-1.5 py-0.5 text-xs font-medium text-accent-foreground leading-none",
+              "inline-flex items-center gap-0.5 rounded-md bg-quaternary shadow-card px-1.5 py-0.5 text-xs font-medium text-foreground leading-none",
           },
         suggestion: {
           char: "@",
@@ -455,6 +455,9 @@ function NewTaskForm({ open, workspaces, defaultWorkspaceId, onCreate, onClose }
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => void handleSubmit("in_progress")}>
+                Start in progress
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => void handleSubmit("planning")}>
                 Plan first
               </DropdownMenuItem>

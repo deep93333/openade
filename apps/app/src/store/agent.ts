@@ -8,6 +8,7 @@ import type {
   ChatThread,
   Checkpoint,
   ImageAttachment,
+  MCPServerConfig,
   TaskStatus,
   ToolApprovalRequest,
 } from "@agentide/shared";
@@ -17,6 +18,7 @@ import { getToolTitle } from "@/components/agent/tools/labels";
 import { getElectronAPI } from "@/lib/electron";
 import { normalizeUserMessageContentToText } from "@/utils/message";
 import { useCostStore } from "./cost";
+import { useWorkspaceStore } from "./workspace";
 
 const CHAT_STORAGE_KEY = "agentide-chat";
 const MODEL_STORAGE_KEY = "agentide-selected-model";
@@ -42,6 +44,84 @@ const EMPTY_RUNTIME: ThreadRuntime = {
   activeToolCalls: [],
   lastCompletedActivity: null,
 };
+
+const MUTATING_TOOL_NAMES = new Set([
+  "applypatch",
+  "edit",
+  "multiedit",
+  "write",
+  "delete",
+  "editnotebook",
+  "createfile",
+  "rename",
+  "move",
+  "copy",
+  "text_editor",
+  "str_replace_editor",
+]);
+
+function normalizeWorkspaceRelativePath(path: string, workspacePath?: string): string {
+  const normalized = path.replace(/\\/g, "/").trim();
+  if (!workspacePath) return normalized;
+  const workspaceNormalized = workspacePath.replace(/\\/g, "/").replace(/\/+$/, "");
+  if (normalized.startsWith(`${workspaceNormalized}/`)) {
+    return normalized.slice(workspaceNormalized.length + 1);
+  }
+  return normalized;
+}
+
+function extractChangedPathsFromToolInput(input: unknown): string[] {
+  const found = new Set<string>();
+  const visit = (value: unknown): void => {
+    if (!value) return;
+    if (typeof value === "string") return;
+    if (Array.isArray(value)) {
+      value.forEach(visit);
+      return;
+    }
+    if (typeof value === "object") {
+      for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+        const keyLower = key.toLowerCase();
+        if (
+          typeof child === "string" &&
+          (keyLower === "path" ||
+            keyLower === "filepath" ||
+            keyLower === "file_path" ||
+            keyLower === "target_file" ||
+            keyLower === "target_notebook" ||
+            keyLower === "new_path" ||
+            keyLower === "old_path")
+        ) {
+          const cleaned = child.trim();
+          if (cleaned) found.add(cleaned);
+        }
+        visit(child);
+      }
+    }
+  };
+  visit(input);
+  return [...found];
+}
+
+function getLikelyChangedFiles(messages: AgentMessage[], workspacePath?: string): string[] {
+  const ordered = new Set<string>();
+  for (const message of messages) {
+    if (message.role !== "tool" || !message.toolName) continue;
+    const toolName = message.toolName.toLowerCase();
+    if (!MUTATING_TOOL_NAMES.has(toolName)) continue;
+    for (const path of extractChangedPathsFromToolInput(message.toolInput)) {
+      const normalized = normalizeWorkspaceRelativePath(path, workspacePath);
+      if (normalized) ordered.add(normalized);
+    }
+  }
+  return [...ordered];
+}
+
+function buildReviewPrompt(basePrompt: string, changedFiles: string[]): string {
+  if (changedFiles.length === 0) return basePrompt;
+  const fileList = changedFiles.slice(0, 25).map((path) => `- ${path}`).join("\n");
+  return `${basePrompt}\n\nReview hint: these files were likely changed earlier in this thread, so inspect them first, but do not limit your review to them if the task, surrounding code, or validation suggests you should inspect other files too.\n\nLikely changed files:\n${fileList}`;
+}
 
 type WorkspaceAgentState = {
   threads: ChatThread[];
@@ -83,7 +163,9 @@ type AgentStoreState = {
   createBrainstormThread: (workspaceId: string) => Promise<string>;
   switchThread: (workspaceId: string, threadId: string) => void;
   deleteThread: (workspaceId: string, threadId: string) => Promise<void>;
-  updateThreadTaskStatus: (workspaceId: string, threadId: string, taskStatus: TaskStatus) => Promise<void>;
+  markThreadRead: (workspaceId: string, threadId: string) => void;
+  updateThreadTaskStatus: (workspaceId: string, threadId: string, taskStatus: TaskStatus, options?: { autoStart?: boolean }) => Promise<void>;
+  updateThreadModel: (workspaceId: string, threadId: string, model: string) => Promise<void>;
   generateThreadTitle: (workspaceId: string, threadId: string) => Promise<void>;
 
   startAgent: (
@@ -92,6 +174,7 @@ type AgentStoreState = {
     options?: {
       displayContent?: string;
       imageAttachments?: ImageAttachment[];
+      mcpServers?: MCPServerConfig[];
       provider?: AgentProvider;
       useExistingPrompt?: boolean;
       threadId?: string;
@@ -102,6 +185,12 @@ type AgentStoreState = {
   stopAgent: (workspaceId: string) => Promise<void>;
 
   addMessage: (message: AgentMessage) => void;
+  updateMessageContent: (
+    workspaceId: string,
+    threadId: string,
+    messageId: string,
+    updates: Partial<Pick<AgentMessage, "content" | "planContent" | "reviewContent">>
+  ) => Promise<void>;
   setResult: (result: AgentResult) => void;
   setError: (payload: { sessionId: string; error: string; workspaceId?: string }) => void;
 
@@ -149,7 +238,7 @@ function migrateLegacy(data: {
   const messages = Array.isArray(data?.messages) ? data.messages : [];
   const threadId = crypto.randomUUID();
   return {
-    threads: [{ id: threadId, messages, createdAt: Date.now() }],
+    threads: [{ id: threadId, messages, createdAt: Date.now(), updatedAt: Date.now() }],
     activeThreadId: threadId,
   };
 }
@@ -266,7 +355,8 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
     get().pendingToolApprovals[workspaceId] ?? null,
 
   loadWorkspace: async (workspaceId) => {
-    if (get().workspaces[workspaceId]) return;
+    const existing = get().workspaces[workspaceId];
+    if (existing?.threads.length && existing.activeThreadId) return;
 
     const api = getElectronAPI();
     let threads: ChatThread[] = [];
@@ -286,7 +376,7 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
     }
     if (threads.length === 0) {
       const threadId = crypto.randomUUID();
-      threads = [{ id: threadId, messages: [], createdAt: Date.now() }];
+      threads = [{ id: threadId, messages: [], createdAt: Date.now(), updatedAt: Date.now() }];
       activeThreadId = threadId;
     }
 
@@ -344,6 +434,7 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
       id: threadId,
       messages: [],
       createdAt: Date.now(),
+      updatedAt: Date.now(),
       taskStatus: "backlog",
     };
 
@@ -371,6 +462,7 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
       id: threadId,
       messages: [],
       createdAt: Date.now(),
+      updatedAt: Date.now(),
       taskStatus: "brainstorm",
     };
 
@@ -411,6 +503,7 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
         id: threadId,
         messages: [userMessage],
         createdAt: Date.now(),
+        updatedAt: Date.now(),
         taskStatus: "backlog",
         ...(model && { model }),
         ...(provider && { provider }),
@@ -487,7 +580,26 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
     }
   },
 
-  updateThreadTaskStatus: async (workspaceId, threadId, taskStatus) => {
+  markThreadRead: (workspaceId, threadId) => {
+    set((s) => {
+      const ws = s.workspaces[workspaceId];
+      if (!ws) return s;
+      return {
+        workspaces: {
+          ...s.workspaces,
+          [workspaceId]: {
+            ...ws,
+            threads: ws.threads.map((t) =>
+              t.id === threadId ? { ...t, lastReadAt: Date.now() } : t
+            ),
+          },
+        },
+      };
+    });
+    get().persistWorkspace(workspaceId).catch(() => {});
+  },
+
+  updateThreadTaskStatus: async (workspaceId, threadId, taskStatus, options) => {
     let prevStatus: TaskStatus | undefined;
     set((s) => {
       const ws = s.workspaces[workspaceId];
@@ -527,7 +639,7 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
       }
     }
 
-    if (taskStatus === "brainstorm") {
+    if (taskStatus === "brainstorm" && options?.autoStart) {
       const ws = get().workspaces[workspaceId];
       const thread = ws?.threads.find((t) => t.id === threadId);
       const runtime = ws?.threadRuntime[threadId];
@@ -612,13 +724,48 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
       const runtime = ws?.threadRuntime[threadId];
       const isAlreadyRunning = runtime?.status === "running" && !!runtime?.sessionId;
       if (thread && !isAlreadyRunning) {
-        const reviewPrompt =
-          "Please review the work done in this thread. Run readlints on any changed files. " +
-          "Check for correctness, completeness, type safety, and edge cases. " +
-          "Summarise findings and suggest concrete improvements.";
-        await get().startAgent(workspaceId, reviewPrompt, {
+        await get().startAgent(workspaceId, "", {
+          useExistingPrompt: true,
           threadId,
           mode: "agent_review",
+        });
+      }
+    }
+  },
+
+  updateThreadModel: async (workspaceId, threadId, model) => {
+    set((s) => {
+      const ws = s.workspaces[workspaceId];
+      if (!ws) return s;
+
+      const updatedThreads = ws.threads.map((t) =>
+        t.id === threadId ? { ...t, model } : t
+      );
+
+      return {
+        ...s,
+        workspaces: {
+          ...s.workspaces,
+          [workspaceId]: {
+            ...ws,
+            threads: updatedThreads,
+          },
+        },
+      };
+    });
+
+    const updatedData = get().workspaces[workspaceId];
+    if (updatedData) {
+      const api = getElectronAPI();
+      if (api?.chat) {
+        await api.chat.save(workspaceId, {
+          threads: updatedData.threads,
+          activeThreadId: updatedData.activeThreadId,
+        }).catch(console.error);
+      } else {
+        saveToLocalStorage(workspaceId, {
+          threads: updatedData.threads,
+          activeThreadId: updatedData.activeThreadId,
         });
       }
     }
@@ -732,6 +879,15 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
       existingMessages = targetThread.messages.slice(0, lastIdx).map((m) =>
         m.role === "user" ? { ...m, content: normalizeUserMessageContentToText(m.content) } : m
       );
+      if (effectiveMode === "agent_review") {
+        const workspacePath = useWorkspaceStore
+          .getState()
+          .workspaces.find((workspace) => workspace.id === workspaceId)?.path;
+        resolvedPrompt = buildReviewPrompt(
+          resolvedPrompt,
+          getLikelyChangedFiles(existingMessages, workspacePath)
+        );
+      }
       skipAddingMessage = true;
     }
 
@@ -818,6 +974,7 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
       requireApproval,
       resumeSessionId,
       imageAttachments: images,
+      mcpServers: options?.mcpServers,
     });
 
     if (result.success && result.data) {
@@ -867,6 +1024,37 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
     const prompt = `Execute the following implementation plan step by step. Follow each step precisely, reading the relevant files first before making changes.\n\n---\n${planContent}\n---\n\nBegin implementing the plan now.`;
     set({ selectedMode: "agent" });
     await get().startAgent(workspaceId, prompt);
+  },
+
+  updateMessageContent: async (workspaceId, threadId, messageId, updates) => {
+    set((s) => {
+      const ws = s.workspaces[workspaceId];
+      if (!ws) return s;
+
+      const threads = ws.threads.map((t) => {
+        if (t.id !== threadId) return t;
+        return {
+          ...t,
+          messages: t.messages.map((m) =>
+            m.id === messageId ? { ...m, ...updates } : m
+          ),
+        };
+      });
+
+      return {
+        workspaces: {
+          ...s.workspaces,
+          [workspaceId]: { ...ws, threads },
+        },
+      };
+    });
+
+    const api = getElectronAPI();
+    if (api?.chat) {
+      await api.chat.updateMessage(workspaceId, threadId, messageId, updates);
+    } else {
+      await get().persistWorkspace(workspaceId);
+    }
   },
 
   stopAgent: async (workspaceId) => {
@@ -982,7 +1170,7 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
         const updatedThreads = messagesToAdd.length > 0
           ? ws.threads.map((t) =>
               t.id === threadId
-                ? { ...t, messages: [...t.messages, ...messagesToAdd] }
+                ? { ...t, messages: [...t.messages, ...messagesToAdd], updatedAt: messagesToAdd[messagesToAdd.length - 1]?.timestamp ?? Date.now() }
                 : t
             )
           : ws.threads;
@@ -1112,7 +1300,7 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
 
       const updatedThreads = ws.threads.map((t) =>
         t.id === threadId
-          ? { ...t, messages: [...t.messages, ...messagesToAdd] }
+          ? { ...t, messages: [...t.messages, ...messagesToAdd], updatedAt: messagesToAdd[messagesToAdd.length - 1]?.timestamp ?? Date.now() }
           : t
       );
       const shouldCleanupSession =

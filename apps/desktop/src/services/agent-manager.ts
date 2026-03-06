@@ -6,19 +6,19 @@ import {
 } from "@agentide/agent";
 import type { ThreadTitleParams } from "@agentide/shared";
 import * as configStorage from "./config-storage";
-import { writeAgentLog } from "./agent-log";
+import { agentLogger } from "./agent-log";
 
 const backendConfig: AgentBackendConfig = {
   getApiKey: () => configStorage.getApiKey(),
   getCodexApiKey: () => configStorage.getCodexApiKey(),
   getMinimaxApiKey: () => configStorage.getMinimaxApiKey(),
-  writeAgentLog,
+  logger: agentLogger,
 };
 
 const backend = createCustomAgentBackend(backendConfig);
 
 export const agentManager = createAgentManager({
-  writeAgentLog,
+  logger: agentLogger,
   backends: [
     ["claude", backend],
     ["codex", backend],

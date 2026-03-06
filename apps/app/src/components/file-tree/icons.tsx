@@ -1,12 +1,11 @@
-const DV = "text-[15px] mr-1.5 shrink-0 inline-block leading-none";
-const SV = "size-4 mr-1.5 shrink-0";
+const DEFAULT_SIZE = "size-4";
 
 const ICON_COLOR =
   "rgba(255, 255, 255, 0.95)";
 
-export function FolderIcon({ name, open }: { name: string; open?: boolean }) {
+export function FolderIcon({ name, open, size = DEFAULT_SIZE }: { name: string; open?: boolean; size?: string }) {
   return (
-    <svg className="size-4 mr-1.5 shrink-0" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+    <svg className={`${size} shrink-0`} viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
       {open ? (
         <>
           <path
@@ -29,32 +28,42 @@ export function FolderIcon({ name, open }: { name: string; open?: boolean }) {
   );
 }
 
-function Dev({ name, style = "plain", color }: { name: string; style?: string; color: string }) {
-  return <i className={`devicon-${name}-${style} ${DV}`} style={{ color }} />;
+const SIZE_TO_FONT: Record<string, string> = {
+  "size-3": "0.65rem",
+  "size-3.5": "0.775rem",
+  "size-4": "0.875rem",
+  "size-5": "1rem",
+  "size-6": "1.25rem",
+};
+
+function Dev({ name, style = "plain", color, size = DEFAULT_SIZE }: { name: string; style?: string; color: string; size?: string }) {
+  return <i className={`devicon-${name}-${style} ${size} shrink-0 inline-flex items-center justify-center leading-none`} style={{ color, fontSize: SIZE_TO_FONT[size] ?? "1rem" }} />;
 }
 
-type SvgProps = { color: string; children: React.ReactNode };
+type SvgProps = { color: string; size?: string; children: React.ReactNode };
 
-function Svg({ color, children }: SvgProps) {
+function Svg({ color, size = DEFAULT_SIZE, children }: SvgProps) {
   return (
-    <svg className={SV} viewBox="0 0 16 16" fill="none" style={{ color }} xmlns="http://www.w3.org/2000/svg">
+    <svg className={`${size} shrink-0`} viewBox="0 0 16 16" fill="none" style={{ color }} xmlns="http://www.w3.org/2000/svg">
       {children}
     </svg>
   );
 }
 
-function KeyIcon({ color }: { color: string }) {
+type IconSizeProps = { color: string; size?: string };
+
+function KeyIcon({ color, size }: IconSizeProps) {
   return (
-    <Svg color={color}>
+    <Svg color={color} size={size}>
       <circle cx="6" cy="8" r="3" stroke="currentColor" strokeWidth="1" />
       <path d="M9 8h4M11 6v4" stroke="currentColor" strokeWidth="1" strokeLinecap="round" />
     </Svg>
   );
 }
 
-function GearIcon({ color }: { color: string }) {
+function GearIcon({ color, size }: IconSizeProps) {
   return (
-    <Svg color={color}>
+    <Svg color={color} size={size}>
       <circle cx="8" cy="8" r="2" stroke="currentColor" strokeWidth="1" />
       <path
         d="M8 2v1.5M8 12.5V14M2 8h1.5M12.5 8H14M3.5 3.5l1 1M11.5 11.5l1 1M12.5 3.5l-1 1M4.5 11.5l-1 1"
@@ -66,25 +75,25 @@ function GearIcon({ color }: { color: string }) {
   );
 }
 
-function TextIcon({ color }: { color: string }) {
+function TextIcon({ color, size }: IconSizeProps) {
   return (
-    <Svg color={color}>
+    <Svg color={color} size={size}>
       <path d="M3 4h10M3 7.5h10M3 11h7" stroke="currentColor" strokeWidth="1" strokeLinecap="round" />
     </Svg>
   );
 }
 
-function LogIcon({ color }: { color: string }) {
+function LogIcon({ color, size }: IconSizeProps) {
   return (
-    <Svg color={color}>
+    <Svg color={color} size={size}>
       <path d="M3 3.5h10M3 6.5h6M3 9.5h8M3 12.5h4" stroke="currentColor" strokeWidth="1" strokeLinecap="round" />
     </Svg>
   );
 }
 
-function ImageIcon({ color }: { color: string }) {
+function ImageIcon({ color, size }: IconSizeProps) {
   return (
-    <Svg color={color}>
+    <Svg color={color} size={size}>
       <rect x="2" y="3" width="12" height="10" rx="1.5" stroke="currentColor" strokeWidth="1" />
       <circle cx="5.5" cy="6.5" r="1.5" fill="currentColor" />
       <path d="M2 11l3.5-3.5 3 3 2-2 3.5 3.5" stroke="currentColor" strokeWidth="1" strokeLinejoin="round" />
@@ -92,9 +101,9 @@ function ImageIcon({ color }: { color: string }) {
   );
 }
 
-function JsonIcon({ color }: { color: string }) {
+function JsonIcon({ color, size }: IconSizeProps) {
   return (
-    <Svg color={color}>
+    <Svg color={color} size={size}>
       <path
         d="M5.5 2.5C4.5 2.5 4 3 4 4v2c0 1-.5 1.5-1.5 1.5C3.5 7.5 4 8 4 9v2c0 1 .5 1.5 1.5 1.5M10.5 2.5c1 0 1.5.5 1.5 1.5v2c0 1 .5 1.5 1.5 1.5C12.5 7.5 12 8 12 9v2c0 1-.5 1.5-1.5 1.5"
         stroke="currentColor"
@@ -106,9 +115,9 @@ function JsonIcon({ color }: { color: string }) {
   );
 }
 
-function FileIcon({ color }: { color: string }) {
+function FileIcon({ color, size }: IconSizeProps) {
   return (
-    <Svg color={color}>
+    <Svg color={color} size={size}>
       <path d="M4 2h5.5L13 5.5V13a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" strokeWidth="1" />
       <path d="M9 2v4h4" stroke="currentColor" strokeWidth="1" />
     </Svg>
@@ -117,47 +126,48 @@ function FileIcon({ color }: { color: string }) {
 
 const imageExtensions = new Set(["png", "jpg", "jpeg", "gif", "webp", "svg", "ico", "bmp"]);
 
-export function getFileTypeIcon(name: string) {
+export function getFileTypeIcon(name: string, size = DEFAULT_SIZE) {
   const lowerName = name.toLowerCase();
+  const s = size;
 
   if (lowerName.startsWith("vite.config")) {
-    return <Dev name="vitejs" style="original" color={ICON_COLOR} />;
+    return <Dev name="vitejs" style="original" color={ICON_COLOR} size={s} />;
   }
 
   if (lowerName.startsWith("vitest.config") || lowerName.endsWith(".test.ts") || lowerName.endsWith(".test.tsx") || lowerName.endsWith(".spec.ts") || lowerName.endsWith(".spec.tsx")) {
-    return <Dev name="vitest" style="original" color={ICON_COLOR} />;
+    return <Dev name="vitest" style="original" color={ICON_COLOR} size={s} />;
   }
 
   if (lowerName === "tsconfig.json" || lowerName.startsWith("tsconfig.")) {
-    return <Dev name="typescript" color={ICON_COLOR} />;
+    return <Dev name="typescript" color={ICON_COLOR} size={s} />;
   }
 
   if (lowerName === "dockerfile" || lowerName === ".dockerignore") {
-    return <Dev name="docker" color={ICON_COLOR} />;
+    return <Dev name="docker" color={ICON_COLOR} size={s} />;
   }
 
   if (lowerName.startsWith(".env")) {
-    return <KeyIcon color={ICON_COLOR} />;
+    return <KeyIcon color={ICON_COLOR} size={s} />;
   }
 
   if (lowerName === "package.json") {
-    return <Dev name="nodejs" color={ICON_COLOR} />;
+    return <Dev name="nodejs" color={ICON_COLOR} size={s} />;
   }
 
   if (lowerName === "bun.lock") {
-    return <Dev name="bun" color={ICON_COLOR} />;
+    return <Dev name="bun" color={ICON_COLOR} size={s} />;
   }
 
   if (lowerName === "pnpm-lock.yaml") {
-    return <Dev name="pnpm" color={ICON_COLOR} />;
+    return <Dev name="pnpm" color={ICON_COLOR} size={s} />;
   }
 
   if (lowerName === "yarn.lock") {
-    return <Dev name="yarn" style="original" color={ICON_COLOR} />;
+    return <Dev name="yarn" style="original" color={ICON_COLOR} size={s} />;
   }
 
   if (lowerName === "package-lock.json") {
-    return <Dev name="npm" style="original" color={ICON_COLOR} />;
+    return <Dev name="npm" style="original" color={ICON_COLOR} size={s} />;
   }
 
   if (
@@ -166,75 +176,75 @@ export function getFileTypeIcon(name: string) {
     lowerName === ".gitmodules" ||
     lowerName === ".git-blame-ignore-revs"
   ) {
-    return <Dev name="git" color={ICON_COLOR} />;
+    return <Dev name="git" color={ICON_COLOR} size={s} />;
   }
 
   const extension = lowerName.includes(".") ? lowerName.split(".").pop() ?? "" : "";
 
   switch (extension) {
     case "ts":
-      return <Dev name="typescript" color={ICON_COLOR} />;
+      return <Dev name="typescript" color={ICON_COLOR} size={s} />;
     case "tsx":
-      return <Dev name="react" style="original" color={ICON_COLOR} />;
+      return <Dev name="react" style="original" color={ICON_COLOR} size={s} />;
     case "js":
     case "mjs":
     case "cjs":
-      return <Dev name="javascript" color={ICON_COLOR} />;
+      return <Dev name="javascript" color={ICON_COLOR} size={s} />;
     case "jsx":
-      return <Dev name="react" style="original" color={ICON_COLOR} />;
+      return <Dev name="react" style="original" color={ICON_COLOR} size={s} />;
     case "py":
-      return <Dev name="python" color={ICON_COLOR} />;
+      return <Dev name="python" color={ICON_COLOR} size={s} />;
     case "go":
-      return <Dev name="go" style="original" color={ICON_COLOR} />;
+      return <Dev name="go" style="original" color={ICON_COLOR} size={s} />;
     case "rs":
-      return <Dev name="rust" style="original" color={ICON_COLOR} />;
+      return <Dev name="rust" style="original" color={ICON_COLOR} size={s} />;
     case "java":
-      return <Dev name="java" color={ICON_COLOR} />;
+      return <Dev name="java" color={ICON_COLOR} size={s} />;
     case "kt":
-      return <Dev name="kotlin" color={ICON_COLOR} />;
+      return <Dev name="kotlin" color={ICON_COLOR} size={s} />;
     case "swift":
-      return <Dev name="swift" color={ICON_COLOR} />;
+      return <Dev name="swift" color={ICON_COLOR} size={s} />;
     case "php":
-      return <Dev name="php" color={ICON_COLOR} />;
+      return <Dev name="php" color={ICON_COLOR} size={s} />;
     case "rb":
-      return <Dev name="ruby" color={ICON_COLOR} />;
+      return <Dev name="ruby" color={ICON_COLOR} size={s} />;
     case "sh":
     case "bash":
     case "zsh":
-      return <Dev name="bash" color={ICON_COLOR} />;
+      return <Dev name="bash" color={ICON_COLOR} size={s} />;
     case "html":
     case "htm":
-      return <Dev name="html5" color={ICON_COLOR} />;
+      return <Dev name="html5" color={ICON_COLOR} size={s} />;
     case "css":
-      return <Dev name="css3" color={ICON_COLOR} />;
+      return <Dev name="css3" color={ICON_COLOR} size={s} />;
     case "scss":
     case "sass":
-      return <Dev name="sass" style="original" color={ICON_COLOR} />;
+      return <Dev name="sass" style="original" color={ICON_COLOR} size={s} />;
     case "less":
-      return <Dev name="less" style="plain-wordmark" color={ICON_COLOR} />;
+      return <Dev name="less" style="plain-wordmark" color={ICON_COLOR} size={s} />;
     case "json":
     case "jsonc":
-      return <JsonIcon color={ICON_COLOR} />;
+      return <JsonIcon color={ICON_COLOR} size={s} />;
     case "yaml":
     case "yml":
-      return <Dev name="yaml" color={ICON_COLOR} />;
+      return <Dev name="yaml" color={ICON_COLOR} size={s} />;
     case "toml":
     case "ini":
-      return <GearIcon color={ICON_COLOR} />;
+      return <GearIcon color={ICON_COLOR} size={s} />;
     case "md":
     case "mdx":
-      return <Dev name="markdown" style="original" color={ICON_COLOR} />;
+      return <Dev name="markdown" style="original" color={ICON_COLOR} size={s} />;
     case "sql":
-      return <Dev name="sqlite" color={ICON_COLOR} />;
+      return <Dev name="sqlite" color={ICON_COLOR} size={s} />;
     case "txt":
-      return <TextIcon color={ICON_COLOR} />;
+      return <TextIcon color={ICON_COLOR} size={s} />;
     case "log":
-      return <LogIcon color={ICON_COLOR} />;
+      return <LogIcon color={ICON_COLOR} size={s} />;
   }
 
   if (imageExtensions.has(extension)) {
-    return <ImageIcon color={ICON_COLOR} />;
+    return <ImageIcon color={ICON_COLOR} size={s} />;
   }
 
-  return <FileIcon color={ICON_COLOR} />;
+  return <FileIcon color={ICON_COLOR} size={s} />;
 }

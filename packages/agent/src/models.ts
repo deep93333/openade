@@ -17,9 +17,9 @@ export type ModelDef = {
 };
 
 export const MODELS: ModelDef[] = [
-  { value: "claude-sonnet-4-6", label: "Claude Sonnet 4.6", llmProvider: "anthropic", apiModelId: "claude-sonnet-4-6", uiProvider: "claude" },
-  { value: "claude-opus-4-6", label: "Claude Opus 4.6", llmProvider: "anthropic", apiModelId: "claude-opus-4-6", uiProvider: "claude" },
-  { value: "claude-haiku-4-5", label: "Claude Haiku 4.5", llmProvider: "anthropic", apiModelId: "claude-haiku-4-5-20251001", uiProvider: "claude" },
+  { value: "claude-sonnet-4-6", label: "Sonnet 4.6", llmProvider: "anthropic", apiModelId: "claude-sonnet-4-6", uiProvider: "claude" },
+  { value: "claude-opus-4-6", label: "Opus 4.6", llmProvider: "anthropic", apiModelId: "claude-opus-4-6", uiProvider: "claude" },
+  { value: "claude-haiku-4-5", label: "Haiku 4.5", llmProvider: "anthropic", apiModelId: "claude-haiku-4-5-20251001", uiProvider: "claude" },
   {
     value: "gpt-5.2", label: "GPT-5.2", llmProvider: "openai", apiModelId: "gpt-5.2", uiProvider: "codex",
     inputPricePer1k: 1.75 / 1000, outputPricePer1k: 14 / 1000,
@@ -29,28 +29,31 @@ export const MODELS: ModelDef[] = [
     inputPricePer1k: 0.25 / 1000, outputPricePer1k: 2 / 1000,
   },
   {
-    value: "gpt-5.2-codex", label: "GPT-5.2 Codex", llmProvider: "openai", apiModelId: "gpt-5.2-codex", uiProvider: "codex",
+    value: "gpt-5.2-codex", label: "Codex 5.2", llmProvider: "openai", apiModelId: "gpt-5.2-codex", uiProvider: "codex",
     inputPricePer1k: 1.75 / 1000, outputPricePer1k: 14 / 1000,
   },
   {
-    value: "gpt-5.3-codex", label: "GPT-5.3 Codex", llmProvider: "openai", apiModelId: "gpt-5.3-codex", uiProvider: "codex",
+    value: "gpt-5.3-codex", label: "Codex 5.3", llmProvider: "openai", apiModelId: "gpt-5.3-codex", uiProvider: "codex",
     inputPricePer1k: 1.75 / 1000, outputPricePer1k: 14 / 1000,
   },
   {
-    value: "gpt-5.1-codex-mini", label: "GPT-5.1 Codex Mini", llmProvider: "openai", apiModelId: "gpt-5.1-codex-mini", uiProvider: "codex",
+    value: "gpt-5.4-2026-03-05", label: "GPT 5.4", llmProvider: "openai", apiModelId: "gpt-5.4-2026-03-05", uiProvider: "codex",
+    inputPricePer1k: 2.5 / 1000, outputPricePer1k: 15 / 1000,
+  },
+  {
+    value: "gpt-5.1-codex-mini", label: "Codex 5.1 Mini", llmProvider: "openai", apiModelId: "gpt-5.1-codex-mini", uiProvider: "codex",
     inputPricePer1k: 0.25 / 1000, outputPricePer1k: 2 / 1000,
   },
-  { value: "minimax-m2", label: "MiniMax M2", llmProvider: "minimax", apiModelId: "MiniMax-M2", uiProvider: "minimax" },
-  { value: "minimax-m2.1", label: "MiniMax M2.1", llmProvider: "minimax", apiModelId: "MiniMax-M2.1", uiProvider: "minimax" },
-  { value: "minimax-m2.1-lightning", label: "MiniMax M2.1 Lightning", llmProvider: "minimax", apiModelId: "MiniMax-M2.1-lightning", uiProvider: "minimax" },
   { value: "minimax-m2.5", label: "MiniMax M2.5", llmProvider: "minimax", apiModelId: "MiniMax-M2.5", uiProvider: "minimax" },
 ];
+
+import type { AgentLogger } from "./logger.js";
 
 export type AgentBackendConfig = {
   getApiKey: () => string | null;
   getCodexApiKey: () => string | null;
   getMinimaxApiKey: () => string | null;
-  writeAgentLog?: (level: "INFO" | "WARN" | "ERROR", source: string, ...args: unknown[]) => void;
+  logger?: AgentLogger;
 };
 
 export function resolveModel(modelValue: string | undefined): ModelDef {

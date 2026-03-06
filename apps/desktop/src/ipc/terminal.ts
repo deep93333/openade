@@ -1,7 +1,7 @@
 import { ipcMain } from "electron";
 import { IPC } from "@agentide/shared";
-import * as terminalService from "../services/terminal";
-import { getAppWindow } from "../services/windows";
+import * as terminalService from "../services/terminal-service";
+import { getAppWindow } from "../windows/app-window";
 
 export function registerTerminalHandlers(): void {
   ipcMain.handle(

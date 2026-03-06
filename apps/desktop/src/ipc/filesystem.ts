@@ -3,10 +3,10 @@ import { IPC } from "@agentide/shared";
 import * as fs from "fs/promises";
 import * as os from "os";
 import * as path from "path";
-import { readDirectoryTree, readDirectoryChildren } from "../services/filesystem";
-import { loadSkillsFromDir, getSkillContent } from "../services/skills";
-import { openFileInExternalEditor } from "../services/editor";
-import { getAgentLogPath, getAgentLogDir } from "../services/logging";
+import { readDirectoryTree, readDirectoryChildren } from "../services/filesystem-service";
+import { loadSkillsFromDir, getSkillContent } from "../services/skills-service";
+import { openFileInExternalEditor } from "../services/editor-service";
+import { getAgentLogPath, getAgentLogDir } from "../services/agent-log";
 import type { AgentSkillItem } from "@agentide/shared";
 
 export function registerFilesystemHandlers(): void {

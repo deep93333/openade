@@ -35,8 +35,8 @@ class WorkspaceManager {
               name: w.name,
               path: w.path,
               createdAt: w.createdAt ?? Date.now(),
+              isGitRepository: w.isGitRepository ?? !!w.branch,
               branch: w.branch,
-              activeSessionId: w.activeSessionId,
             });
           }
         }
@@ -75,11 +75,11 @@ class WorkspaceManager {
       throw new Error(`Directory does not exist: ${path}`);
     }
 
-    // Check if it's a git repository and get the current branch
+    let isGitRepository = false;
     let branch: string | undefined;
     try {
-      const isGitRepo = await gitService.isGitRepository(path);
-      if (isGitRepo) {
+      isGitRepository = await gitService.isGitRepository(path);
+      if (isGitRepository) {
         branch = (await gitService.getCurrentBranch(path)) || undefined;
       }
     } catch {
@@ -91,6 +91,7 @@ class WorkspaceManager {
       name,
       path,
       createdAt: Date.now(),
+      isGitRepository,
       branch,
     };
 
@@ -108,7 +109,7 @@ class WorkspaceManager {
     this.saveToDisk();
   }
 
-  update(id: string, updates: Partial<Pick<Workspace, "name" | "branch" | "activeSessionId">>): Workspace {
+  update(id: string, updates: Partial<Pick<Workspace, "name" | "branch" | "isGitRepository">>): Workspace {
     this.loadFromDisk();
     const workspace = this.workspaces.get(id);
     if (!workspace) {
@@ -129,13 +130,18 @@ class WorkspaceManager {
     }
 
     try {
-      const isGitRepo = await gitService.isGitRepository(workspace.path);
-      if (isGitRepo) {
+      const isGitRepository = await gitService.isGitRepository(workspace.path);
+      if (isGitRepository) {
         const currentBranch = await gitService.getCurrentBranch(workspace.path);
-        return this.update(id, { branch: currentBranch || undefined });
-      } else {
-        return this.update(id, { branch: undefined });
+        return this.update(id, {
+          isGitRepository: true,
+          branch: currentBranch || undefined,
+        });
       }
+      return this.update(id, {
+        isGitRepository: false,
+        branch: undefined,
+      });
     } catch (error) {
       throw new Error(`Failed to refresh git info: ${error instanceof Error ? error.message : "Unknown error"}`);
     }
@@ -174,7 +180,7 @@ class WorkspaceManager {
       }
 
       await gitService.switchBranch(workspace.path, branchName);
-      return this.update(id, { branch: branchName });
+      return this.update(id, { isGitRepository: true, branch: branchName });
     } catch (error) {
       throw new Error(`Failed to switch branch: ${error instanceof Error ? error.message : "Unknown error"}`);
     }
@@ -194,9 +200,24 @@ class WorkspaceManager {
       }
 
       await gitService.createAndSwitchBranch(workspace.path, branchName);
-      return this.update(id, { branch: branchName });
+      return this.update(id, { isGitRepository: true, branch: branchName });
     } catch (error) {
       throw new Error(`Failed to create branch: ${error instanceof Error ? error.message : "Unknown error"}`);
+    }
+  }
+
+  async initializeGitRepository(id: string): Promise<Workspace> {
+    this.loadFromDisk();
+    const workspace = this.workspaces.get(id);
+    if (!workspace) {
+      throw new Error(`Workspace not found: ${id}`);
+    }
+
+    try {
+      await gitService.init(workspace.path);
+      return await this.refreshGitInfo(id);
+    } catch (error) {
+      throw new Error(`Failed to initialize git repository: ${error instanceof Error ? error.message : "Unknown error"}`);
     }
   }
 }

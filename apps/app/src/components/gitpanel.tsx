@@ -11,6 +11,7 @@ import {
   IconArrowBackUp,
   IconChevronDown,
   IconChevronRight,
+  IconGitBranch,
   IconGitCommit,
   IconLoader,
   IconMinus,
@@ -207,6 +208,7 @@ export const GitChangesPanel = ({ className, onFileSelect: _onFileSelect }: GitC
     activeWorkspaceId ? (s.gitChangeVersions[activeWorkspaceId] ?? 0) : 0
   );
   const openDiffViewer = useUIStore((s) => s.openDiffViewer);
+  const initializeGitRepository = useWorkspaceStore((s) => s.initializeGitRepository);
 
   const [staged, setStaged] = useState<GitStagedChange[]>([]);
   const [unstaged, setUnstaged] = useState<GitUnstagedChange[]>([]);
@@ -378,10 +380,50 @@ export const GitChangesPanel = ({ className, onFileSelect: _onFileSelect }: GitC
     setCommitError(null);
   }, []);
 
+  const handleInitializeGit = useCallback(async () => {
+    if (!activeWorkspace?.id) return;
+
+    setLoading(true);
+    setError(null);
+    try {
+      const success = await initializeGitRepository(activeWorkspace.id);
+      if (success) {
+        setStep("changes");
+        hasLoadedOnceRef.current = false;
+        await load();
+      } else {
+        setError("Failed to initialize Git");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to initialize Git");
+    } finally {
+      setLoading(false);
+    }
+  }, [activeWorkspace?.id, initializeGitRepository, load]);
+
   if (!activeWorkspace) {
     return (
       <div className={cn("flex flex-col items-center justify-center py-8 text-xs text-muted-foreground", className)}>
         No workspace selected
+      </div>
+    );
+  }
+
+  if (!activeWorkspace.isGitRepository) {
+    return (
+      <div className={cn("flex h-full flex-col items-center justify-center gap-4 px-6 text-center", className)}>
+        <div className="flex size-10 items-center justify-center rounded-full bg-foreground/5">
+          <IconGitBranch className="size-5 text-muted-foreground" />
+        </div>
+        <div className="space-y-1">
+          <p className="text-sm font-medium">This workspace is not a Git repository</p>
+          <p className="text-xs text-muted-foreground">
+            Chat and agent tasks still work. Initialize Git to enable branches, commits, and changes.
+          </p>
+        </div>
+        <Button size="sm" onClick={handleInitializeGit} loading={loading}>
+          Initialize Git
+        </Button>
       </div>
     );
   }

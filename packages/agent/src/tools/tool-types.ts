@@ -1,5 +1,6 @@
 import { z } from "zod";
-import type { LanguageModel } from "ai";
+import type { LanguageModel, ToolSet } from "ai";
+import type { MCPServerConfig } from "@agentide/shared";
 
 export type UserInputResponse = {
   updatedInput?: unknown;
@@ -11,6 +12,12 @@ export type ToolStartMeta = {
   toolName: string;
   input: unknown;
   toolCallId: string;
+};
+
+export type MCPToolRuntime = {
+  config: MCPServerConfig;
+  tools: ToolSet;
+  close: () => Promise<void>;
 };
 
 export type SubAgentCapability = {
@@ -26,6 +33,7 @@ export type ToolContext = {
   requestUserInput: (toolName: string, input: unknown) => Promise<UserInputResponse>;
   onToolStart?: (meta: ToolStartMeta) => void;
   subAgent?: SubAgentCapability;
+  mcpTools?: MCPToolRuntime[];
 };
 
 export type ToolResult = {

@@ -12,11 +12,11 @@
 }
 
 @font-face {
-  font-family: "Geist Mono";
+  font-family: "IBM Plex Mono";
   font-style: normal;
-  font-weight: 100 900;
+  font-weight: 100 700;
   font-display: swap;
-  src: url("../assets/fonts/GeistMono-Regular.woff2") format("woff2");
+  src: url("../assets/fonts/IBMPlexMono-Regular.woff2") format("woff2");
 }
 
 @font-face {

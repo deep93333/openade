@@ -34,6 +34,7 @@ export const TasksPage = () => {
   const setTasksCount = useUIStore((state) => state.setTasksCount);
 
   const [statusFilter, setStatusFilter] = useState<"all" | TaskStatus>("all");
+  const [showArchived, setShowArchived] = useState(false);
   const [brainstormDialog, setBrainstormDialog] = useState<{ workspaceId: string; threadId: string } | null>(null);
 
   const kanbanScrollRef = useRef<HTMLDivElement>(null);
@@ -93,6 +94,9 @@ export const TasksPage = () => {
       const workspaceState = agentWorkspaces[workspace.id];
       if (!workspaceState) continue;
       for (const thread of workspaceState.threads) {
+        const isArchived = thread.taskStatus === "archived";
+        if (isArchived && !showArchived) continue;
+        if (!isArchived && showArchived) continue;
         tasks.push({
           workspaceId: workspace.id,
           workspaceName: workspace.name,
@@ -101,9 +105,18 @@ export const TasksPage = () => {
         });
       }
     }
-    tasks.sort((a, b) => b.thread.createdAt - a.thread.createdAt);
+    tasks.sort((a, b) => {
+      const aTime = a.thread.updatedAt ?? a.thread.createdAt;
+      const bTime = b.thread.updatedAt ?? b.thread.createdAt;
+      const aValid = Number.isFinite(aTime);
+      const bValid = Number.isFinite(bTime);
+      if (aValid && bValid) return bTime - aTime;
+      if (aValid) return -1;
+      if (bValid) return 1;
+      return 0;
+    });
     return tasks;
-  }, [agentWorkspaces, workspaceFilter, workspaces]);
+  }, [agentWorkspaces, showArchived, workspaceFilter, workspaces]);
 
   const tasksByStatus = useMemo(() => {
     const grouped: Record<TaskStatus, WorkspaceTask[]> = {
@@ -114,6 +127,7 @@ export const TasksPage = () => {
       agent_review: [],
       in_review: [],
       completed: [],
+      archived: [],
     };
     for (const task of allTasks) {
       const status = task.thread.taskStatus ?? "backlog";
@@ -132,6 +146,19 @@ export const TasksPage = () => {
     [workspaces]
   );
 
+  const archivedCount = useMemo(() => {
+    let count = 0;
+    for (const workspace of workspaces) {
+      if (workspaceFilter !== "all" && workspace.id !== workspaceFilter) continue;
+      const workspaceState = agentWorkspaces[workspace.id];
+      if (!workspaceState) continue;
+      for (const thread of workspaceState.threads) {
+        if (thread.taskStatus === "archived") count++;
+      }
+    }
+    return count;
+  }, [agentWorkspaces, workspaceFilter, workspaces]);
+
   useEffect(() => {
     setTasksCount(allTasks.length);
   }, [allTasks.length, setTasksCount]);
@@ -146,7 +173,7 @@ export const TasksPage = () => {
     ) => {
       const threadId = await createTaskThread(workspaceId, text, undefined, model, provider);
       if (initialStatus && threadId) {
-        await updateThreadTaskStatus(workspaceId, threadId, initialStatus);
+        await updateThreadTaskStatus(workspaceId, threadId, initialStatus, { autoStart: true });
       }
     },
     [createTaskThread, updateThreadTaskStatus]
@@ -193,17 +220,20 @@ export const TasksPage = () => {
 
   return (
     <TaskDialogProvider>
-      <div className="flex h-full flex-col">
-        <div className="flex-1 h-full overflow-auto">
+      <div className="flex min-h-0 h-full flex-col">
+        <div className={`flex min-h-0 flex-1 flex-col ${viewMode === "kanban" ? "overflow-hidden" : "overflow-auto"}`}>
           {viewMode === "list" && (
             <TaskStatusFilters
               statusFilter={statusFilter}
               allTasksCount={allTasks.length}
               tasksByStatus={tasksByStatus}
-              onStatusFilterChange={setStatusFilter}
+              onStatusFilterChange={(s) => { setShowArchived(false); setStatusFilter(s); }}
+              archivedCount={archivedCount}
+              showArchived={showArchived}
+              onToggleArchived={() => { setShowArchived((v) => !v); setStatusFilter("all"); }}
             />
           )}
-          {viewMode === "list" &&
+          {!showArchived && viewMode === "list" &&
             (visibleTasks.length === 0 ? (
               <div className="flex h-full items-center justify-center rounded-lg border border-dashed border-foreground/10 p-4 text-sm text-muted-foreground">
                 No tasks found for this filter.
@@ -223,11 +253,11 @@ export const TasksPage = () => {
                 ))}
               </div>
             ))}
-          {viewMode === "kanban" && (
-            <div className="relative h-full">
+          {!showArchived && viewMode === "kanban" && (
+            <div className="relative min-h-0 flex-1 h-full">
             <div
               ref={kanbanScrollRef}
-              className="flex h-full divide-x divide-foreground/2 divide-dashed overflow-x-auto"
+              className="flex min-h-0 h-full divide-x divide-foreground/2 divide-dashed overflow-x-auto"
               style={
                 {
                   maskImage: `linear-gradient(to right, ${kanbanClip.left ? "transparent 0%, black 4%" : "black 0%"}, ${kanbanClip.right ? "black 96%, transparent 100%" : "black 100%"})`,
@@ -253,11 +283,38 @@ export const TasksPage = () => {
                       ? () => void handleNewBrainstorm(activeWorkspaceId)
                       : undefined
                   }
+                  archivedCount={status === "completed" ? archivedCount : undefined}
+                  showArchived={status === "completed" ? showArchived : undefined}
+                  onToggleArchived={
+                    status === "completed"
+                      ? () => { setShowArchived((v) => !v); setStatusFilter("all"); }
+                      : undefined
+                  }
                 />
               ))}
             </div>
             </div>
           )}
+          {showArchived &&
+            (allTasks.length === 0 ? (
+              <div className="flex h-full items-center justify-center rounded-lg border border-dashed border-foreground/10 p-4 text-sm text-muted-foreground">
+                No archived tasks.
+              </div>
+            ) : (
+              <div className="flex flex-col gap-1">
+                {allTasks.map((task) => (
+                  <TaskRow
+                    key={task.thread.id}
+                    task={task}
+                    canDelete={(agentWorkspaces[task.workspaceId]?.threads.length ?? 0) > 1}
+                    onOpenChat={handleOpenChat}
+                    onStatusChange={handleStatusChange}
+                    onDeleteTask={handleDeleteTask}
+                    onStartAgent={handleStartAgent}
+                  />
+                ))}
+              </div>
+            ))}
         </div>
         <NewTaskDialog
           open={newTaskDialogOpen}

@@ -48,6 +48,11 @@ const taskStatusConfig: Record<TaskStatus, {
     variant: "green",
     icon: "✅",
   },
+  archived: {
+    label: "Archived",
+    variant: "gray",
+    icon: "📦",
+  },
 };
 
 export const TaskStatusBadge = ({ status, size = "sm", className }: TaskStatusBadgeProps) => {

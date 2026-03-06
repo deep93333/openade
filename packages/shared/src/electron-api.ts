@@ -52,10 +52,23 @@ export type ElectronAPI = {
     setMethod: (method: import("./types.js").AuthMethod) => Promise<IpcResult>;
     login: () => Promise<IpcResult<{ email?: string }>>;
   };
+  settings: {
+    get: () => Promise<IpcResult<import("./types.js").GlobalSettings>>;
+    set: (settings: import("./types.js").GlobalSettings) => Promise<IpcResult>;
+    validateMcpServers: (
+      servers: import("./types.js").MCPServerConfig[]
+    ) => Promise<IpcResult<import("./types.js").MCPValidationResult>>;
+  };
   chat: {
     load: (workspaceId: string) => Promise<IpcResult<ChatData>>;
     save: (workspaceId: string, data: ChatData) => Promise<IpcResult>;
     deleteThread: (workspaceId: string, threadId: string) => Promise<IpcResult>;
+    updateMessage: (
+      workspaceId: string,
+      threadId: string,
+      messageId: string,
+      updates: Partial<Pick<AgentMessage, "content" | "planContent" | "reviewContent">>
+    ) => Promise<IpcResult>;
   };
   agent: {
     start: (params: AgentStartParams) => Promise<IpcResult<{ sessionId: string }>>;
@@ -79,6 +92,7 @@ export type ElectronAPI = {
     getBranches: (id: string) => Promise<IpcResult<GitBranch[]>>;
     switchBranch: (id: string, branchName: string) => Promise<IpcResult<Workspace>>;
     createBranch: (id: string, branchName: string) => Promise<IpcResult<Workspace>>;
+    initializeGit: (id: string) => Promise<IpcResult<Workspace>>;
     getUnstagedChanges: (id: string) => Promise<IpcResult<GitUnstagedChange[]>>;
     getStagedChanges: (id: string) => Promise<IpcResult<GitStagedChange[]>>;
     getFileDiffContent: (workspaceId: string, path: string, staged?: boolean) => Promise<IpcResult<FileDiffContent>>;

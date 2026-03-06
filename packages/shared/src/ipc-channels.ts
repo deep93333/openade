@@ -19,6 +19,7 @@ export const IPC = {
   WORKSPACE_GIT_BRANCHES: "workspace:git-branches",
   WORKSPACE_GIT_SWITCH_BRANCH: "workspace:git-switch-branch",
   WORKSPACE_GIT_CREATE_BRANCH: "workspace:git-create-branch",
+  WORKSPACE_GIT_INIT: "workspace:git-init",
   WORKSPACE_GIT_UNSTAGED_CHANGES: "workspace:git-unstaged-changes",
   WORKSPACE_GET_FILE_DIFF: "workspace:get-file-diff",
   WORKSPACE_REVERT_FILE_CHANGE: "workspace:revert-file-change",
@@ -43,6 +44,7 @@ export const IPC = {
   CHAT_LOAD: "chat:load",
   CHAT_SAVE: "chat:save",
   CHAT_DELETE_THREAD: "chat:delete-thread",
+  CHAT_UPDATE_MESSAGE: "chat:update-message",
 
   CONFIG_GET_ACTIVE_WORKSPACE: "config:get-active-workspace",
   CONFIG_SET_ACTIVE_WORKSPACE: "config:set-active-workspace",
@@ -65,6 +67,9 @@ export const IPC = {
   API_KEYS_GET: "api-keys:get",
   API_KEYS_SET: "api-keys:set",
   API_KEYS_HAS: "api-keys:has",
+  SETTINGS_GET: "settings:get",
+  SETTINGS_SET: "settings:set",
+  SETTINGS_VALIDATE_MCP_SERVERS: "settings:validate-mcp-servers",
   AUTH_STATUS: "auth:status",
   AUTH_SET_METHOD: "auth:set-method",
   AUTH_LOGIN: "auth:login",
@@ -82,6 +87,8 @@ export const IPC = {
   CHECKPOINT_CREATE: "checkpoint:create",
   CHECKPOINT_RESTORE: "checkpoint:restore",
   CHECKPOINT_FINALIZE: "checkpoint:finalize",
+  CHECKPOINT_SAVE_SNAPSHOTS: "checkpoint:save-snapshots",
+  CHECKPOINT_RESTORE_SNAPSHOTS: "checkpoint:restore-snapshots",
 } as const;
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC];

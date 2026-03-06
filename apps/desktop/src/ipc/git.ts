@@ -1,7 +1,7 @@
 import { ipcMain } from "electron";
 import { IPC } from "@agentide/shared";
-import { workspaceManager } from "../services/workspace";
-import { gitService } from "../services/git";
+import { workspaceManager } from "../services/workspace-manager";
+import { gitService } from "../services/git-service";
 import * as path from "path";
 import * as fs from "fs/promises";
 
@@ -39,6 +39,15 @@ export function registerGitHandlers(): void {
       return { success: true, data: workspace };
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : "Failed to create branch" };
+    }
+  });
+
+  ipcMain.handle(IPC.WORKSPACE_GIT_INIT, async (_event, id: string) => {
+    try {
+      const workspace = await workspaceManager.initializeGitRepository(id);
+      return { success: true, data: workspace };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : "Failed to initialize git repository" };
     }
   });
 

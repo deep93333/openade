@@ -179,7 +179,7 @@ export const AgentPanel = () => {
       <div className="mx-auto mb-2 w-full max-w-2xl shrink-0 px-4">
         <ChatEditor embedded />
         <div className="mt-2 flex items-center justify-between">
-          {activeWorkspace?.branch ? (
+          {activeWorkspace?.isGitRepository ? (
             <BranchSwitcher
               workspaceId={activeWorkspace.id}
               currentBranch={activeWorkspace.branch}

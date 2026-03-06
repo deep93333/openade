@@ -278,7 +278,14 @@ export const CreateWorkspaceDialog = ({ isOpen, onClose }: CreateWorkspaceDialog
                       }
                     />
                     {hasFolderPicker && (
-                      <Button type="button" variant="secondary" onClick={handleSelectFolder}>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={async () => {
+                          const selectedPath = await handleSelectFolder();
+                          if (selectedPath) setPath(selectedPath);
+                        }}
+                      >
                         Browse…
                       </Button>
                     )}
@@ -310,7 +317,14 @@ export const CreateWorkspaceDialog = ({ isOpen, onClose }: CreateWorkspaceDialog
                       }
                     />
                     {hasFolderPicker && (
-                      <Button type="button" variant="secondary" onClick={handleSelectFolder}>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={async () => {
+                          const selectedPath = await handleSelectFolder();
+                          if (selectedPath) setPath(selectedPath);
+                        }}
+                      >
                         Browse…
                       </Button>
                     )}

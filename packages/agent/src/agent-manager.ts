@@ -1,13 +1,11 @@
 import type { AgentBackend, AgentBackendStartOptions } from "./agent-backend-types.js";
 import type { AgentStatus } from "@agentide/shared";
 import { ulid } from "ulid";
+import { createAgentLogger, logAgentEvent, type AgentLogger, type AgentLogWriter } from "./logger.js";
 
 export type AgentManagerOptions = {
-  writeAgentLog?: (
-    level: "INFO" | "WARN" | "ERROR",
-    source: string,
-    ...args: unknown[]
-  ) => void;
+  logger?: AgentLogger;
+  writeAgentLog?: AgentLogWriter;
   backends: [AgentBackend["provider"], AgentBackend][];
 };
 
@@ -43,7 +41,7 @@ type ActiveSession = {
 };
 
 export function createAgentManager(options: AgentManagerOptions) {
-  const writeAgentLog = options.writeAgentLog ?? (() => {});
+  const logger = createAgentLogger(options.logger ?? options.writeAgentLog);
   const backends = new Map<AgentBackend["provider"], AgentBackend>(options.backends);
 
   function getBackend(provider: AgentBackend["provider"]): AgentBackend | null {
@@ -62,6 +60,7 @@ export function createAgentManager(options: AgentManagerOptions) {
     mode?: import("@agentide/shared").AgentMode;
     resumeSessionId?: string;
     imageAttachments?: import("@agentide/shared").ImageAttachment[];
+    mcpServers?: import("@agentide/shared").MCPServerConfig[];
     canUseTool?: AgentBackendStartOptions["canUseTool"];
     onMessage: AgentBackendStartOptions["onMessage"];
     onResult: AgentBackendStartOptions["onResult"];
@@ -80,7 +79,8 @@ export function createAgentManager(options: AgentManagerOptions) {
       const sessionId = ulid();
       const abortController = new AbortController();
 
-      writeAgentLog("INFO", "Agent", "session start", {
+      logAgentEvent(logger, "INFO", "Agent", "agent_event", {
+        event: "session_start",
         sessionId,
         provider,
         model: options.model,
@@ -104,6 +104,7 @@ export function createAgentManager(options: AgentManagerOptions) {
         mode: options.mode,
         resumeSessionId: options.resumeSessionId,
         imageAttachments: options.imageAttachments,
+        mcpServers: options.mcpServers,
         abortSignal: abortController.signal,
         canUseTool: options.canUseTool,
         onMessage: options.onMessage,
@@ -121,7 +122,11 @@ export function createAgentManager(options: AgentManagerOptions) {
         },
         (error) => {
           const detail = extractErrorDetail(error);
-          writeAgentLog("ERROR", "Agent", "backend.start rejected", { sessionId, detail });
+          logAgentEvent(logger, "ERROR", "Agent", "agent_event", {
+            event: "backend_start_rejected",
+            sessionId,
+            detail,
+          });
           options.onError({ sessionId, error: detail });
           const session = sessions.get(sessionId);
           if (session) session.status = "error";
@@ -134,7 +139,7 @@ export function createAgentManager(options: AgentManagerOptions) {
     async stop(sessionId: string): Promise<void> {
       const session = sessions.get(sessionId);
       if (session) {
-        writeAgentLog("INFO", "Agent", "agent_event", { event: "session_stop", sessionId });
+        logAgentEvent(logger, "INFO", "Agent", "agent_event", { event: "session_stop", sessionId });
         session.abortController.abort();
         session.status = "stopped";
         sessions.delete(sessionId);

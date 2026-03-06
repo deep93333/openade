@@ -9,6 +9,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@agentide/ui";
+import { IconArchive } from "@tabler/icons-react";
 import { taskStatuses, taskStatusLabels, getTaskStatusIcon } from "./task-utils";
 import type { WorkspaceTask } from "./task-utils";
 
@@ -52,6 +53,9 @@ type TaskStatusFiltersProps = {
   allTasksCount: number;
   tasksByStatus: Record<TaskStatus, WorkspaceTask[]>;
   onStatusFilterChange: (status: "all" | TaskStatus) => void;
+  archivedCount?: number;
+  showArchived?: boolean;
+  onToggleArchived?: () => void;
 };
 
 export function TaskStatusFilters({
@@ -59,6 +63,9 @@ export function TaskStatusFilters({
   allTasksCount,
   tasksByStatus,
   onStatusFilterChange,
+  archivedCount = 0,
+  showArchived = false,
+  onToggleArchived,
 }: TaskStatusFiltersProps) {
   return (
     <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -86,6 +93,22 @@ export function TaskStatusFilters({
           </Badge>
         </Button>
       ))}
+      {onToggleArchived && (
+        <Button
+          size="sm"
+          variant={showArchived ? "secondary" : "ghost"}
+          className="text-muted-foreground"
+          onClick={onToggleArchived}
+        >
+          <IconArchive className="size-3.5" stroke={2} />
+          Archived
+          {archivedCount > 0 && (
+            <Badge variant="outline" size="sm">
+              {archivedCount}
+            </Badge>
+          )}
+        </Button>
+      )}
     </div>
   );
 }

@@ -2,10 +2,16 @@ import { ipcMain } from "electron";
 import { IPC } from "@agentide/shared";
 import type { Checkpoint } from "@agentide/shared";
 import { ulid } from "ulid";
-import * as chatStorage from "../services/chat";
-import { workspaceManager } from "../services/workspace";
-import { gitService } from "../services/git";
+import * as chatStorage from "../services/chat-storage";
+import { workspaceManager } from "../services/workspace-manager";
+import { gitService } from "../services/git-service";
 import { postRunSnapshotPromises } from "./agent";
+import {
+  saveSnapshots,
+  loadSnapshots,
+  restoreFromSnapshots,
+  type FileSnapshot,
+} from "../services/snapshot-store";
 
 export function registerCheckpointHandlers(): void {
   ipcMain.handle(
@@ -146,6 +152,40 @@ export function registerCheckpointHandlers(): void {
         return { success: true };
       } catch (error) {
         return { success: false, error: error instanceof Error ? error.message : "Failed to restore checkpoint" };
+      }
+    },
+  );
+
+  ipcMain.handle(
+    IPC.CHECKPOINT_SAVE_SNAPSHOTS,
+    async (
+      _event,
+      params: { workspaceId: string; threadId: string; checkpointId: string; snapshots: FileSnapshot[] },
+    ) => {
+      try {
+        await saveSnapshots(params.workspaceId, params.threadId, params.checkpointId, params.snapshots);
+        return { success: true };
+      } catch (error) {
+        return { success: false, error: error instanceof Error ? error.message : "Failed to save snapshots" };
+      }
+    },
+  );
+
+  ipcMain.handle(
+    IPC.CHECKPOINT_RESTORE_SNAPSHOTS,
+    async (
+      _event,
+      params: { workspaceId: string; threadId: string; checkpointId: string },
+    ) => {
+      try {
+        const snapshots = await loadSnapshots(params.workspaceId, params.threadId, params.checkpointId);
+        if (snapshots.length === 0) {
+          return { success: false, error: "No snapshots found for this checkpoint" };
+        }
+        const result = await restoreFromSnapshots(snapshots);
+        return { success: true, data: result };
+      } catch (error) {
+        return { success: false, error: error instanceof Error ? error.message : "Failed to restore snapshots" };
       }
     },
   );

@@ -4,6 +4,7 @@ import type {
   AgentResult,
   AgentProvider,
   ImageAttachment,
+  MCPServerConfig,
 } from "@agentide/shared";
 
 export type ToolApprovalResult =
@@ -19,6 +20,7 @@ export type AgentBackendStartOptions = {
   mode?: AgentMode;
   resumeSessionId?: string;
   imageAttachments?: ImageAttachment[];
+  mcpServers?: MCPServerConfig[];
   abortSignal: AbortSignal;
   canUseTool?: (
     sessionId: string,

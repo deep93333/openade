@@ -118,10 +118,9 @@ function pollGit(workspaceId: string, workspacePath: string): void {
   if (!state) return;
   runGitStatus(workspacePath)
     .then((out) => {
-      if (state?.lastGitStatus !== out) {
-        state.lastGitStatus = out;
-        send?.(IPC.WORKSPACE_GIT_CHANGED, { workspaceId });
-      }
+      if (!state || state.lastGitStatus === out) return;
+      state.lastGitStatus = out;
+      send?.(IPC.WORKSPACE_GIT_CHANGED, { workspaceId });
     })
     .catch(() => {});
 }

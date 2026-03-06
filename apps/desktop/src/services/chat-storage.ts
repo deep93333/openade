@@ -44,7 +44,7 @@ function migrateLegacy(data: {
   const messages = Array.isArray(data?.messages) ? data.messages : [];
   const threadId = ulid();
   const threads: ChatThread[] = [
-    { id: threadId, messages, createdAt: Date.now() },
+    { id: threadId, messages, createdAt: Date.now(), updatedAt: Date.now() },
   ];
   const sdkSessionId =
     typeof data?.sdkSessionId === "string" ? data.sdkSessionId : undefined;
@@ -104,6 +104,38 @@ export function setChat(
   } catch {
     // ignore
   }
+}
+
+export function updateMessage(
+  workspaceId: string,
+  threadId: string,
+  messageId: string,
+  updates: Partial<Pick<AgentMessage, "content" | "planContent" | "reviewContent">>
+): void {
+  const current = getChat(workspaceId);
+  const thread = current.threads.find((t) => t.id === threadId);
+  if (!thread) return;
+
+  const msgIndex = thread.messages.findIndex((m) => m.id === messageId);
+  if (msgIndex === -1) return;
+
+  thread.messages[msgIndex] = { ...thread.messages[msgIndex], ...updates };
+
+  const filePath = getChatPath(workspaceId);
+  writeFileSync(
+    filePath,
+    JSON.stringify(
+      {
+        threads: current.threads,
+        activeThreadId: current.activeThreadId,
+        sdkSessionId: current.sdkSessionId,
+      },
+      null,
+      0
+    ),
+    "utf-8"
+  );
+  console.log("[chat-storage] updateMessage", { workspaceId, threadId, messageId });
 }
 
 export function deleteThread(workspaceId: string, threadId: string): void {

@@ -31,22 +31,24 @@ const PopoverContent = React.forwardRef<
   const { modal } = React.useContext(PopoverContext);
 
   return (
-    <PopoverPrimitive.Content
-      ref={ref}
-      align={align}
-      sideOffset={sideOffset}
-      className={cn(
-        "w-80 mt-1 rounded-xl bg-background/95 dark:bg-tertiary/95 backdrop-blur-xl p-4 text-foreground shadow-popover data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out",
-        modal ? "z-modal-dropdown" : "z-[var(--z-popover)]",
-        className
-      )}
-      style={
-        zIndex !== undefined
-          ? { zIndex: typeof zIndex === "number" ? zIndex : undefined }
-          : undefined
-      }
-      {...props}
-    />
+    <PopoverPrimitive.Portal>
+      <PopoverPrimitive.Content
+        ref={ref}
+        align={align}
+        sideOffset={sideOffset}
+        className={cn(
+          "w-80 mt-1 rounded-xl bg-background dark:bg-secondary p-4 text-foreground shadow-popover data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out",
+          modal ? "z-modal-dropdown" : "z-[var(--z-popover)]",
+          className
+        )}
+        style={
+          zIndex !== undefined
+            ? { zIndex: typeof zIndex === "number" ? zIndex : undefined }
+            : undefined
+        }
+        {...props}
+      />
+    </PopoverPrimitive.Portal>
   );
 });
 PopoverContent.displayName = PopoverPrimitive.Content.displayName;

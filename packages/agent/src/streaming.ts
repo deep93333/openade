@@ -169,5 +169,22 @@ export function extractApiErrorMessage(error: unknown): string {
 
   if (err.message && err.message !== "No output generated. Check the stream for errors.") return err.message;
   if (err.statusCode) return `API request failed with status ${err.statusCode}`;
-  return error instanceof Error ? error.message : String(error);
+
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  if (error && typeof error === "object") {
+    const obj = error as Record<string, unknown>;
+    if (typeof obj.message === "string") return obj.message;
+    if (typeof obj.error === "string") return obj.error;
+    if (obj.error && typeof (obj.error as Record<string, unknown>).message === "string") {
+      return (obj.error as Record<string, unknown>).message as string;
+    }
+    try {
+      const str = JSON.stringify(error);
+      return str.length > 500 ? str.slice(0, 500) + "…" : str;
+    } catch {
+      return "Unknown error";
+    }
+  }
+  return String(error);
 }

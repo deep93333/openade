@@ -46,12 +46,25 @@ contextBridge.exposeInMainWorld("electronAPI", {
     setMethod: (method: AuthMethod) => ipcRenderer.invoke(IPC.AUTH_SET_METHOD, method),
     login: () => ipcRenderer.invoke(IPC.AUTH_LOGIN),
   },
+  settings: {
+    get: () => ipcRenderer.invoke(IPC.SETTINGS_GET),
+    set: (settings: import("@agentide/shared").GlobalSettings) =>
+      ipcRenderer.invoke(IPC.SETTINGS_SET, settings),
+    validateMcpServers: (servers: import("@agentide/shared").MCPServerConfig[]) =>
+      ipcRenderer.invoke(IPC.SETTINGS_VALIDATE_MCP_SERVERS, servers),
+  },
   chat: {
     load: (workspaceId: string) => ipcRenderer.invoke(IPC.CHAT_LOAD, workspaceId),
     save: (workspaceId: string, data: ChatData) =>
       ipcRenderer.invoke(IPC.CHAT_SAVE, workspaceId, data),
     deleteThread: (workspaceId: string, threadId: string) =>
       ipcRenderer.invoke(IPC.CHAT_DELETE_THREAD, workspaceId, threadId),
+    updateMessage: (
+      workspaceId: string,
+      threadId: string,
+      messageId: string,
+      updates: Partial<Pick<import("@agentide/shared").AgentMessage, "content" | "planContent" | "reviewContent">>
+    ) => ipcRenderer.invoke(IPC.CHAT_UPDATE_MESSAGE, workspaceId, threadId, messageId, updates),
   },
   agent: {
     start: (params: AgentStartParams) =>
@@ -124,6 +137,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
     createBranch: (id: string, branchName: string) =>
       ipcRenderer.invoke(IPC.WORKSPACE_GIT_CREATE_BRANCH, id, branchName),
+
+    initializeGit: (id: string) => ipcRenderer.invoke(IPC.WORKSPACE_GIT_INIT, id),
 
     getUnstagedChanges: (id: string) =>
       ipcRenderer.invoke(IPC.WORKSPACE_GIT_UNSTAGED_CHANGES, id),

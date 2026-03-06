@@ -6,8 +6,8 @@ import { registerAuthHandlers } from "./auth";
 import { registerTerminalHandlers } from "./terminal";
 import { registerCheckpointHandlers } from "./checkpoint";
 import { registerFilesystemHandlers } from "./filesystem";
-import { initWorkspaceEvents } from "../services/watcher";
-import { getAppWindow } from "../services/windows";
+import { initWorkspaceEvents } from "../services/workspace-events";
+import { getAppWindow } from "../windows/app-window";
 
 export function registerIpcHandlers(): void {
   initWorkspaceEvents((channel, payload) => {

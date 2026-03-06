@@ -5,7 +5,7 @@ import { ToolContainer } from "./container";
 type QuestionInput = {
   question: string;
   header?: string;
-  options: Array<{ label: string; description?: string }>;
+  options: Array<{ label: string }>;
   multiSelect?: boolean;
 };
 
@@ -67,12 +67,7 @@ export const AskQuestionTool = ({ toolInput, toolResult }: ToolComponentProps) =
                           : "text-muted-foreground"
                       }`}
                     >
-                      <div>
-                        <span className={isSelected ? "font-medium text-sm" : ""}>{opt.label}</span>
-                        {opt.description && (
-                          <span className="ml-1.5 text-sm text-muted-foreground">{opt.description}</span>
-                        )}
-                      </div>
+                      <span className={isSelected ? "font-medium text-sm" : ""}>{opt.label}</span>
                       {isSelected && <Check strokeWidth={2} className="size-3 shrink-0 text-accent-foreground" />}
                     </div>
                   );

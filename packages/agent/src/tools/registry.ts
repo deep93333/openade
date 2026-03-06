@@ -1,5 +1,6 @@
 import { ulid } from "ulid";
 import { tool, zodSchema, type ToolSet } from "ai";
+import { mergeMCPTools } from "./mcp.js";
 import { bashTool } from "./bash.js";
 import { readTool } from "./read.js";
 import { writeTool } from "./write.js";
@@ -78,20 +79,35 @@ export function createToolSet(
     tools.delegate = wrapTool(delegateTool, ctx, onToolCall);
   }
 
-  return tools;
+  return mergeMCPTools(tools, ctx.mcpTools);
 }
 
 export function createReadOnlyToolSet(
   ctx: ToolContext,
   onToolCall?: (meta: ToolCallMetadata) => void,
 ): ToolSet {
-  return {
+  return mergeMCPTools({
     read: wrapTool(readTool, ctx, onToolCall),
     glob: wrapTool(globTool, ctx, onToolCall),
     grep: wrapTool(grepTool, ctx, onToolCall),
     ls: wrapTool(lsTool, ctx, onToolCall),
     readlints: wrapTool(readLintsTool, ctx, onToolCall),
-  };
+  }, ctx.mcpTools);
+}
+
+export function createPlanningToolSet(
+  ctx: ToolContext,
+  onToolCall?: (meta: ToolCallMetadata) => void,
+): ToolSet {
+  return mergeMCPTools({
+    read: wrapTool(readTool, ctx, onToolCall),
+    glob: wrapTool(globTool, ctx, onToolCall),
+    grep: wrapTool(grepTool, ctx, onToolCall),
+    ls: wrapTool(lsTool, ctx, onToolCall),
+    readlints: wrapTool(readLintsTool, ctx, onToolCall),
+    todowrite: wrapTool(todoWriteTool, ctx, onToolCall),
+    ask_question: wrapTool(askQuestionTool, ctx, onToolCall),
+  }, ctx.mcpTools);
 }
 
 export function getToolIds(): string[] {

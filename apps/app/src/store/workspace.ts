@@ -54,6 +54,7 @@ type WorkspaceStoreState = {
   getGitBranches: (id: string) => Promise<GitBranch[]>;
   switchGitBranch: (id: string, branchName: string) => Promise<void>;
   createGitBranch: (id: string, branchName: string) => Promise<void>;
+  initializeGitRepository: (id: string) => Promise<boolean>;
 
   notifyFilesChanged: (workspaceId: string) => void;
   notifyGitChanged: (workspaceId: string) => void;
@@ -191,6 +192,19 @@ export const useWorkspaceStore = create<WorkspaceStoreState>()((set, get) => ({
         workspaces: s.workspaces.map((w) => (w.id === id ? result.data! : w)),
       }));
     }
+  },
+
+  initializeGitRepository: async (id) => {
+    const api = getElectronAPI();
+    if (!api) return false;
+    const result = await api.workspace.initializeGit(id);
+    if (result.success && result.data) {
+      set((s) => ({
+        workspaces: s.workspaces.map((w) => (w.id === id ? result.data! : w)),
+      }));
+      return true;
+    }
+    return false;
   },
 
   notifyFilesChanged: (workspaceId) => {

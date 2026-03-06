@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import type { AgentMessage } from "@agentide/shared";
-import { LlmChatIcon } from "@agentide/ui";
+import { Button, LlmChatIcon, RotateIcon } from "@agentide/ui";
 import { useStickToBottom } from "use-stick-to-bottom";
 import { cn } from "@/lib/cn";
 import { useAgentStore } from "@/store/agent";
@@ -47,14 +47,33 @@ type MessageListPreviewProps = {
   messages: AgentMessage[];
   className?: string;
   emptyLabel?: string;
+  retryAction?: {
+    enabled: boolean;
+    onRetry: () => void;
+  };
 };
 
 export const MessageListPreview = ({
   messages,
   className,
   emptyLabel = "No conversation yet",
+  retryAction,
 }: MessageListPreviewProps) => {
   const { scrollRef, contentRef } = useStickToBottom();
+
+  const lastUserWithoutAssistant = useMemo(() => {
+    const lastUserIndex = [...messages].reverse().findIndex((message) => message.role === "user");
+    if (lastUserIndex === -1) return null;
+
+    const userIndex = messages.length - 1 - lastUserIndex;
+    const trailingMessages = messages.slice(userIndex + 1);
+    const hasAssistantReply = trailingMessages.some((message) => message.role === "assistant");
+
+    if (hasAssistantReply) return null;
+    if (trailingMessages.some((message) => message.role === "user")) return null;
+
+    return messages[userIndex];
+  }, [messages]);
 
   return (
     <div
@@ -64,24 +83,40 @@ export const MessageListPreview = ({
         className
       )}
     >
-      <div ref={contentRef} className="mx-auto flex w-full min-w-0 max-w-full flex-col gap-1 py-4">
+      <div ref={contentRef} className="mx-auto flex w-full min-w-0 flex-col gap-1 py-4">
         {messages.length === 0 ? (
           <div className="flex h-full min-h-0 flex-1 flex-col items-center justify-center gap-2 px-6 py-8 text-xs text-muted-foreground">
             {emptyLabel}
           </div>
         ) : (
-          buildRenderItems(messages).map((item) =>
-            item.type === "message" ? (
-              <MessageBubble
-                key={item.message.id}
-                message={item.message}
-                messageIndex={item.messageIndex}
-                isPreview
-              />
-            ) : (
-              <ToolCallGroup key={item.messages.map((m) => m.id).join(",")} messages={item.messages} />
-            )
-          )
+          <>
+            {buildRenderItems(messages).map((item) =>
+              item.type === "message" ? (
+                <MessageBubble
+                  key={item.message.id}
+                  message={item.message}
+                  messageIndex={item.messageIndex}
+                  isPreview
+                />
+              ) : (
+                <ToolCallGroup key={item.messages.map((m) => m.id).join(",")} messages={item.messages} />
+              )
+            )}
+
+            {retryAction?.enabled && lastUserWithoutAssistant && (
+              <div className="flex gap-3 px-4 py-2 w-full">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-auto px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground"
+                  onClick={retryAction.onRetry}
+                >
+                  <RotateIcon className="size-3.5" />
+                  Retry last message
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
@@ -99,9 +134,11 @@ export const MessageList = () => {
   const streamingText = useAgentStore((s) =>
     s.getActiveRuntime(activeWorkspaceId ?? "").streamingText
   );
-  const status = useAgentStore((s) =>
-    s.getActiveRuntime(activeWorkspaceId ?? "").status
+  const runtime = useAgentStore((s) => s.getActiveRuntime(activeWorkspaceId ?? ""));
+  const activeThread = useAgentStore((s) =>
+    activeWorkspaceId ? s.getActiveThread(activeWorkspaceId) : null
   );
+  const startAgent = useAgentStore((s) => s.startAgent);
   const activeThreadId = useAgentStore((s) =>
     s.getWorkspaceState(activeWorkspaceId ?? "").activeThreadId
   );
@@ -111,6 +148,29 @@ export const MessageList = () => {
     if (activeToolCalls.length === 0) return messages;
     return [...messages, ...activeToolCalls];
   }, [messages, activeToolCalls]);
+
+  const lastUserWithoutAssistant = useMemo(() => {
+    if (!activeThread) return null;
+
+    const threadMessages = activeThread.messages;
+    const lastUserIndex = [...threadMessages].reverse().findIndex((message) => message.role === "user");
+    if (lastUserIndex === -1) return null;
+
+    const userIndex = threadMessages.length - 1 - lastUserIndex;
+    const trailingMessages = threadMessages.slice(userIndex + 1);
+    const hasAssistantReply = trailingMessages.some((message) => message.role === "assistant");
+
+    if (hasAssistantReply) return null;
+    if (trailingMessages.some((message) => message.role === "user")) return null;
+
+    return threadMessages[userIndex];
+  }, [activeThread]);
+
+  const canRetryLastUserMessage =
+    !!activeWorkspaceId &&
+    !!activeThread &&
+    !!lastUserWithoutAssistant &&
+    runtime.status !== "running";
 
   const isEmpty = allMessages.length === 0 && !streamingText;
 
@@ -154,7 +214,27 @@ export const MessageList = () => {
             </div>
           )}
 
-          {status === "running" && !streamingText && activeToolCalls.length === 0 && (
+          {canRetryLastUserMessage && (
+            <div className="flex gap-3 px-4 py-2 w-full">
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-auto px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground"
+                onClick={() => {
+                  if (!activeWorkspaceId || !activeThreadId) return;
+                  void startAgent(activeWorkspaceId, "", {
+                    threadId: activeThreadId,
+                    useExistingPrompt: true,
+                  });
+                }}
+              >
+                <RotateIcon className="size-3.5" />
+                Retry last message
+              </Button>
+            </div>
+          )}
+
+          {runtime.status === "running" && !streamingText && activeToolCalls.length === 0 && (
             <div className="flex gap-3 py-3">
               <div className="flex max-w-2xl items-center gap-0.5 rounded-2xl px-2 py-1">
                 <span className="h-1 w-1 animate-bounce rounded-full bg-foreground/50 [animation-delay:0ms]" />

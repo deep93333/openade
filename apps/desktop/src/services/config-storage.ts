@@ -2,7 +2,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { app, safeStorage } from "electron";
-import type { ApiKeyProvider, AuthMethod } from "@agentide/shared";
+import type { ApiKeyProvider, AuthMethod, GlobalSettings, MCPServerConfig } from "@agentide/shared";
 
 type AppConfig = {
   activeWorkspaceId: string | null;
@@ -10,6 +10,7 @@ type AppConfig = {
   encryptedCodexApiKey: string | null;
   encryptedMinimaxApiKey: string | null;
   authMethod: AuthMethod;
+  mcpServers: MCPServerConfig[];
 };
 
 const getConfigPath = (): string => {
@@ -27,7 +28,67 @@ const DEFAULT_CONFIG: AppConfig = {
   encryptedCodexApiKey: null,
   encryptedMinimaxApiKey: null,
   authMethod: "claude_login",
+  mcpServers: [],
 };
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function inferMCPServerType(value: Record<string, unknown>): MCPServerConfig["type"] | null {
+  if (typeof value.command === "string" && value.command.trim()) return "stdio";
+  if (typeof value.url !== "string" || !value.url.trim()) return null;
+
+  try {
+    const url = new URL(value.url);
+    const path = url.pathname.toLowerCase();
+    if (path.endsWith("/sse") || path.includes("/sse/")) return "sse";
+  } catch {
+    if (value.url.toLowerCase().includes("/sse")) return "sse";
+  }
+
+  return "http";
+}
+
+function normalizeMCPServerConfig(value: unknown): MCPServerConfig | null {
+  if (!isRecord(value)) return null;
+
+  const id = typeof value.id === "string" ? value.id : undefined;
+  const name = typeof value.name === "string" ? value.name : undefined;
+  const explicitType = value.type;
+  const type =
+    explicitType === "stdio" || explicitType === "http" || explicitType === "sse"
+      ? explicitType
+      : explicitType === undefined
+        ? inferMCPServerType(value)
+        : null;
+
+  if (type === "stdio" && typeof value.command === "string") {
+    const args = Array.isArray(value.args)
+      ? value.args.filter((item): item is string => typeof item === "string")
+      : undefined;
+    const env = isRecord(value.env)
+      ? Object.fromEntries(
+          Object.entries(value.env).filter((entry): entry is [string, string] => typeof entry[1] === "string")
+        )
+      : undefined;
+    const cwd = typeof value.cwd === "string" ? value.cwd : undefined;
+
+    return { id, name, type: "stdio", command: value.command, args, env, cwd };
+  }
+
+  if ((type === "http" || type === "sse") && typeof value.url === "string") {
+    const headers = isRecord(value.headers)
+      ? Object.fromEntries(
+          Object.entries(value.headers).filter((entry): entry is [string, string] => typeof entry[1] === "string")
+        )
+      : undefined;
+
+    return { id, name, type, url: value.url, headers };
+  }
+
+  return null;
+}
 
 function loadConfig(): AppConfig {
   try {
@@ -48,6 +109,11 @@ function loadConfig(): AppConfig {
         data?.authMethod === "api_key" || data?.authMethod === "claude_login"
           ? data.authMethod
           : "claude_login",
+      mcpServers: Array.isArray(data?.mcpServers)
+        ? data.mcpServers
+            .map((server) => normalizeMCPServerConfig(server))
+            .filter((server): server is MCPServerConfig => server !== null)
+        : [],
     };
   } catch {
     return { ...DEFAULT_CONFIG };
@@ -209,6 +275,23 @@ export function hasApiKeyByProvider(provider: ApiKeyProvider): boolean {
 
 export function getAuthMethod(): AuthMethod {
   return loadConfig().authMethod;
+}
+
+export function getGlobalSettings(): GlobalSettings {
+  const config = loadConfig();
+  return { mcpServers: config.mcpServers };
+}
+
+export function setGlobalSettings(settings: GlobalSettings): void {
+  try {
+    const config = loadConfig();
+    config.mcpServers = settings.mcpServers
+      .map((server) => normalizeMCPServerConfig(server))
+      .filter((server): server is MCPServerConfig => server !== null);
+    saveConfig(config);
+  } catch {
+    // ignore
+  }
 }
 
 export function setAuthMethod(method: AuthMethod): void {

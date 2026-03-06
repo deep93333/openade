@@ -1,20 +1,20 @@
 import { useCallback, useEffect, useState } from "react";
-import type { ProviderConfig } from "@agentide/shared";
 import { PROVIDER_CONFIGS } from "@agentide/shared";
 import {
-  Badge,
   Button,
   Dialog,
-  DialogClose,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
 } from "@agentide/ui";
 import { getElectronAPI } from "@/lib/electron";
+import { MCPSettings } from "./mcp-settings";
 import { ProviderKeyInput } from "./providerkey";
-import { IconX } from "@tabler/icons-react";
 
 type ApiKeyDialogProps = {
   open: boolean;
@@ -28,7 +28,7 @@ export const ApiKeyDialog = ({
   onSaved,
 }: ApiKeyDialogProps) => {
   const [maskedKeys, setMaskedKeys] = useState<Record<string, string | null>>({});
-  const [activeTab, setActiveTab] = useState<string>(PROVIDER_CONFIGS[0]?.id ?? "claude");
+  const [activeProviderTab, setActiveProviderTab] = useState<string>(PROVIDER_CONFIGS[0]?.id ?? "claude");
 
   const api = getElectronAPI();
 
@@ -58,51 +58,62 @@ export const ApiKeyDialog = ({
     refreshMaskedKeys();
   }, [open, refreshMaskedKeys]);
 
-  const activeProvider = PROVIDER_CONFIGS.find((p) => p.id === activeTab);
+  const activeProvider = PROVIDER_CONFIGS.find((p) => p.id === activeProviderTab);
 
   return (
     <Dialog open={open} onOpenChange={(o) => onOpenChange(o)}>
-      <DialogContent className="max-w-2xl h-[500px]">
+      <DialogContent className="max-w-4xl h-[680px]">
         <DialogHeader>
           <div className="flex flex-col gap-1">
-            <DialogTitle>API Keys</DialogTitle>
+            <DialogTitle>Settings</DialogTitle>
             <DialogDescription>
-              Configure API keys for AI providers. Keys are encrypted and stored locally.
+              Manage provider credentials and global MCP server connections.
             </DialogDescription>
           </div>
-      
         </DialogHeader>
-   
-        <div className="flex gap-4 pt-6">
-          <div className="flex w-44 flex-col gap-3">
-           
-            <div className="flex flex-col gap-1">
-              {PROVIDER_CONFIGS.map((provider) => (
-                <Button
-                  key={provider.id}
-                  onClick={() => setActiveTab(provider.id)}
-                  variant={activeTab === provider.id ? "secondary" : "ghost"}
-                  className="justify-start"
-                >
-                  <span>{provider.name}</span>
-                 
-                </Button>
-              ))}
+
+        <Tabs defaultValue="providers" className="flex h-full min-h-0 flex-col gap-4">
+          <TabsList className="w-fit">
+            <TabsTrigger value="providers">Providers</TabsTrigger>
+            <TabsTrigger value="mcp">MCP Servers</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="providers" className="min-h-0 flex-1">
+            <div className="flex h-full gap-4 pt-2">
+              <div className="flex w-44 flex-col gap-3">
+                <div className="flex flex-col gap-1">
+                  {PROVIDER_CONFIGS.map((provider) => (
+                    <Button
+                      key={provider.id}
+                      onClick={() => setActiveProviderTab(provider.id)}
+                      variant={activeProviderTab === provider.id ? "secondary" : "ghost"}
+                      className="justify-start"
+                    >
+                      <span>{provider.name}</span>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+                {activeProvider && (
+                  <ProviderKeyInput
+                    config={activeProvider}
+                    maskedKey={maskedKeys[activeProvider.id] ?? null}
+                    onSaved={() => {
+                      void refreshMaskedKeys();
+                      onSaved?.();
+                    }}
+                  />
+                )}
+              </div>
             </div>
-          </div>
+          </TabsContent>
 
-          <div className="flex-1">
-            {activeProvider && (
-              <ProviderKeyInput
-                config={activeProvider}
-                maskedKey={maskedKeys[activeProvider.id] ?? null}
-                onSaved={refreshMaskedKeys}
-              />
-            )}
-          </div>
-        </div>
-
-   
+          <TabsContent value="mcp" className="min-h-0 flex-1 overflow-hidden">
+            <MCPSettings />
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );

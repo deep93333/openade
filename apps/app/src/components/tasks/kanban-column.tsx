@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import type { TaskStatus } from "@agentide/shared";
-import { Badge } from "@agentide/ui";
-import { IconPlus } from "@tabler/icons-react";
+import { Badge, Button } from "@agentide/ui";
+import { IconArchive, IconPlus } from "@tabler/icons-react";
 import { taskStatusLabels, getTaskStatusIcon } from "./task-utils";
 import type { WorkspaceTask } from "./task-utils";
 import { KanbanCard } from "./kanban-card";
@@ -15,6 +15,7 @@ const columnEmptyHints: Record<TaskStatus, string> = {
   agent_review: "Drop tasks here for an automated agent review pass.",
   in_review: "Tasks awaiting your review before completion.",
   completed: "Finished tasks ready to ship.",
+  archived: "Archived tasks are hidden from the board.",
 };
 
 export type KanbanColumnProps = {
@@ -27,6 +28,9 @@ export type KanbanColumnProps = {
   onStartAgent: (workspaceId: string, threadId: string) => Promise<void>;
   onNewTask?: () => void;
   onNewBrainstorm?: () => void;
+  archivedCount?: number;
+  showArchived?: boolean;
+  onToggleArchived?: () => void;
 };
 
 export function KanbanColumn({
@@ -39,8 +43,35 @@ export function KanbanColumn({
   onStartAgent,
   onNewTask,
   onNewBrainstorm,
+  archivedCount = 0,
+  showArchived = false,
+  onToggleArchived,
 }: KanbanColumnProps) {
   const [isDragOver, setIsDragOver] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [clip, setClip] = useState({ top: false, bottom: false });
+
+  const updateClip = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setClip({
+      top: el.scrollTop > 4,
+      bottom: el.scrollTop < el.scrollHeight - el.clientHeight - 4,
+    });
+  }, []);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    updateClip();
+    el.addEventListener("scroll", updateClip, { passive: true });
+    const ro = new ResizeObserver(updateClip);
+    ro.observe(el);
+    return () => {
+      el.removeEventListener("scroll", updateClip);
+      ro.disconnect();
+    };
+  }, [updateClip]);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -70,16 +101,38 @@ export function KanbanColumn({
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      className={`flex min-w-[260px] pt-4 flex-1 flex-col transition-colors ${isDragOver ? "bg-accent/5" : ""}`}
+      className={`flex min-h-0 min-w-[280px] pt-4 flex-1 flex-col overflow-hidden transition-colors ${isDragOver ? "bg-accent/5" : ""}`}
     >
-      <div className="flex items-center gap-2 px-4 pt-1.5 pb-2">
+      <div className="sticky top-0 z-10 flex shrink-0 items-center gap-2 px-6 pt-1.5 pb-2">
         {getTaskStatusIcon(status)}
         <span className="text-sm font-medium">{taskStatusLabels[status]}</span>
         <Badge variant="secondary" size="sm" className="font-medium">
           {tasks?.length ?? 0}
         </Badge>
+        {status === "completed" && onToggleArchived && (
+          <Button
+            variant={showArchived ? "secondary" : "ghost"}
+            size="sm"
+            className="ml-auto h-6 gap-1 text-xs text-muted-foreground"
+            onClick={onToggleArchived}
+          >
+            <IconArchive className="size-3" stroke={2} />
+            {archivedCount > 0 ? `${archivedCount}` : ""}
+          </Button>
+        )}
       </div>
-      <div className="flex min-h-[120px] px-2 flex-1 flex-col gap-3 overflow-y-auto p-2">
+      <div className="relative min-h-0 flex-1">
+        {/* Gradient overlays — pointer-events:none so they don't clip portaled content */}
+        {clip.top && (
+          <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-8 bg-gradient-to-b from-[#222222] to-transparent" />
+        )}
+        {clip.bottom && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-8 bg-gradient-to-t from-[#222222] to-transparent" />
+        )}
+        <div
+          ref={scrollRef}
+          className="flex h-full flex-col gap-3 overflow-y-auto p-4"
+        >
 
       {onNewBrainstorm && status === "brainstorm" && (
           <button
@@ -128,6 +181,7 @@ export function KanbanColumn({
           ))}
         </AnimatePresence>
      
+        </div>
       </div>
     </div>
   );

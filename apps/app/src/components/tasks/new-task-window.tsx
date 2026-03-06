@@ -29,7 +29,7 @@ export const NewTaskWindow = () => {
     await loadWorkspace(workspaceId);
     const threadId = await createTaskThread(workspaceId, text, undefined, model, provider);
     if (initialStatus && threadId) {
-      await updateThreadTaskStatus(workspaceId, threadId, initialStatus);
+      await updateThreadTaskStatus(workspaceId, threadId, initialStatus, { autoStart: true });
     }
   };
 

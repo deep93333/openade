@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { AgentMessage } from "@agentide/shared";
 import {
   Button,
@@ -7,9 +8,11 @@ import {
   DropdownMenuTrigger,
   PlayIcon,
   RotateIcon,
+  Textarea,
 } from "@agentide/ui";
-import { CodeIcon } from "lucide-react";
+import { IconPencil } from "@tabler/icons-react";
 import { cn } from "@/lib/cn";
+import { UserMessagePreview } from "./mention-chip";
 import { useAgentStore } from "@/store/agent";
 import { useWorkspaceStore } from "@/store/workspace";
 import { getCheckpointForMessage, isCodeRestoreAvailable } from "@/utils/checkpoint";
@@ -23,101 +26,7 @@ type MessageBubbleProps = {
   isPreview?: boolean;
 };
 
-type NormalizedPart =
-  | { type: "text"; value: string }
-  | { type: "mention"; label: string; id: string; mentionType?: "element" };
 
-function unescapeHtml(html: string): string {
-  return html
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&amp;/g, "&")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'");
-}
-
-function normalizeUserContent(content: string): NormalizedPart[] {
-  const trimmed = content.trim();
-  if (!trimmed) return [];
-  const unescaped = unescapeHtml(trimmed);
-  const looksLikeHtml = /<[^>]+>/.test(unescaped);
-  if (looksLikeHtml) {
-    try {
-      const doc = new DOMParser().parseFromString(unescaped, "text/html");
-      const parts: NormalizedPart[] = [];
-      const walk = (node: Node) => {
-        if (node.nodeType === Node.TEXT_NODE && node.textContent) {
-          parts.push({ type: "text", value: node.textContent });
-          return;
-        }
-        if (node.nodeType !== Node.ELEMENT_NODE) return;
-        const el = node as Element;
-        if (el.getAttribute?.("data-type") === "mention") {
-          const id = el.getAttribute("data-id") ?? "";
-          const labelAttr = el.getAttribute("data-label");
-          let mentionType: "element" | undefined =
-            el.getAttribute("data-mention-type") === "element" ? "element" : undefined;
-          if (!mentionType && id) {
-            try {
-              const parsed = JSON.parse(id);
-              if (parsed?.type === "element") mentionType = "element";
-            } catch {
-              /* not element */
-            }
-          }
-          const label = (labelAttr ?? ((el.textContent?.trim() || id) || "@")).trim();
-          const displayLabel =
-            mentionType === "element" ? label : label.startsWith("@") ? label : `@${label}`;
-          parts.push({
-            type: "mention",
-            label: displayLabel,
-            id,
-            ...(mentionType && { mentionType }),
-          });
-          return;
-        }
-        for (const child of el.childNodes) walk(child);
-      };
-      walk(doc.body);
-      if (parts.length > 0) return parts;
-      const stripped = unescaped.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-      return [{ type: "text", value: stripped || trimmed }];
-    } catch {
-      const stripped = unescaped.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-      return [{ type: "text", value: stripped || trimmed }];
-    }
-  }
-  const mentionRe = /(@[\w./-]+)/g;
-  const segments = trimmed.split(mentionRe);
-  if (segments.length <= 1) return [{ type: "text", value: trimmed }];
-  return segments.map((seg) =>
-    /^@[\w./-]+$/.test(seg)
-      ? { type: "mention" as const, label: seg.startsWith("@") ? seg : `@${seg}`, id: seg }
-      : { type: "text" as const, value: seg }
-  );
-}
-
-function UserMessageContent({ content }: { content: string }) {
-  const parts = normalizeUserContent(content);
-  const hasMentions = parts.some((p) => p.type === "mention");
-  if (!hasMentions && parts.length === 1 && parts[0].type === "text") {
-    return <span className="whitespace-pre-wrap wrap-break-word">{parts[0].value}</span>;
-  }
-  return (
-    <span className="whitespace-pre-wrap wrap-break-word">
-      {parts.map((p, i) =>
-        p.type === "text" ? (
-          <span key={i}>{p.value}</span>
-        ) : (
-          <span key={i} data-type="mention" className="font-medium text-accent inline-flex items-center gap-1">
-            {p.mentionType === "element" && <CodeIcon className="size-3 shrink-0 opacity-70" />}
-            {p.label}
-          </span>
-        )
-      )}
-    </span>
-  );
-}
 
 const parseToolInput = (input: unknown): Record<string, unknown> => {
   if (input && typeof input === "object" && !Array.isArray(input)) {
@@ -191,18 +100,64 @@ function MessageUsageFooter({ message }: { message: AgentMessage }) {
   );
 }
 
-function PlanBuildFooter({ planContent }: { planContent: string }) {
+function PlanBuildFooter({ message }: { message: AgentMessage }) {
   const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
   const buildFromPlan = useAgentStore((s) => s.buildFromPlan);
+  const updateMessageContent = useAgentStore((s) => s.updateMessageContent);
+  const activeThread = useAgentStore((s) =>
+    activeWorkspaceId ? s.getActiveThread(activeWorkspaceId) : null
+  );
   const runtime = useAgentStore((s) =>
     s.getActiveRuntime(activeWorkspaceId ?? "")
   );
   const isRunning = runtime.status === "running";
 
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState("");
+
+  const planContent = message.planContent ?? "";
+
   const handleBuild = () => {
     if (!activeWorkspaceId || isRunning) return;
     buildFromPlan(activeWorkspaceId, planContent);
   };
+
+  const handleStartEdit = () => {
+    setEditValue(planContent);
+    setIsEditing(true);
+  };
+
+  const handleSave = async () => {
+    if (!activeWorkspaceId || !activeThread) return;
+    await updateMessageContent(
+      activeWorkspaceId,
+      activeThread.id,
+      message.id,
+      { planContent: editValue, content: editValue }
+    );
+    setIsEditing(false);
+  };
+
+  if (isEditing) {
+    return (
+      <div className="mt-3 flex flex-col gap-2">
+        <Textarea
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          className="w-full min-h-[200px] resize-y font-mono text-sm"
+          autoFocus
+        />
+        <div className="flex items-center gap-2">
+          <Button size="sm" onClick={handleSave}>
+            Save
+          </Button>
+          <Button variant="secondary" size="sm" onClick={() => setIsEditing(false)}>
+            Cancel
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mt-3 flex items-center gap-2">
@@ -214,6 +169,83 @@ function PlanBuildFooter({ planContent }: { planContent: string }) {
       >
         <PlayIcon className="size-3.5 mr-1.5" />
         Build from Plan
+      </Button>
+      <Button
+        size="sm"
+        variant="secondary"
+        onClick={handleStartEdit}
+        disabled={isRunning}
+      >
+        <IconPencil className="size-3.5 mr-1.5" />
+        Edit Plan
+      </Button>
+    </div>
+  );
+}
+
+function ReviewFooter({ message }: { message: AgentMessage }) {
+  const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
+  const updateMessageContent = useAgentStore((s) => s.updateMessageContent);
+  const activeThread = useAgentStore((s) =>
+    activeWorkspaceId ? s.getActiveThread(activeWorkspaceId) : null
+  );
+  const runtime = useAgentStore((s) =>
+    s.getActiveRuntime(activeWorkspaceId ?? "")
+  );
+  const isRunning = runtime.status === "running";
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState("");
+
+  const reviewContent = message.reviewContent ?? "";
+
+  const handleStartEdit = () => {
+    setEditValue(reviewContent);
+    setIsEditing(true);
+  };
+
+  const handleSave = async () => {
+    if (!activeWorkspaceId || !activeThread) return;
+    await updateMessageContent(
+      activeWorkspaceId,
+      activeThread.id,
+      message.id,
+      { reviewContent: editValue, content: editValue }
+    );
+    setIsEditing(false);
+  };
+
+  if (isEditing) {
+    return (
+      <div className="mt-3 flex flex-col gap-2">
+        <Textarea
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          className="w-full min-h-[200px] resize-y font-mono text-sm"
+          autoFocus
+        />
+        <div className="flex items-center gap-2">
+          <Button size="sm" onClick={handleSave}>
+            Save
+          </Button>
+          <Button variant="secondary" size="sm" onClick={() => setIsEditing(false)}>
+            Cancel
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-3 flex items-center gap-2">
+      <Button
+        size="sm"
+        variant="secondary"
+        onClick={handleStartEdit}
+        disabled={isRunning}
+      >
+        <IconPencil className="size-3.5 mr-1.5" />
+        Edit Review
       </Button>
     </div>
   );
@@ -237,6 +269,7 @@ export const MessageBubble = ({ message, messageIndex, isPreview = false }: Mess
 
   const codeRestoreAvailable = checkpoint ? isCodeRestoreAvailable(checkpoint) : false;
   const isPlanMessage = !isUser && !!message.planContent && !message.isPartial;
+  const isReviewMessage = !isUser && !!message.reviewContent && !message.isPartial;
 
   return (
     <div className={cn("flex gap-3 px-4 py-3 w-full min-w-0 group", isPreview && "max-w-full")}>
@@ -250,13 +283,14 @@ export const MessageBubble = ({ message, messageIndex, isPreview = false }: Mess
         )}
       >
         {isUser ? (
-          <UserMessageContent content={message.content} />
+          <UserMessagePreview content={message.content} />
         ) : (
           <div className="py-1">
             <MarkdownMessage content={message.content} />
           </div>
         )}
-        {isPlanMessage && !isPreview && <PlanBuildFooter planContent={message.planContent!} />}
+        {isPlanMessage && !isPreview && <PlanBuildFooter message={message} />}
+        {isReviewMessage && !isPreview && <ReviewFooter message={message} />}
         <MessageUsageFooter message={message} />
       </div>
       {isUser && !isPreview && checkpoint && activeWorkspace && (

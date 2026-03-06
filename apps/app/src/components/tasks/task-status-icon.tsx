@@ -286,6 +286,46 @@ function CompletedIcon({ size, className }: { size: number; className?: string }
   );
 }
 
+function ArchivedIcon({ size, className }: { size: number; className?: string }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 20 20"
+      fill="none"
+      className={cn("shrink-0", className)}
+    >
+      <rect
+        x={3}
+        y={3.5}
+        width={14}
+        height={4}
+        rx={1}
+        stroke="currentColor"
+        strokeWidth={STROKE_W}
+        fill="none"
+        opacity={0.55}
+      />
+      <path
+        d="M4.5 7.5 L5.5 15 Q5.7 16 7 16 L13 16 Q14.3 16 14.5 15 L15.5 7.5"
+        stroke="currentColor"
+        strokeWidth={STROKE_W}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+        opacity={0.55}
+      />
+      <path
+        d="M7.5 11.5 L12.5 11.5"
+        stroke="currentColor"
+        strokeWidth={1.5}
+        strokeLinecap="round"
+        opacity={0.7}
+      />
+    </svg>
+  );
+}
+
 const statusConfig: Record<
   TaskStatus,
   {
@@ -300,6 +340,7 @@ const statusConfig: Record<
   agent_review: { Icon: AgentReviewIcon, colorClass: "text-violet-400" },
   in_review: { Icon: InReviewIcon, colorClass: "text-yellow-400" },
   completed: { Icon: CompletedIcon, colorClass: "text-emerald-500" },
+  archived: { Icon: ArchivedIcon, colorClass: "text-zinc-500" },
 };
 
 export function TaskStatusIcon({ status, size = 18, className }: TaskStatusIconProps) {

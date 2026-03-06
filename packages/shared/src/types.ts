@@ -9,7 +9,11 @@ export type AuthStatus = {
   cliEmail?: string;
 };
 
-export type TaskStatus = "brainstorm" | "backlog" | "planning" | "in_progress" | "agent_review" | "in_review" | "completed";
+export type GlobalSettings = {
+  mcpServers: MCPServerConfig[];
+};
+
+export type TaskStatus = "brainstorm" | "backlog" | "planning" | "in_progress" | "agent_review" | "in_review" | "completed" | "archived";
 
 export type AgentMessageRole = "user" | "assistant" | "system" | "tool";
 
@@ -50,6 +54,7 @@ export type Workspace = {
   name: string;
   path: string;
   createdAt: number;
+  isGitRepository: boolean;
   branch?: string;
 };
 
@@ -74,8 +79,8 @@ export const PROVIDER_CONFIGS: ProviderConfig[] = [
     id: "claude",
     name: "Claude",
     icon: "IconUserCircle",
-    keyPrefix: "sk-ant-",
-    keyPlaceholder: "sk-ant-api03-...",
+    keyPrefix: "sk-",
+    keyPlaceholder: "sk-ant-...",
     helpUrl: "https://console.anthropic.com/settings/keys",
     helpText: "Get a key from console.anthropic.com",
   },
@@ -83,8 +88,8 @@ export const PROVIDER_CONFIGS: ProviderConfig[] = [
     id: "codex",
     name: "Codex",
     icon: "IconCode",
-    keyPrefix: "codex_",
-    keyPlaceholder: "codex_...",
+    keyPrefix: "sk-",
+    keyPlaceholder: "sk-...",
     helpUrl: "https://docs.anthropic.com/en/docs/claude-code/codex",
     helpText: "Get a key from Codex settings",
   },
@@ -104,6 +109,36 @@ export type AgentModelOption = {
   provider: AgentProvider;
 };
 
+export type MCPServerConfig =
+  | {
+      id?: string;
+      name?: string;
+      type: "stdio";
+      command: string;
+      args?: string[];
+      env?: Record<string, string>;
+      cwd?: string;
+    }
+  | {
+      id?: string;
+      name?: string;
+      type: "http" | "sse";
+      url: string;
+      headers?: Record<string, string>;
+    };
+
+export type MCPServerHealth = {
+  name: string;
+  type: MCPServerConfig["type"];
+  toolNames: string[];
+  toolCount: number;
+};
+
+export type MCPValidationResult = {
+  servers: MCPServerHealth[];
+  warnings: string[];
+};
+
 export type AgentStartParams = {
   prompt: string;
   workspaceId: string;
@@ -115,6 +150,7 @@ export type AgentStartParams = {
   requireApproval?: boolean;
   resumeSessionId?: string;
   imageAttachments?: ImageAttachment[];
+  mcpServers?: MCPServerConfig[];
 };
 
 export type ThreadTitleParams = {
@@ -179,6 +215,7 @@ export type ChatThread = {
   id: string;
   messages: AgentMessage[];
   createdAt: number;
+  updatedAt: number;
   title?: string;
   sdkSessionId?: string;
   provider?: AgentProvider;
@@ -189,6 +226,7 @@ export type ChatThread = {
   outputTokens?: number;
   lastRunInputTokens?: number;
   lastRunOutputTokens?: number;
+  lastReadAt?: number;
 };
 
 export type ChatData = {

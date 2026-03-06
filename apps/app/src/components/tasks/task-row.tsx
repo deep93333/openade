@@ -10,7 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@agentide/ui";
-import { IconDots, IconFile, IconProgress, IconRobot } from "@tabler/icons-react";
+import { IconArchive, IconDots, IconFile, IconProgress, IconRobot } from "@tabler/icons-react";
 import { ArrowRightIcon } from "lucide-react";
 import { useAgentActivity } from "@/hooks/use-agent-activity";
 import { getTaskStatusLabel } from "../shared/badge";
@@ -39,7 +39,7 @@ export function TaskRow({ task, canDelete, onOpenChat, onStatusChange, onDeleteT
 
   const rowContent = (
       <div
-        className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1 hover:bg-foreground/5"
+        className="group/row flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1 hover:bg-foreground/5"
         onClick={isBrainstormTask ? () => setBrainstormDialogOpen(true) : undefined}
       >
         <div className="flex min-w-0 flex-1 items-center gap-3 rounded-lg px-2 py-1 text-left">
@@ -109,6 +109,16 @@ export function TaskRow({ task, canDelete, onOpenChat, onStatusChange, onDeleteT
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
+
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Archive task"
+            className="opacity-0 group-hover/row:opacity-100 transition-opacity"
+            onClick={() => void onStatusChange(task.workspaceId, task.thread.id, "archived")}
+          >
+            <IconArchive className="size-3.5 text-muted-foreground" stroke={2} />
+          </Button>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

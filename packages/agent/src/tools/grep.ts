@@ -3,12 +3,9 @@ import { execFile } from "child_process";
 import * as path from "path";
 import type { ToolDefinition, ToolResult } from "./tool-types.js";
 import { truncateOutput } from "./tool-types.js";
+import { IGNORE_DIRS } from "../constants.js";
 
-const EXCLUDE_DIRS = [
-  "node_modules", ".git", ".next", ".turbo", "dist", "build", "out",
-  "__pycache__", ".venv", "venv", "target", ".cache", ".idea", ".vscode",
-  "coverage", ".nyc_output", ".parcel-cache", ".svelte-kit",
-];
+const EXCLUDE_DIRS = [...IGNORE_DIRS];
 
 const EXEC_OPTS = {
   encoding: "utf-8" as const,

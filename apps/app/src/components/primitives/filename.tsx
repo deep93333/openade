@@ -17,6 +17,7 @@ type FileNameProps = {
   isOpen?: boolean;
   showParentDir?: boolean;
   nameClassName?: string;
+  iconSize?: string;
   parentDirClassName?: string;
   className?: string;
 };
@@ -25,6 +26,7 @@ export function FileName({
   path,
   type = "file",
   isOpen,
+  iconSize = "size-3",
   showParentDir = false,
   nameClassName,
   parentDirClassName,
@@ -36,9 +38,9 @@ export function FileName({
   return (
     <span className={cn("flex min-w-0 items-center gap-1.5", className)}>
       {type === "directory" ? (
-        <FolderIcon name={name} open={isOpen} />
+        <FolderIcon name={name} open={isOpen} size={iconSize} />
       ) : (
-        getFileTypeIcon(name)
+        getFileTypeIcon(name, iconSize)
       )}
       <span className={cn("truncate text-xs", nameClassName)}>
         {name}

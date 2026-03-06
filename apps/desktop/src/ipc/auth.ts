@@ -1,7 +1,8 @@
 import { ipcMain } from "electron";
+import { validateMCPServers } from "@agentide/agent/src/tools/mcp.js";
 import { IPC } from "@agentide/shared";
-import type { ApiKeyProvider } from "@agentide/shared";
-import * as configStorage from "../services/config";
+import type { ApiKeyProvider, GlobalSettings, MCPServerConfig } from "@agentide/shared";
+import * as configStorage from "../services/config-storage";
 
 export function registerAuthHandlers(): void {
   ipcMain.handle(IPC.AUTH_LOGIN, async () => {
@@ -144,6 +145,35 @@ export function registerAuthHandlers(): void {
       return { success: true, data: configStorage.hasApiKeyByProvider(provider) };
     } catch {
       return { success: false, error: `Failed to check API key for ${provider}` };
+    }
+  });
+
+  ipcMain.handle(IPC.SETTINGS_GET, async () => {
+    try {
+      return { success: true, data: configStorage.getGlobalSettings() };
+    } catch {
+      return { success: false, error: "Failed to load settings" };
+    }
+  });
+
+  ipcMain.handle(IPC.SETTINGS_SET, async (_event, settings: GlobalSettings) => {
+    try {
+      configStorage.setGlobalSettings(settings);
+      return { success: true };
+    } catch {
+      return { success: false, error: "Failed to save settings" };
+    }
+  });
+
+  ipcMain.handle(IPC.SETTINGS_VALIDATE_MCP_SERVERS, async (_event, servers: MCPServerConfig[]) => {
+    try {
+      const result = await validateMCPServers(servers);
+      return { success: true, data: result };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to connect to MCP server",
+      };
     }
   });
 

@@ -1,101 +1,6 @@
 import os from "os";
-import * as fs from "fs/promises";
-import * as path from "path";
 import type { AgentMode } from "@agentide/shared";
-
-const PROJECT_MARKERS = [
-  "package.json",
-  "Cargo.toml",
-  "go.mod",
-  "pyproject.toml",
-  "requirements.txt",
-  "Gemfile",
-  "pom.xml",
-  "build.gradle",
-  "CMakeLists.txt",
-  "Makefile",
-  "docker-compose.yml",
-  "Dockerfile",
-  ".gitignore",
-];
-
-const IGNORE_DIRS = new Set([
-  "node_modules", ".git", ".next", ".turbo", "dist", "build", "out",
-  "__pycache__", ".venv", "venv", "target", ".cache", ".idea", ".vscode",
-  "coverage", ".nyc_output", ".parcel-cache", ".svelte-kit",
-]);
-
-async function getShallowTree(dir: string, depth = 2, prefix = ""): Promise<string[]> {
-  if (depth <= 0) return [];
-  const lines: string[] = [];
-  try {
-    const entries = await fs.readdir(dir, { withFileTypes: true });
-    const sorted = entries
-      .filter((e) => !e.name.startsWith(".") || e.name === ".env.example")
-      .sort((a, b) => {
-        if (a.isDirectory() && !b.isDirectory()) return -1;
-        if (!a.isDirectory() && b.isDirectory()) return 1;
-        return a.name.localeCompare(b.name);
-      });
-
-    for (const entry of sorted) {
-      if (entry.isDirectory()) {
-        if (IGNORE_DIRS.has(entry.name)) continue;
-        lines.push(`${prefix}${entry.name}/`);
-        const sub = await getShallowTree(path.join(dir, entry.name), depth - 1, prefix + "  ");
-        lines.push(...sub);
-      } else {
-        lines.push(`${prefix}${entry.name}`);
-      }
-    }
-  } catch {}
-  return lines;
-}
-
-async function readProjectFile(dir: string, filename: string, maxLines = 20): Promise<string | null> {
-  try {
-    const filepath = path.join(dir, filename);
-    const content = await fs.readFile(filepath, "utf-8");
-    const lines = content.split("\n");
-    if (lines.length <= maxLines) return content.trim();
-    return lines.slice(0, maxLines).join("\n") + `\n... (${lines.length} total lines)`;
-  } catch {
-    return null;
-  }
-}
-
-async function detectProjectContext(workspacePath: string): Promise<string> {
-  const sections: string[] = [];
-
-  const tree = await getShallowTree(workspacePath, 2);
-  if (tree.length > 0) {
-    const maxTreeLines = 40;
-    const truncated = tree.length > maxTreeLines;
-    const display = truncated ? tree.slice(0, maxTreeLines) : tree;
-    sections.push(
-      "### Project Structure",
-      "```",
-      ...display,
-      truncated ? `... (${tree.length} total entries)` : "",
-      "```",
-    );
-  }
-
-  for (const marker of PROJECT_MARKERS) {
-    const content = await readProjectFile(workspacePath, marker);
-    if (content) {
-      sections.push(`### ${marker}`, "```", content, "```");
-      break;
-    }
-  }
-
-  const readme = await readProjectFile(workspacePath, "README.md", 20);
-  if (readme) {
-    sections.push("### README.md (excerpt)", readme);
-  }
-
-  return sections.filter(Boolean).join("\n");
-}
+import { detectProjectContext } from "./context.js";
 
 function buildEnvironmentSection(workspacePath: string): string {
   const platform = os.platform();
@@ -179,20 +84,24 @@ function buildPlanModePrompt(envSection: string, projectSection: string): string
 ${envSection}
 ${projectSection}
 ## Your Role
-You are in **Plan mode**. Your job is to analyze the user's request and produce a structured implementation plan. You have access to **read-only tools** to explore the codebase — use them to understand the existing code before planning.
+You are in **Plan mode**. Your job is to analyze the user's request and produce a structured implementation plan. You have access to **planning tools** to explore the codebase and organize your plan — use them to understand the existing code before planning.
 
-### Available Tools (read-only)
+### Available Tools
 - **read:** Read file contents. Use 'offset' and 'limit' params for large files.
 - **grep:** Search file contents with regex. Supports 'include' for file type filtering.
 - **glob:** Find files by pattern. Supports recursive '**' patterns.
 - **ls:** List directory contents.
 - **readlints:** Check for lint/type errors.
+- **todowrite:** Create and manage a structured task list to organize your plan into trackable items.
+- **ask_question:** Ask the user structured multiple-choice questions when you need clarification before planning.
 
-You CANNOT modify, write, edit, or delete any files.
+You CANNOT modify, write, edit, or delete any files. You can only explore the codebase, organize tasks, and ask clarifying questions.
 
 ### Workflow
-1. Use the read-only tools to explore relevant files and understand the codebase
-2. Once you have enough context, produce a structured plan
+1. If the request is ambiguous, use **ask_question** to get clarification from the user
+2. Use the read-only tools to explore relevant files and understand the codebase
+3. Use **todowrite** to organize implementation steps as trackable tasks
+4. Produce a structured plan
 
 ## Output Format
 After exploring the codebase, produce your plan in this markdown structure:
@@ -259,48 +168,73 @@ function buildAgentReviewModePrompt(envSection: string, projectSection: string):
 ${envSection}
 ${projectSection}
 ## Your Role
-You are in **Agent Review mode**. Your job is to rigorously review the work done in this thread. You have access to **read-only tools** to inspect the codebase — use them to verify implementations, trace logic, and check correctness.
+You are in **Agent Review mode**. Your job is to determine whether the work in this thread correctly fulfills the user's original request.
+
+Anchor your review to the user's request and acceptance criteria implied by the thread's user messages. Do not review in the abstract. First identify what the user asked for, then inspect the implementation and verify whether it actually achieves that goal without introducing bugs or regressions.
+
+You have access to **read-only tools** to inspect the codebase. Use them to verify behavior, trace logic, inspect affected files, compare nearby patterns, and validate code quality.
 
 ### Available Tools (read-only)
 - **read:** Read file contents. Use 'offset' and 'limit' params for large files.
 - **grep:** Search file contents with regex. Supports 'include' for file type filtering.
 - **glob:** Find files by pattern. Supports recursive '**' patterns.
 - **ls:** List directory contents.
-- **readlints:** Check for lint/type errors.
+- **readlints:** Check lint/type errors.
 
 You CANNOT modify, write, edit, or delete any files.
 
-## Review Checklist
-Work through the following systematically:
+## Review Process
+Work through the review in this order:
 
-1. **Correctness** — Does the implementation do what was asked? Are there logic errors or off-by-one bugs?
-2. **Completeness** — Are all required cases handled? Are there missing edge cases or untreated error paths?
-3. **Type safety** — Do types align correctly? Are there any implicit \`any\` or unsafe casts?
-4. **Lint & build** — Run \`readlints\` on changed files to surface type or lint errors.
-5. **Consistency** — Does the code follow existing patterns in the codebase? Check neighboring files.
-6. **Side effects** — Are there unintended side effects, memory leaks, or race conditions?
-7. **Security** — Any injection vectors, unvalidated inputs, or exposed secrets?
+1. **Restate the task** — Infer the concrete task from the user's messages in the thread.
+2. **Locate the implementation** — Read the relevant changed files and nearby code.
+3. **Verify correctness** — Check whether the implementation actually satisfies the user's request.
+4. **Check for bugs** — Look for logic errors, broken flows, regressions, edge cases, race conditions, and bad assumptions.
+5. **Validate quality** — Check type safety, consistency with existing patterns, and maintainability.
+6. **Run validation** — Use \`readlints\` on relevant changed files. Report any lint or type errors you find.
+7. **Judge completion** — Decide whether the task is fully done, partially done, or incorrect.
+
+## Review Checklist
+Evaluate the implementation against these standards:
+
+1. **Task fulfillment** — Does the result match what the user asked for?
+2. **Correctness** — Does the logic work as intended under normal conditions?
+3. **Completeness** — Are important cases, paths, and requirements covered?
+4. **Regression risk** — Could this break existing behavior or connected flows?
+5. **Edge cases** — Are empty states, error paths, null/undefined handling, and unusual inputs addressed?
+6. **Type safety & lint** — Are there type errors, lint issues, unsafe casts, or fragile typings?
+7. **Codebase consistency** — Does it follow surrounding project patterns and existing architecture?
+8. **Security & safety** — Any injection risks, unsafe file operations, exposed secrets, or dangerous assumptions?
 
 ## Output Format
 Structure your review as:
 
-### Summary
-<1-2 sentences on what was implemented>
+### Task
+<brief restatement of what the user asked for>
 
-### Issues Found
-- **[CRITICAL | WARNING | SUGGESTION]** \`file:line\` — description
+### Verdict
+**[PASS | PARTIAL | FAIL]** — <one sentence conclusion>
+
+### Findings
+- **[CRITICAL | WARNING | SUGGESTION]** \`file:line\` — description, why it matters, and what is affected
+
+### Validation
+- **Lint/type check:** <passed or failed, with details>
+- **Scope checked:** <files/areas you inspected>
 
 ### What Looks Good
-- <things that are correct and well-done>
+- <things that correctly satisfy the task>
 
 ### Recommended Next Steps
 - <concrete, actionable items ordered by priority>
 
 ## Guidelines
-- Read the relevant changed files before reviewing — never guess
+- Start from the user's request in the thread, not from assumptions
+- Read the relevant files before reviewing — never guess
+- Use \`readlints\` when relevant to validate changed files
 - Reference specific file paths and line numbers for every issue
-- Be precise and actionable — no vague feedback
-- If nothing needs fixing, say so clearly`;
+- Be precise, evidence-based, and actionable
+- If the task is fully correct and no fixes are needed, say that clearly in the verdict and findings`;
 }
 
 export async function buildSystemPrompt(workspacePath: string, mode: AgentMode = "agent"): Promise<string> {

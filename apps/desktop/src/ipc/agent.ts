@@ -1,15 +1,17 @@
 import { ipcMain } from "electron";
 import { IPC } from "@agentide/shared";
 import type { AgentStartParams, ThreadTitleParams, ToolApprovalResponse } from "@agentide/shared";
+import type { ToolApprovalResult } from "@agentide/agent";
 import { ulid } from "ulid";
-import { agentManager, generateThreadTitle, getAllModels } from "../services/agent";
-import * as chatStorage from "../services/chat";
-import { gitService } from "../services/git";
-import { workspaceManager } from "../services/workspace";
-import { getAppWindow } from "../services/windows";
+import { agentManager, generateThreadTitle, getAllModels } from "../services/agent-manager";
+import * as chatStorage from "../services/chat-storage";
+import * as configStorage from "../services/config-storage";
+import { gitService } from "../services/git-service";
+import { workspaceManager } from "../services/workspace-manager";
+import { getAppWindow } from "../windows/app-window";
 
 type ToolApprovalEntry = {
-  resolve: (r: { behavior: "allow" | "deny"; updatedInput?: unknown; message?: string }) => void;
+  resolve: (r: ToolApprovalResult) => void;
   input: unknown;
 };
 
@@ -31,19 +33,17 @@ export function registerAgentHandlers(): void {
 
       const ALWAYS_APPROVE_BYPASS = new Set(["ask_question"]);
 
-      const canUseTool = async (sessionId: string, toolName: string, input: unknown) => {
+      const canUseTool = async (sessionId: string, toolName: string, input: unknown): Promise<ToolApprovalResult> => {
         if (!params.requireApproval && !ALWAYS_APPROVE_BYPASS.has(toolName)) {
-          return { behavior: "allow" as const, updatedInput: input };
+          return { behavior: "allow", updatedInput: input };
         }
         const requestId = ulid();
-        return new Promise<{ behavior: "allow" | "deny"; updatedInput?: unknown; message?: string }>(
-          (resolve) => {
-            pendingToolApprovals.set(requestId, { resolve, input });
-            window.webContents.send(IPC.AGENT_TOOL_APPROVAL_REQUEST, {
-              requestId, toolName, input, sessionId, workspaceId: params.workspaceId,
-            });
-          },
-        );
+        return new Promise<ToolApprovalResult>((resolve) => {
+          pendingToolApprovals.set(requestId, { resolve, input });
+          window.webContents.send(IPC.AGENT_TOOL_APPROVAL_REQUEST, {
+            requestId, toolName, input, sessionId, workspaceId: params.workspaceId,
+          });
+        });
       };
 
       const chat = chatStorage.getChat(params.workspaceId);
@@ -65,6 +65,7 @@ export function registerAgentHandlers(): void {
         mode: params.mode,
         resumeSessionId,
         imageAttachments: params.imageAttachments,
+        mcpServers: params.mcpServers ?? configStorage.getGlobalSettings().mcpServers,
         canUseTool,
         onMessage: (message) => {
           window.webContents.send(IPC.AGENT_MESSAGE, message);

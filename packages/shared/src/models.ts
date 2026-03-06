@@ -9,6 +9,7 @@ const MODEL_PROVIDER_MAP: Record<string, AgentProvider> = {
   "gpt-5-mini": "codex",
   "gpt-5.2-codex": "codex",
   "gpt-5.3-codex": "codex",
+  "gpt-5.4-2026-03-05": "codex",
   "gpt-5.1-codex-mini": "codex",
   "minimax-m2": "minimax",
   "minimax-m2.1": "minimax",

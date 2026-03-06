@@ -12,7 +12,6 @@ type ToolApprovalBarProps = {
 
 type AskQuestionOption = {
   label: string;
-  description?: string;
 };
 
 type AskQuestionItem = {
@@ -51,10 +50,7 @@ function parseAskQuestionInput(input: unknown): AskQuestionInput | null {
     const options: AskQuestionOption[] = [];
     for (const option of item.options) {
       if (!isRecord(option) || typeof option.label !== "string") return null;
-      options.push({
-        label: option.label,
-        description: typeof option.description === "string" ? option.description : undefined,
-      });
+      options.push({ label: option.label });
     }
 
     questions.push({
@@ -204,9 +200,6 @@ export const ToolApprovalBar = ({ request }: ToolApprovalBarProps) => {
                     onClick={() => handleOptionClick(currentStep, option.label, !!currentQuestion.multiSelect)}
                   >
                     <span className={cn("text-base flex-1", isSelected && "font-medium")}>{option.label}</span>
-                    {option.description && (
-                      <span className="text-sm text-muted-foreground">{option.description}</span>
-                    )}
                     {isSelected && <Check className="size-5 shrink-0 text-foreground/60" strokeWidth={2.5} />}
                   </button>
                 );

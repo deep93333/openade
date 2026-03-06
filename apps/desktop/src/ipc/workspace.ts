@@ -1,12 +1,12 @@
 import { ipcMain } from "electron";
 import { IPC } from "@agentide/shared";
-import * as chatStorage from "../services/chat";
-import { workspaceManager } from "../services/workspace";
+import * as chatStorage from "../services/chat-storage";
+import { workspaceManager } from "../services/workspace-manager";
 import {
   setActiveWorkspace,
   clearActiveWorkspace,
   getActiveWorkspaceId,
-} from "../services/watcher";
+} from "../services/workspace-events";
 
 export function registerWorkspaceHandlers(): void {
   ipcMain.handle(IPC.WORKSPACE_LIST, async () => {

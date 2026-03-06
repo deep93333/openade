@@ -1,6 +1,7 @@
 import type { ChatThread, TaskStatus } from "@agentide/shared";
 import type { ReactNode } from "react";
 import { TaskStatusIcon } from "./task-status-icon";
+import { normalizeUserMessageContentToText } from "@/utils/normalize-user-message";
 
 export type WorkspaceTask = {
   workspaceId: string;
@@ -19,6 +20,7 @@ export const taskStatusLabels: Record<TaskStatus, string> = {
   agent_review: "Agent Review",
   in_review: "Human Review",
   completed: "Ready",
+  archived: "Archived",
 };
 
 export function getTaskStatusIcon(status: TaskStatus): ReactNode {
@@ -29,11 +31,17 @@ export function getTaskTitle(thread: ChatThread): string {
   if (thread.title?.trim()) return thread.title.trim();
   const firstUserMessage = thread.messages.find((message) => message.role === "user");
   if (firstUserMessage?.content) {
-    const text = firstUserMessage.content.trim().replace(/\s+/g, " ");
+    const text = normalizeUserMessageContentToText(firstUserMessage.content).replace(/\s+/g, " ").trim();
     if (text.length > 48) return `${text.slice(0, 48)}...`;
     return text;
   }
   return "Untitled task";
+}
+
+export function getTaskRawContent(thread: ChatThread): string | null {
+  if (thread.title?.trim()) return null;
+  const firstUserMessage = thread.messages.find((message) => message.role === "user");
+  return firstUserMessage?.content ?? null;
 }
 
 export function getRelativeTimeLabel(timestamp: number): string {

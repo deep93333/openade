@@ -81,7 +81,7 @@ vi.mock("./services/snapshot-store", () => ({
   runGarbageCollection: vi.fn().mockResolvedValue({ deletedDirs: 0, freedBytes: 0 }),
 }));
 
-vi.mock("./services/agent-manager", () => ({ agentManager: {}, getAllModels: vi.fn().mockReturnValue([]) }));
+vi.mock("./services/agent-manager", () => ({ agentManager: {}, getAllModels: vi.fn().mockReturnValue([]), generateThreadTitle: vi.fn().mockResolvedValue(null) }));
 vi.mock("./services/config-storage", () => ({ get: vi.fn(), set: vi.fn() }));
 vi.mock("./services/terminal-service", () => ({ create: vi.fn() }));
 vi.mock("./windows/app-window", () => ({ getAppWindow: () => null }));
@@ -94,6 +94,17 @@ vi.mock("./services/workspace-events", () => ({
 vi.mock("./services/agent-log", () => ({
   getAgentLogPath: vi.fn().mockReturnValue("/tmp/agent.log"),
   getAgentLogDir: vi.fn().mockReturnValue("/tmp"),
+}));
+vi.mock("./services/filesystem-service", () => ({
+  readDirectoryTree: vi.fn().mockResolvedValue({ name: "", path: "", type: "directory", children: [] }),
+  readDirectoryChildren: vi.fn().mockResolvedValue([]),
+}));
+vi.mock("./services/skills-service", () => ({
+  loadSkillsFromDir: vi.fn().mockResolvedValue([]),
+  getSkillContent: vi.fn().mockResolvedValue(null),
+}));
+vi.mock("./services/editor-service", () => ({
+  openFileInExternalEditor: vi.fn().mockResolvedValue({ success: true }),
 }));
 
 import { registerIpcHandlers } from "./ipc";
@@ -313,8 +324,8 @@ describe("Checkpoint IPC handlers", () => {
   it("CHAT_DELETE_THREAD: also cleans up thread snapshots", async () => {
     mockGetChat.mockReturnValue({
       threads: [
-        { id: "thread-1", messages: [], createdAt: 0 },
-        { id: "thread-2", messages: [], createdAt: 0 },
+        { id: "thread-1", messages: [], createdAt: 0, updatedAt: 0 },
+        { id: "thread-2", messages: [], createdAt: 0, updatedAt: 0 },
       ],
     });
     registerIpcHandlers();

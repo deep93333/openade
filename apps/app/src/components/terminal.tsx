@@ -71,7 +71,7 @@ const TerminalSession = ({ sessionId, visible, cwd }: TerminalSessionProps) => {
     const term = new Terminal({
       cursorBlink: true,
       fontSize: 13,
-      fontFamily: '"Geist Mono", "SF Mono", Menlo, Monaco, "Courier New", monospace',
+      fontFamily: '"IBM Plex Mono", "SF Mono", Menlo, Monaco, "Courier New", monospace',
       lineHeight: 1.2,
       theme: getTerminalTheme(),
     });

@@ -3,12 +3,7 @@ import { glob } from "node:fs/promises";
 import * as path from "path";
 import type { ToolDefinition, ToolResult } from "./tool-types.js";
 import { truncateOutput } from "./tool-types.js";
-
-const IGNORE_DIRS = new Set([
-  "node_modules", ".git", ".next", ".turbo", "dist", "build", "out",
-  "__pycache__", ".venv", "venv", "target", ".cache", ".idea", ".vscode",
-  "coverage", ".nyc_output", ".parcel-cache", ".svelte-kit",
-]);
+import { IGNORE_DIRS } from "../constants.js";
 
 const MAX_FILES = 500;
 

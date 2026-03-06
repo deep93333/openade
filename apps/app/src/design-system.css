@@ -186,7 +186,7 @@ body {
 
 @theme inline {
   --font-sans: "Inter var", sans-serif;
-  --font-mono: "Geist Mono", monospace;
+  --font-mono: "IBM Plex Mono", monospace;
   --font-serif: "Sentinel", serif;
 
   --color-base-background: oklch(var(--oklch-white));
