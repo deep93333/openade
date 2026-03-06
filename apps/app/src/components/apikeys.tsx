@@ -2,16 +2,17 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { PROVIDER_CONFIGS } from "@agentide/shared";
 import {
   Button,
+  ChevronDownIcon,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
   Tabs,
   TabsContent,
   TabsList,
@@ -40,6 +41,7 @@ export const ApiKeyDialog = ({
 
   const api = getElectronAPI();
   const modelOptions = useChatEditorStore((s) => s.modelOptions);
+  const fetchModelOptions = useChatEditorStore((s) => s.fetchModelOptions);
   const commitMessageModelOptions = useMemo(
     () => modelOptions.map((option) => ({ value: option.value, label: option.label, provider: option.provider })),
     [modelOptions]
@@ -69,7 +71,8 @@ export const ApiKeyDialog = ({
   useEffect(() => {
     if (!open) return;
     refreshMaskedKeys();
-  }, [open, refreshMaskedKeys]);
+    void fetchModelOptions();
+  }, [fetchModelOptions, open, refreshMaskedKeys]);
 
   useEffect(() => {
     if (!open || !api?.settings) return;
@@ -134,19 +137,32 @@ export const ApiKeyDialog = ({
                 Choose which model generates short git commit messages from staged diffs.
               </div>
             </div>
-            <Select value={commitMessageModel || "__default__"} onValueChange={(value) => void handleCommitMessageModelChange(value)}>
-              <SelectTrigger className="w-[240px]">
-                <SelectValue placeholder="Use default model" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__default__">Use default model</SelectItem>
-                {commitMessageModelOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <DropdownMenu modal={true}>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="w-[240px] justify-between">
+                  <span className="truncate text-sm">
+                    {commitMessageModel
+                      ? (commitMessageModelOptions.find((option) => option.value === commitMessageModel)?.label ??
+                        commitMessageModel)
+                      : "Use default model"}
+                  </span>
+                  <ChevronDownIcon className="size-4 shrink-0 opacity-50" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-[240px]">
+                <DropdownMenuRadioGroup
+                  value={commitMessageModel || "__default__"}
+                  onValueChange={(value) => void handleCommitMessageModelChange(value)}
+                >
+                  <DropdownMenuRadioItem value="__default__">Use default model</DropdownMenuRadioItem>
+                  {commitMessageModelOptions.map((option) => (
+                    <DropdownMenuRadioItem key={option.value} value={option.value}>
+                      {option.label}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           <TabsContent value="providers" className="min-h-0 flex-1">

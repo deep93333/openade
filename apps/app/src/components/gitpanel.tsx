@@ -250,6 +250,7 @@ export const GitChangesPanel = ({ className, onFileSelect: _onFileSelect }: GitC
   const openDiffViewer = useUIStore((s) => s.openDiffViewer);
   const initializeGitRepository = useWorkspaceStore((s) => s.initializeGitRepository);
   const modelOptions = useChatEditorStore((s) => s.modelOptions);
+  const fetchModelOptions = useChatEditorStore((s) => s.fetchModelOptions);
 
   const [staged, setStaged] = useState<GitStagedChange[]>([]);
   const [unstaged, setUnstaged] = useState<GitUnstagedChange[]>([]);
@@ -330,6 +331,10 @@ export const GitChangesPanel = ({ className, onFileSelect: _onFileSelect }: GitC
   useEffect(() => {
     load();
   }, [load, gitChangeVersion]);
+
+  useEffect(() => {
+    void fetchModelOptions();
+  }, [fetchModelOptions]);
 
   useEffect(() => {
     const api = getElectronAPI();

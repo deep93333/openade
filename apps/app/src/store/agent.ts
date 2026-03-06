@@ -23,7 +23,6 @@ import { useWorkspaceStore } from "./workspace";
 const CHAT_STORAGE_KEY = "agentide-chat";
 const MODEL_STORAGE_KEY = "agentide-selected-model";
 const PROVIDER_STORAGE_KEY = "agentide-selected-provider";
-const DEFAULT_MODEL = "claude-sonnet-4-20250514";
 
 type ThreadRuntime = {
   status: AgentStatus;
@@ -267,10 +266,9 @@ const saveToLocalStorage = (workspaceId: string, data: ChatData): void => {
 
 const loadSelectedModel = (): string => {
   try {
-    const model = localStorage.getItem(MODEL_STORAGE_KEY);
-    return model && model.trim().length > 0 ? model : DEFAULT_MODEL;
+    return localStorage.getItem(MODEL_STORAGE_KEY)?.trim() ?? "";
   } catch {
-    return DEFAULT_MODEL;
+    return "";
   }
 };
 
