@@ -207,14 +207,12 @@ async function runAgent(
         workspacePath: options.workspacePath,
         abortSignal: linkedAbort.signal,
         onMetadata: () => {},
-        requestUserInput: mode === "plan"
-          ? async (toolName: string, input: unknown) => {
-              if (!options.canUseTool) return { denied: false, updatedInput: input };
-              const result = await options.canUseTool(sessionId, toolName, input);
-              if (result.behavior === "deny") return { denied: true, message: result.message };
-              return { denied: false, updatedInput: result.updatedInput };
-            }
-          : async () => ({ denied: false, updatedInput: undefined }),
+        requestUserInput: async (toolName: string, input: unknown) => {
+          if (!options.canUseTool) return { denied: false, updatedInput: input };
+          const result = await options.canUseTool(sessionId, toolName, input);
+          if (result.behavior === "deny") return { denied: true, message: result.message };
+          return { denied: false, updatedInput: result.updatedInput };
+        },
         onToolStart: (meta) => {
           options.onMessage({
             id: meta.toolCallId,

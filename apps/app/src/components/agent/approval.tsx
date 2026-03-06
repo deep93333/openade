@@ -109,7 +109,7 @@ export const ToolApprovalBar = ({ request }: ToolApprovalBarProps) => {
   const currentStepHasAnswer = currentSelected.length > 0 || currentCustom.length > 0;
 
   const handleSubmit = () => {
-    if (!approvalWorkspaceId || !askQuestionInput) return;
+    if (!approvalWorkspaceId || !askQuestionInput || !currentStepHasAnswer) return;
     const updatedInput = {
       ...(isRecord(request.input) ? request.input : {}),
       responses: questions.map((q, i) => {
@@ -125,6 +125,7 @@ export const ToolApprovalBar = ({ request }: ToolApprovalBarProps) => {
   };
 
   const handleNext = () => {
+    if (!currentStepHasAnswer) return;
     if (isLastStep) handleSubmit();
     else setCurrentStep((s) => s + 1);
   };
@@ -140,9 +141,13 @@ export const ToolApprovalBar = ({ request }: ToolApprovalBarProps) => {
     if (!multiSelect) {
       setCustomInputs((prev) => ({ ...prev, [questionIndex]: "" }));
       if (isLastStep) {
-        setTimeout(() => handleSubmit(), 120);
+        setTimeout(() => {
+          if (label.trim()) handleSubmit();
+        }, 120);
       } else {
-        setTimeout(() => setCurrentStep((s) => s + 1), 120);
+        setTimeout(() => {
+          if (label.trim()) setCurrentStep((s) => s + 1);
+        }, 120);
       }
     }
   };
@@ -229,17 +234,15 @@ export const ToolApprovalBar = ({ request }: ToolApprovalBarProps) => {
               Skip
             </Button>
             <div className="flex-1" />
-            {(currentQuestion.multiSelect || currentCustom.length > 0) && (
-              <Button
-                type="button"
-                size="sm"
-                variant="brand"
-                disabled={!currentStepHasAnswer}
-                onClick={handleNext}
-              >
-                {isLastStep ? "Submit" : "Next"}
-              </Button>
-            )}
+            <Button
+              type="button"
+              size="sm"
+              variant="brand"
+              disabled={!currentStepHasAnswer}
+              onClick={handleNext}
+            >
+              {isLastStep ? "Submit" : "Next"}
+            </Button>
           </div>
         </>
       ) : (

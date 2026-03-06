@@ -95,6 +95,7 @@ export function AppTopBar({ left, right }: AppTopBarProps) {
   const setCenterPage = useUIStore((s) => s.setCenterPage);
 
   const workspaces = useWorkspaceStore((s) => s.workspaces);
+  const agentWorkspaces = useAgentStore((s) => s.workspaces);
   const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
   const selectWorkspace = useWorkspaceStore((s) => s.selectWorkspace);
 
@@ -112,6 +113,11 @@ export function AppTopBar({ left, right }: AppTopBarProps) {
             <div className="flex flex-row not-draggable  bg-foreground/5 rounded-full p-0.5 items-center gap-0.5">
             {workspaces.map((ws) => {
               const isActive = ws.id === activeWorkspaceId;
+              const unreadCount = (agentWorkspaces[ws.id]?.threads ?? []).reduce((count, thread) => {
+                const updatedAt = thread.updatedAt ?? thread.createdAt;
+                const lastReadAt = thread.lastReadAt ?? thread.createdAt;
+                return updatedAt > lastReadAt ? count + 1 : count;
+              }, 0);
               return (
                 <Button
                   key={ws.id}
@@ -123,6 +129,11 @@ export function AppTopBar({ left, right }: AppTopBarProps) {
                   onClick={() => handleSelectWorkspace(ws.id)}
                 >
                   <span className="max-w-[160px] truncate">{ws.name}</span>
+                  {unreadCount > 0 ? (
+                    <span className="ml-1 inline-flex min-w-4 items-center justify-center rounded-full bg-accent px-1.5 text-[10px] leading-4 text-foreground shadow-card">
+                      {unreadCount}
+                    </span>
+                  ) : null}
                 </Button>
               );
             })}

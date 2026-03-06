@@ -32,6 +32,7 @@ export const TasksPage = () => {
   const newTaskDialogOpen = useUIStore((state) => state.tasksNewTaskDialogOpen);
   const setNewTaskDialogOpen = useUIStore((state) => state.setTasksNewTaskDialogOpen);
   const setTasksCount = useUIStore((state) => state.setTasksCount);
+  const setUnreadTasksCount = useUIStore((state) => state.setUnreadTasksCount);
 
   const [statusFilter, setStatusFilter] = useState<"all" | TaskStatus>("all");
   const [showArchived, setShowArchived] = useState(false);
@@ -159,9 +160,24 @@ export const TasksPage = () => {
     return count;
   }, [agentWorkspaces, workspaceFilter, workspaces]);
 
+  const unreadTasksCount = useMemo(() => {
+    let count = 0;
+    for (const workspace of workspaces) {
+      const workspaceState = agentWorkspaces[workspace.id];
+      if (!workspaceState) continue;
+      for (const thread of workspaceState.threads) {
+        const updatedAt = thread.updatedAt ?? thread.createdAt;
+        const lastReadAt = thread.lastReadAt ?? thread.createdAt;
+        if (updatedAt > lastReadAt) count++;
+      }
+    }
+    return count;
+  }, [agentWorkspaces, workspaces]);
+
   useEffect(() => {
     setTasksCount(allTasks.length);
-  }, [allTasks.length, setTasksCount]);
+    setUnreadTasksCount(unreadTasksCount);
+  }, [allTasks.length, setTasksCount, setUnreadTasksCount, unreadTasksCount]);
 
   const handleCreateTask = useCallback(
     async (

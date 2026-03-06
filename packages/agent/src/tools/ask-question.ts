@@ -33,11 +33,26 @@ export const askQuestionTool: ToolDefinition<typeof askQuestionParameters> = {
     }
 
     const updatedInput = response.updatedInput as Record<string, unknown> | undefined;
-    const responses = (updatedInput?.responses ?? []) as Array<{
-      header?: string;
-      question: string;
-      answers: string[];
-    }>;
+    const responses = Array.isArray(updatedInput?.responses)
+      ? (updatedInput.responses as Array<{
+          header?: string;
+          question: string;
+          answers: string[];
+        }>)
+      : [];
+
+    if (responses.length === 0) {
+      const diagnostic = {
+        hasUpdatedInput: updatedInput !== undefined,
+        updatedInputKeys: updatedInput ? Object.keys(updatedInput) : [],
+      };
+
+      return {
+        title: "Ask Question",
+        output: `No responses received from user input bridge. ${JSON.stringify(diagnostic)}`,
+        metadata: { responses: [], diagnostic },
+      };
+    }
 
     const lines: string[] = [];
     for (const r of responses) {
@@ -52,7 +67,7 @@ export const askQuestionTool: ToolDefinition<typeof askQuestionParameters> = {
 
     return {
       title: "Ask Question",
-      output: lines.join("\n").trim() || "No responses received.",
+      output: lines.join("\n").trim(),
       metadata: { responses },
     };
   },

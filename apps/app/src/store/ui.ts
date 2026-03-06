@@ -57,6 +57,8 @@ type UIStoreState = {
   setTasksNewTaskDialogOpen: (open: boolean) => void;
   tasksCount: number;
   setTasksCount: (count: number) => void;
+  unreadTasksCount: number;
+  setUnreadTasksCount: (count: number) => void;
 
   skillsCount: number;
   setSkillsCount: (count: number) => void;
@@ -137,6 +139,8 @@ export const useUIStore = create<UIStoreState>()((set) => ({
   setTasksNewTaskDialogOpen: (open) => set({ tasksNewTaskDialogOpen: open }),
   tasksCount: 0,
   setTasksCount: (count) => set({ tasksCount: count }),
+  unreadTasksCount: 0,
+  setUnreadTasksCount: (count) => set({ unreadTasksCount: count }),
 
   skillsCount: 0,
   setSkillsCount: (count) => set({ skillsCount: count }),
