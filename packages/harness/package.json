@@ -1,0 +1,17 @@
+{
+  "name": "@agentide/harness",
+  "version": "1.0.0",
+  "description": "Vendor-neutral bridge types for Claude, Codex, and OpenCode agent harnesses",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "typescript": "~5.8.3"
+  },
+  "files": ["dist"]
+}
