@@ -2,7 +2,7 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 REPO_ROOT="$(cd "$ROOT/../.." && pwd)"
-ORIGIN="${TRYADE_ORIGIN:-https://tryade.sh}"
+ORIGIN="${TRYADE_ORIGIN:-https://tryade.dev}"
 INSTALL_SRC="$REPO_ROOT/scripts/install.sh"
 PUBLIC="$ROOT/public"
 mkdir -p "$PUBLIC"

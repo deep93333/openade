@@ -44,7 +44,7 @@ To store thread JSONL and tool spill files **inside** the project again (legacy 
 
 From any directory (requires Git; installs [Bun](https://bun.sh) if it is missing).
 
-**tryade.sh** (landing + install scripts, Vite app in `apps/tryade`): `curl -fsSL https://tryade.sh/i | bash` — same installer, easy to share. Develop: `bun run dev:tryade`; build: `bun run build:tryade`. Deploy `apps/tryade/dist` to your host and point the domain at it. For a preview host, build with `TRYADE_ORIGIN=https://your-preview.vercel.app bun run build:tryade` so `/i` fetches `/install.sh` from that origin.
+**tryade.dev** (landing + install scripts, Vite app in `apps/tryade`): `curl -fsSL https://tryade.dev/i | bash` — same installer, easy to share. Develop: `bun run dev:tryade`; build: `bun run build:tryade`. Deploy `apps/tryade/dist` to your host and point the domain at it. For a preview host, build with `TRYADE_ORIGIN=https://your-preview.vercel.app bun run build:tryade` so `/i` fetches `/install.sh` from that origin.
 
 **GitHub raw** (bootstrap → full `scripts/install.sh` on `main`):
 
@@ -121,7 +121,7 @@ Electron will open and load the React UI from `http://localhost:3010`. Add a wor
 | Script | Description |
 |--------|-------------|
 | `bun run dev` | Start Vite (app) and Electron (desktop) together |
-| `bun run dev:tryade` | Landing + install scripts for tryade.sh (port 3020) |
+| `bun run dev:tryade` | Landing + install scripts for tryade.dev (port 3020) |
 | `bun run build:tryade` | Production build → `apps/tryade/dist` |
 | `bun run dev:app` | Vite dev server only (port 3010) |
 | `bun run dev:desktop` | Build desktop and run Electron (expects app on 3010) |
@@ -147,7 +147,7 @@ agentide/
 │           ├── electron-api.ts # ElectronAPI type for preload
 │           └── index.ts
 ├── apps/
-│   ├── tryade/           # tryade.sh landing + static /i and /install.sh (Vite)
+│   ├── tryade/           # tryade.dev landing + static /i and /install.sh (Vite)
 │   ├── app/              # React renderer (Vite 7)
 │   │   ├── src/
 │   │   │   ├── main.tsx, app.tsx

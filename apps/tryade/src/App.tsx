@@ -3,7 +3,7 @@ import { useCallback, useState } from "react";
 const ORIGIN =
   typeof window !== "undefined" && window.location.origin !== "null"
     ? window.location.origin
-    : "https://tryade.sh";
+    : "https://tryade.dev";
 
 const INSTALL_LINE = `curl -fsSL ${ORIGIN}/i | bash`;
 
@@ -33,7 +33,7 @@ export function App() {
       <header className="relative border-b border-white/5 bg-[#030712]/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-6 py-4">
           <span className="text-lg font-semibold tracking-tight text-white">
-            tryade<span className="text-emerald-400">.sh</span>
+            tryade<span className="text-emerald-400">.dev</span>
           </span>
           <a
             className="text-sm font-medium text-slate-400 transition hover:text-emerald-400"
@@ -54,7 +54,7 @@ export function App() {
           Install AgentIDE in one command
         </h1>
         <p className="mt-5 max-w-xl text-lg leading-relaxed text-slate-400">
-          tryade.sh hosts a short install bootstrap and the full setup script for{" "}
+          tryade.dev hosts a short install bootstrap and the full setup script for{" "}
           <a
             className="text-slate-300 underline decoration-white/20 underline-offset-4 transition hover:text-emerald-400 hover:decoration-emerald-400/50"
             href="https://github.com/deep93333/openade"
@@ -113,7 +113,7 @@ export function App() {
           <p className="mt-4 text-slate-400">
             Build output is static (
             <code className="font-mono text-slate-500">apps/tryade/dist</code>
-            ). Point <strong className="font-medium text-slate-300">tryade.sh</strong> at your host
+            ). Point <strong className="font-medium text-slate-300">tryade.dev</strong> at your host
             (Vercel, Cloudflare Pages, Netlify). Set project root to{" "}
             <code className="font-mono text-slate-500">apps/tryade</code> or deploy only{" "}
             <code className="font-mono text-slate-500">dist</code> after{" "}
@@ -123,7 +123,7 @@ export function App() {
       </main>
 
       <footer className="relative border-t border-white/5 py-8 text-center text-sm text-slate-600">
-        AgentIDE is open source. tryade.sh is a convenience mirror for install scripts.
+        AgentIDE is open source. tryade.dev is a convenience mirror for install scripts.
       </footer>
     </div>
   );
