@@ -1,1 +1,0 @@
-{"role":"user","content":[{"type":"text","text":"can we remove close from @apps/app/src/components/topbar.tsx tabs it's causing layout shift when i hover i don't want that behaviour i'll do something about close later"}]}
