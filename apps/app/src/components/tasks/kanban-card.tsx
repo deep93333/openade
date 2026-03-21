@@ -354,7 +354,7 @@ const DEFAULT_CONTEXT_WINDOW = 200_000;
                 </span>
               )}
               {taskError ? <IconAlertCircle className="size-3 text-rose-400" stroke={2} /> : null}
-              <span className="text-xxs text-muted-foreground/50">
+              <span className="text-xxs text-muted-foreground">
                 {getRelativeTimeLabel(task.thread.updatedAt ?? task.thread.createdAt)}
               </span>
             </div>
@@ -398,7 +398,7 @@ const DEFAULT_CONTEXT_WINDOW = 200_000;
               </span>
             </div>
             <div className="flex flex-row items-center gap-1.5 px-1">
-              <span className="text-xxs text-muted-foreground/50">
+              <span className="text-xxs text-muted-foreground">
                 {modelLabel}
               </span>
             </div>

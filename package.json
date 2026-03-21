@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "concurrently -n app,agent -c blue,magenta \"bun run dev:app\" \"bun run dev:server\"",
     "web": "bash scripts/dev-web.sh",
+    "dev:tryade": "bun run --filter @agentide/tryade dev",
+    "build:tryade": "bun run --filter @agentide/tryade build",
     "dev:app": "bun run --filter @agentide/app dev",
     "dev:desktop": "bun run --filter @agentide/desktop dev",
     "dev:full": "concurrently -n app,desktop,agent -c blue,green,magenta \"bun run dev:app\" \"bun run dev:desktop\" \"bun run dev:server\"",
@@ -17,7 +19,7 @@
     "build:desktop": "bun run --filter @agentide/desktop build",
     "build:prod": "npm run build:shared && npm run build:agent && npm run build:app",
     "build:prod:electron": "npm run build:shared && npm run build:agent && bun run --filter @agentide/app build:electron && npm run build:desktop",
-    "clean": "rm -rf apps/app/dist apps/desktop/dist packages/shared/dist packages/agent/dist",
+    "clean": "rm -rf apps/app/dist apps/desktop/dist apps/tryade/dist packages/shared/dist packages/agent/dist",
     "format": "biome format --write .",
     "format:check": "biome format .",
     "test": "bun run --filter @agentide/desktop test && bun run --filter @agentide/app test",

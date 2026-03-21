@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+URL="${AGENTIDE_INSTALL_SCRIPT_URL:-https://tryade.sh/install.sh}"
+curl -fsSL "$URL" | bash -s -- "$@"

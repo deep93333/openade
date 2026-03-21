@@ -1,0 +1,27 @@
+{
+  "name": "@agentide/tryade",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "sync": "bash scripts/sync-install.sh",
+    "predev": "bun run sync",
+    "dev": "vite --port 3020",
+    "prebuild": "bun run sync",
+    "build": "vite build",
+    "preview": "vite preview --port 3020"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.13",
+    "tailwindcss": "^4.1.13",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@vitejs/plugin-react": "^4.6.0",
+    "typescript": "~5.8.3",
+    "vite": "^7.0.4"
+  }
+}

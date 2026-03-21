@@ -101,6 +101,23 @@
         "typescript": "~5.8.3",
       },
     },
+    "apps/tryade": {
+      "name": "@agentide/tryade",
+      "version": "0.0.0",
+      "dependencies": {
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0",
+      },
+      "devDependencies": {
+        "@tailwindcss/vite": "^4.1.13",
+        "@types/react": "^18.2.0",
+        "@types/react-dom": "^18.2.0",
+        "@vitejs/plugin-react": "^4.6.0",
+        "tailwindcss": "^4.1.13",
+        "typescript": "~5.8.3",
+        "vite": "^7.0.4",
+      },
+    },
     "packages/agent": {
       "name": "@agentide/agent",
       "version": "1.0.0",
@@ -205,6 +222,8 @@
     "@agentide/server": ["@agentide/server@workspace:apps/server"],
 
     "@agentide/shared": ["@agentide/shared@workspace:packages/shared"],
+
+    "@agentide/tryade": ["@agentide/tryade@workspace:apps/tryade"],
 
     "@agentide/ui": ["@agentide/ui@workspace:packages/ui"],
 

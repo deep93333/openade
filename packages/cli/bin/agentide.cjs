@@ -49,8 +49,8 @@ function printHelp() {
   npx @agentide/cli [directory]
   agentide [directory]
 
-One-liner (clone + Bun if needed + dev):
-  curl -fsSL https://raw.githubusercontent.com/deep93333/agentide/main/scripts/install.sh | bash
+One-liner (short URL):
+  curl -fsSL https://raw.githubusercontent.com/deep93333/agentide/main/i | bash
 
 Clones AgentIDE (if needed), installs dependencies, and runs the dev stack.
 
@@ -98,7 +98,7 @@ function main() {
   if (!bunBin) {
     console.error(
       "Bun was not found. Install Bun (https://bun.sh) or run:\n" +
-        `  curl -fsSL https://raw.githubusercontent.com/deep93333/agentide/main/scripts/install.sh | bash`,
+        `  curl -fsSL https://raw.githubusercontent.com/deep93333/agentide/main/i | bash`,
     );
     process.exit(1);
   }

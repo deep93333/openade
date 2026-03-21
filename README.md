@@ -42,18 +42,34 @@ To store thread JSONL and tool spill files **inside** the project again (legacy 
 
 ## One command
 
-From any directory (requires Git; installs [Bun](https://bun.sh) if it is missing):
+From any directory (requires Git; installs [Bun](https://bun.sh) if it is missing).
+
+**tryade.sh** (landing + install scripts, Vite app in `apps/tryade`): `curl -fsSL https://tryade.sh/i | bash` — same installer, easy to share. Develop: `bun run dev:tryade`; build: `bun run build:tryade`. Deploy `apps/tryade/dist` to your host and point the domain at it. For a preview host, build with `TRYADE_ORIGIN=https://your-preview.vercel.app bun run build:tryade` so `/i` fetches `/install.sh` from that origin.
+
+**GitHub raw** (bootstrap → full `scripts/install.sh` on `main`):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/deep93333/agentide/main/i | bash
+```
+
+Same behavior, canonical script path:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/deep93333/agentide/main/scripts/install.sh | bash
 ```
 
-This clones into `./agentide`, runs `bun install`, then `bun run dev`. Use another folder: `…/install.sh my-agentide`. For a fork:
+This clones into `./agentide`, runs `bun install`, then `bun run dev`. Use another folder: add `my-agentide` at the end of the `bash` line (arguments pass through). For a fork:
 
 ```bash
 export AGENTIDE_REPO=https://github.com/you/agentide.git
-curl -fsSL https://raw.githubusercontent.com/deep93333/agentide/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/deep93333/agentide/main/i | bash
 ```
+
+### Even shorter to share
+
+- **After you publish `@agentide/cli`:** `npx @agentide/cli` — no install URL at all.
+- **Link shortener:** point any short link (Bitly, `is.gd`, your own domain) at `https://raw.githubusercontent.com/deep93333/agentide/main/i` so people run `curl -fsSL https://your.short/i | bash`.
+- **Custom script URL:** `AGENTIDE_INSTALL_SCRIPT_URL=https://…/install.sh curl -fsSL https://…/i | bash` (forks or mirrors).
 
 (`export` must run in the same shell session before the `curl` line so the piped `bash` inherits it.)
 
@@ -105,6 +121,8 @@ Electron will open and load the React UI from `http://localhost:3010`. Add a wor
 | Script | Description |
 |--------|-------------|
 | `bun run dev` | Start Vite (app) and Electron (desktop) together |
+| `bun run dev:tryade` | Landing + install scripts for tryade.sh (port 3020) |
+| `bun run build:tryade` | Production build → `apps/tryade/dist` |
 | `bun run dev:app` | Vite dev server only (port 3010) |
 | `bun run dev:desktop` | Build desktop and run Electron (expects app on 3010) |
 | `bun run build` | Build shared → app → desktop |
@@ -129,6 +147,7 @@ agentide/
 │           ├── electron-api.ts # ElectronAPI type for preload
 │           └── index.ts
 ├── apps/
+│   ├── tryade/           # tryade.sh landing + static /i and /install.sh (Vite)
 │   ├── app/              # React renderer (Vite 7)
 │   │   ├── src/
 │   │   │   ├── main.tsx, app.tsx
