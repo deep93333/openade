@@ -68,7 +68,7 @@ function ModelDropdown({
           <ChevronDownIcon className="size-3.5 shrink-0 opacity-50" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-[220px]">
+      <DropdownMenuContent align="end" className="w-[220px] max-h-[280px]">
         <DropdownMenuRadioGroup value={selectedModel} onValueChange={handleModelChange}>
           {modelOptions.map((opt) => (
             <DropdownMenuRadioItem key={opt.value} value={opt.value}>

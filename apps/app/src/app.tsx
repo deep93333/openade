@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { AppLayout } from "@/layouts/app-layout";
 import { NewTaskWindow } from "@/components/tasks/new-task-window";
+import { ThemeSync } from "@/components/theme-sync";
 import { useChatEditorStore } from "@/store/editor";
 
 const getRoute = () => {
@@ -19,6 +20,7 @@ export const App = () => {
 
   return (
     <div className="flex h-screen w-full min-w-0 overflow-hidden bg-background">
+      <ThemeSync />
       {isNewTaskWindow ? <NewTaskWindow /> : <AppLayout />}
     </div>
   );

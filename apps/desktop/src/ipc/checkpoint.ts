@@ -1,22 +1,27 @@
-import { ipcMain } from "electron";
 import { IPC } from "@agentide/shared";
 import type { Checkpoint } from "@agentide/shared";
+import { ipcMain } from "electron";
 import { ulid } from "ulid";
 import * as chatStorage from "../services/chat-storage";
-import { workspaceManager } from "../services/workspace-manager";
 import { gitService } from "../services/git-service";
-import { postRunSnapshotPromises } from "./agent";
 import {
-  saveSnapshots,
+  type FileSnapshot,
   loadSnapshots,
   restoreFromSnapshots,
-  type FileSnapshot,
+  saveSnapshots,
 } from "../services/snapshot-store";
+import { workspaceManager } from "../services/workspace-manager";
+
+type PostRunSnapshot = { untracked: string[]; stashSha: string | null };
+const postRunSnapshotPromises = new Map<string, Promise<PostRunSnapshot>>();
 
 export function registerCheckpointHandlers(): void {
   ipcMain.handle(
     IPC.CHECKPOINT_CREATE,
-    async (_event, params: { workspaceId: string; activeThreadId: string; messageIndex: number }) => {
+    async (
+      _event,
+      params: { workspaceId: string; activeThreadId: string; messageIndex: number }
+    ) => {
       try {
         const workspace = workspaceManager.get(params.workspaceId);
         if (!workspace) return { success: false, error: "Workspace not found" };
@@ -46,7 +51,11 @@ export function registerCheckpointHandlers(): void {
         let finalizedPrev: Checkpoint | null = null;
         if (prevCheckpoint && !prevCheckpoint.modifiedFiles) {
           const modified = await gitService
-            .getModifiedFilesBetween(workspace.path, prevCheckpoint.gitStashRef ?? null, gitStashRef ?? null)
+            .getModifiedFilesBetween(
+              workspace.path,
+              prevCheckpoint.gitStashRef ?? null,
+              gitStashRef ?? null
+            )
             .catch(() => [] as string[]);
           const fromSet = new Set(prevCheckpoint.untrackedAtCheckpoint ?? []);
           const created = untrackedAtCheckpoint.filter((f) => !fromSet.has(f));
@@ -66,16 +75,43 @@ export function registerCheckpointHandlers(): void {
         const threads = chat.threads.map((t) => {
           if (t.id !== params.activeThreadId) return t;
           const updatedCheckpoints = (t.checkpoints ?? []).map((c) =>
-            finalizedPrev && c.id === finalizedPrev.id ? finalizedPrev : c,
+            finalizedPrev && c.id === finalizedPrev.id ? finalizedPrev : c
           );
           return { ...t, checkpoints: [...updatedCheckpoints, newCheckpoint] };
         });
         chatStorage.setChat(params.workspaceId, { threads });
         return { success: true, data: { checkpoint: newCheckpoint, finalizedPrev } };
       } catch (error) {
-        return { success: false, error: error instanceof Error ? error.message : "Failed to create checkpoint" };
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : "Failed to create checkpoint",
+        };
       }
-    },
+    }
+  );
+
+  ipcMain.handle(
+    IPC.CHECKPOINT_CAPTURE_POST_RUN,
+    async (_event, params: { workspaceId: string; threadId: string }) => {
+      try {
+        const workspace = workspaceManager.get(params.workspaceId);
+        if (!workspace) return { success: false, error: "Workspace not found" };
+        const key = `${params.workspaceId}:${params.threadId}`;
+        postRunSnapshotPromises.set(
+          key,
+          Promise.all([
+            gitService.getUntrackedFiles(workspace.path).catch(() => [] as string[]),
+            gitService.stashCreate(workspace.path).catch(() => null as string | null),
+          ]).then(([untracked, stashSha]) => ({ untracked, stashSha }))
+        );
+        return { success: true };
+      } catch (error) {
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : "Failed to capture post-run snapshot",
+        };
+      }
+    }
   );
 
   ipcMain.handle(
@@ -89,15 +125,19 @@ export function registerCheckpointHandlers(): void {
         const thread = chat.threads.find((t) => t.id === params.threadId);
         if (!thread) return { success: false, error: "Thread not found" };
 
-        const checkpoint = thread.checkpoints?.slice().reverse().find((c) => !c.modifiedFiles);
+        const checkpoint = thread.checkpoints
+          ?.slice()
+          .reverse()
+          .find((c) => !c.modifiedFiles);
         if (!checkpoint) return { success: true, data: null };
 
         const snapshotKey = `${params.workspaceId}:${params.threadId}`;
-        const postRun = await postRunSnapshotPromises.get(snapshotKey)?.catch(() => null) ?? null;
+        const postRun = (await postRunSnapshotPromises.get(snapshotKey)?.catch(() => null)) ?? null;
         postRunSnapshotPromises.delete(snapshotKey);
 
-        const postRunUntracked = postRun?.untracked
-          ?? await gitService.getUntrackedFiles(workspace.path).catch(() => [] as string[]);
+        const postRunUntracked =
+          postRun?.untracked ??
+          (await gitService.getUntrackedFiles(workspace.path).catch(() => [] as string[]));
         const postRunStashSha = postRun?.stashSha ?? null;
 
         const modified = await gitService
@@ -112,10 +152,12 @@ export function registerCheckpointHandlers(): void {
             ? {
                 ...t,
                 checkpoints: (t.checkpoints ?? []).map((c) =>
-                  c.id === checkpoint.id ? { ...c, modifiedFiles: modified, createdFiles: created } : c,
+                  c.id === checkpoint.id
+                    ? { ...c, modifiedFiles: modified, createdFiles: created }
+                    : c
                 ),
               }
-            : t,
+            : t
         );
         chatStorage.setChat(params.workspaceId, { threads: updatedThreads });
 
@@ -124,16 +166,24 @@ export function registerCheckpointHandlers(): void {
           data: { checkpointId: checkpoint.id, modifiedFiles: modified, createdFiles: created },
         };
       } catch (error) {
-        return { success: false, error: error instanceof Error ? error.message : "Failed to finalize checkpoint" };
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : "Failed to finalize checkpoint",
+        };
       }
-    },
+    }
   );
 
   ipcMain.handle(
     IPC.CHECKPOINT_RESTORE,
     async (
       _event,
-      params: { workspaceId: string; stashRef: string | null; modifiedFiles?: string[]; createdFiles?: string[] },
+      params: {
+        workspaceId: string;
+        stashRef: string | null;
+        modifiedFiles?: string[];
+        createdFiles?: string[];
+      }
     ) => {
       try {
         const workspace = workspaceManager.get(params.workspaceId);
@@ -151,42 +201,62 @@ export function registerCheckpointHandlers(): void {
         }
         return { success: true };
       } catch (error) {
-        return { success: false, error: error instanceof Error ? error.message : "Failed to restore checkpoint" };
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : "Failed to restore checkpoint",
+        };
       }
-    },
+    }
   );
 
   ipcMain.handle(
     IPC.CHECKPOINT_SAVE_SNAPSHOTS,
     async (
       _event,
-      params: { workspaceId: string; threadId: string; checkpointId: string; snapshots: FileSnapshot[] },
+      params: {
+        workspaceId: string;
+        threadId: string;
+        checkpointId: string;
+        snapshots: FileSnapshot[];
+      }
     ) => {
       try {
-        await saveSnapshots(params.workspaceId, params.threadId, params.checkpointId, params.snapshots);
+        await saveSnapshots(
+          params.workspaceId,
+          params.threadId,
+          params.checkpointId,
+          params.snapshots
+        );
         return { success: true };
       } catch (error) {
-        return { success: false, error: error instanceof Error ? error.message : "Failed to save snapshots" };
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : "Failed to save snapshots",
+        };
       }
-    },
+    }
   );
 
   ipcMain.handle(
     IPC.CHECKPOINT_RESTORE_SNAPSHOTS,
-    async (
-      _event,
-      params: { workspaceId: string; threadId: string; checkpointId: string },
-    ) => {
+    async (_event, params: { workspaceId: string; threadId: string; checkpointId: string }) => {
       try {
-        const snapshots = await loadSnapshots(params.workspaceId, params.threadId, params.checkpointId);
+        const snapshots = await loadSnapshots(
+          params.workspaceId,
+          params.threadId,
+          params.checkpointId
+        );
         if (snapshots.length === 0) {
           return { success: false, error: "No snapshots found for this checkpoint" };
         }
         const result = await restoreFromSnapshots(snapshots);
         return { success: true, data: result };
       } catch (error) {
-        return { success: false, error: error instanceof Error ? error.message : "Failed to restore snapshots" };
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : "Failed to restore snapshots",
+        };
       }
-    },
+    }
   );
 }

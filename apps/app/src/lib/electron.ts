@@ -1,12 +1,20 @@
+import { getBackendBaseUrl } from "@/lib/backend-url";
+import { createWebElectronAPI } from "@/lib/web-electron-api";
 import type { ElectronAPI, WindowWithElectronAPI } from "@agentide/shared";
 
+let webElectronApi: ElectronAPI | null = null;
+
 export const getElectronAPI = (): ElectronAPI | null => {
-  if (typeof window !== "undefined" && "electronAPI" in window) {
-    return (window as unknown as WindowWithElectronAPI).electronAPI;
+  if (typeof window === "undefined") return null;
+  const native = (window as unknown as Partial<WindowWithElectronAPI>).electronAPI;
+  if (native) return native;
+  if (!webElectronApi) {
+    webElectronApi = createWebElectronAPI(getBackendBaseUrl());
   }
-  return null;
+  return webElectronApi;
 };
 
 export const isElectron = (): boolean => {
-  return getElectronAPI() !== null;
+  if (typeof window === "undefined") return false;
+  return Boolean((window as unknown as Partial<WindowWithElectronAPI>).electronAPI);
 };

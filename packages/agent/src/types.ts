@@ -14,6 +14,7 @@ export type ToolApprovalResult =
 export type AgentBackendStartOptions = {
   sessionId: string;
   workspacePath: string;
+  workspaceId?: string;
   prompt: string;
   existingMessages?: AgentMessage[];
   activeMemory?: string;

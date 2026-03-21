@@ -422,7 +422,7 @@ function NewTaskForm({ open, workspaces, defaultWorkspaceId, onCreate, onClose }
                   <ChevronDownIcon className="size-3.5 shrink-0" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-[220px]">
+              <DropdownMenuContent align="start" className="w-[220px] max-h-[280px]">
                 <DropdownMenuRadioGroup
                   value={selectedModel || agentSelectedModel}
                   onValueChange={(value) => {

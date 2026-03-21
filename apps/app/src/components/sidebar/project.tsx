@@ -12,7 +12,8 @@ import {
 } from "@agentide/ui";
 import { IconFolder, IconPlus, IconLink } from "@tabler/icons-react";
 import { useWorkspaceStore } from "@/store/workspace";
-import { getElectronAPI } from "@/lib/electron";
+import { getElectronAPI, isElectron } from "@/lib/electron";
+import { pickWebDirectoryDisplayName, supportsShowDirectoryPicker } from "@/lib/browser-directory-picker";
 
 type CreateWorkspaceDialogProps = {
   isOpen: boolean;
@@ -51,18 +52,30 @@ export const CreateWorkspaceDialog = ({ isOpen, onClose }: CreateWorkspaceDialog
   const [cloneUrl, setCloneUrl] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [webFolderPickHint, setWebFolderPickHint] = useState<string | null>(null);
   const createWorkspace = useWorkspaceStore((s) => s.createWorkspace);
   const electronAPI = getElectronAPI();
-  const hasFolderPicker = Boolean(electronAPI?.dialog?.selectFolder);
+  const canBrowseFolder = isElectron() || supportsShowDirectoryPicker();
   const hasProjectApi = Boolean(electronAPI?.project);
 
   const options = hasProjectApi ? OPTIONS : OPTIONS.slice(0, 1);
 
   const handleSelectFolder = async (): Promise<string | null> => {
+    if (!isElectron()) return null;
     const api = getElectronAPI();
     if (!api?.dialog?.selectFolder) return null;
     const result = await api.dialog.selectFolder();
     return result.success && result.data ? result.data : null;
+  };
+
+  const handleBrowseFolderPath = async () => {
+    if (isElectron()) {
+      const selectedPath = await handleSelectFolder();
+      if (selectedPath) setPath(selectedPath);
+      return;
+    }
+    const name = await pickWebDirectoryDisplayName();
+    if (name) setWebFolderPickHint(name);
   };
 
   const addWorkspaceFromPath = async (dirPath: string) => {
@@ -77,6 +90,7 @@ export const CreateWorkspaceDialog = ({ isOpen, onClose }: CreateWorkspaceDialog
     setFolderName("");
     setCloneUrl("");
     setError(null);
+    setWebFolderPickHint(null);
   };
 
   const handleChooseOption = async (value: WorkspaceMode) => {
@@ -85,37 +99,39 @@ export const CreateWorkspaceDialog = ({ isOpen, onClose }: CreateWorkspaceDialog
     if (!api) return;
 
     if (value === "existing") {
-      const selectedPath = await handleSelectFolder();
-      if (selectedPath) {
-        setIsSubmitting(true);
-        try {
-          await addWorkspaceFromPath(selectedPath);
-          reset();
-          onClose();
-        } catch (err) {
-          setError(err instanceof Error ? err.message : "Failed to add workspace");
-        } finally {
-          setIsSubmitting(false);
+      if (isElectron()) {
+        const selectedPath = await handleSelectFolder();
+        if (selectedPath) {
+          setIsSubmitting(true);
+          try {
+            await addWorkspaceFromPath(selectedPath);
+            reset();
+            onClose();
+          } catch (err) {
+            setError(err instanceof Error ? err.message : "Failed to add workspace");
+          } finally {
+            setIsSubmitting(false);
+          }
         }
-      } else if (hasFolderPicker) {
         return;
-      } else {
-        setMode("existing");
-        setStep(2);
       }
+      setMode("existing");
+      setStep(2);
       return;
     }
 
     if (value === "empty") {
-      const parentPath = await handleSelectFolder();
-      if (parentPath) {
-        setPath(parentPath);
-        setMode("empty");
-        setStep(2);
-      } else if (!hasFolderPicker) {
-        setMode("empty");
-        setStep(2);
+      if (isElectron()) {
+        const parentPath = await handleSelectFolder();
+        if (parentPath) {
+          setPath(parentPath);
+          setMode("empty");
+          setStep(2);
+        }
+        return;
       }
+      setMode("empty");
+      setStep(2);
       return;
     }
 
@@ -130,6 +146,12 @@ export const CreateWorkspaceDialog = ({ isOpen, onClose }: CreateWorkspaceDialog
     setFolderName("");
     setCloneUrl("");
     setError(null);
+    setWebFolderPickHint(null);
+  };
+
+  const onPathInputChange = (value: string) => {
+    setPath(value);
+    setWebFolderPickHint(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -224,7 +246,7 @@ export const CreateWorkspaceDialog = ({ isOpen, onClose }: CreateWorkspaceDialog
                     <Button
                       key={value}
                       type="button"
-                      variant="bordered"
+                      variant="secondary"
                       onClick={() => handleChooseOption(value)}
                       className="flex flex-1 flex-col gap-1.5 h-24"
                     >
@@ -243,19 +265,27 @@ export const CreateWorkspaceDialog = ({ isOpen, onClose }: CreateWorkspaceDialog
                   <Input
                     type="text"
                     value={path}
-                    onChange={(e) => setPath(e.target.value)}
+                    onChange={(e) => onPathInputChange(e.target.value)}
                     placeholder={
-                      hasFolderPicker
-                        ? "Select a folder or paste path"
+                      canBrowseFolder
+                        ? isElectron()
+                          ? "Select a folder or paste path"
+                          : "Paste absolute path (Browse opens the system folder picker)"
                         : "/Users/you/projects/my-project"
                     }
                   />
-                  {hasFolderPicker && (
-                    <Button type="button" variant="secondary" onClick={handleSelectFolder}>
+                  {canBrowseFolder && (
+                    <Button type="button" variant="secondary" onClick={() => void handleBrowseFolderPath()}>
                       Browse…
                     </Button>
                   )}
                 </div>
+                {webFolderPickHint && !isElectron() && (
+                  <p className="text-xs text-muted-foreground">
+                    You chose folder &quot;{webFolderPickHint}&quot; in the picker. Paste its full path above so
+                    the local server can open it.
+                  </p>
+                )}
                 {path.trim() && (
                   <p className="text-xs text-muted-foreground">
                     Project name: {getProjectNameFromPath(path)}
@@ -272,24 +302,27 @@ export const CreateWorkspaceDialog = ({ isOpen, onClose }: CreateWorkspaceDialog
                     <Input
                       type="text"
                       value={path}
-                      onChange={(e) => setPath(e.target.value)}
+                      onChange={(e) => onPathInputChange(e.target.value)}
                       placeholder={
-                        hasFolderPicker ? "Select folder or paste path" : "/Users/you/projects"
+                        canBrowseFolder
+                          ? isElectron()
+                            ? "Select folder or paste path"
+                            : "Paste absolute path (Browse opens the system folder picker)"
+                          : "/Users/you/projects"
                       }
                     />
-                    {hasFolderPicker && (
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        onClick={async () => {
-                          const selectedPath = await handleSelectFolder();
-                          if (selectedPath) setPath(selectedPath);
-                        }}
-                      >
+                    {canBrowseFolder && (
+                      <Button type="button" variant="secondary" onClick={() => void handleBrowseFolderPath()}>
                         Browse…
                       </Button>
                     )}
                   </div>
+                  {webFolderPickHint && !isElectron() && (
+                    <p className="text-xs text-muted-foreground">
+                      You chose folder &quot;{webFolderPickHint}&quot; in the picker. Paste its full path above so
+                      the local server can open it.
+                    </p>
+                  )}
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label>Folder name</Label>
@@ -311,24 +344,27 @@ export const CreateWorkspaceDialog = ({ isOpen, onClose }: CreateWorkspaceDialog
                     <Input
                       type="text"
                       value={path}
-                      onChange={(e) => setPath(e.target.value)}
+                      onChange={(e) => onPathInputChange(e.target.value)}
                       placeholder={
-                        hasFolderPicker ? "Select folder or paste path" : "/Users/you/projects"
+                        canBrowseFolder
+                          ? isElectron()
+                            ? "Select folder or paste path"
+                            : "Paste absolute path (Browse opens the system folder picker)"
+                          : "/Users/you/projects"
                       }
                     />
-                    {hasFolderPicker && (
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        onClick={async () => {
-                          const selectedPath = await handleSelectFolder();
-                          if (selectedPath) setPath(selectedPath);
-                        }}
-                      >
+                    {canBrowseFolder && (
+                      <Button type="button" variant="secondary" onClick={() => void handleBrowseFolderPath()}>
                         Browse…
                       </Button>
                     )}
                   </div>
+                  {webFolderPickHint && !isElectron() && (
+                    <p className="text-xs text-muted-foreground">
+                      You chose folder &quot;{webFolderPickHint}&quot; in the picker. Paste its full path above so
+                      the local server can open it.
+                    </p>
+                  )}
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label>Repository URL</Label>

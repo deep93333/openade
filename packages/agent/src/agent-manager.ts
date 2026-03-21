@@ -100,6 +100,7 @@ export function createAgentManager(options: AgentManagerOptions) {
       const backendOptions: AgentBackendStartOptions = {
         sessionId,
         workspacePath: options.workspacePath,
+        workspaceId: options.workspaceId,
         prompt: options.prompt,
         existingMessages: options.existingMessages,
         activeMemory: options.activeMemory,

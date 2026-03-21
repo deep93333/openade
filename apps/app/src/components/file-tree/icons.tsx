@@ -1,7 +1,7 @@
 const DEFAULT_SIZE = "size-4";
 
 const ICON_COLOR =
-  "rgba(255, 255, 255, 0.95)";
+  "rgba(0, 0, 0, 0.65)";
 
 export function FolderIcon({ name, open, size = DEFAULT_SIZE }: { name: string; open?: boolean; size?: string }) {
   return (

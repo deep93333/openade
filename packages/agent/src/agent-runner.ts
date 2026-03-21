@@ -308,7 +308,12 @@ async function pushAndPersist(ctx: RunContext, messages: ModelMessage[]) {
     count: messages.length,
     roles: messages.map((m) => m.role),
   });
-  appendMessages(ctx.options.workspacePath, ctx.sessionId, messages).catch((err) => {
+  appendMessages(
+    ctx.options.workspacePath,
+    ctx.sessionId,
+    messages,
+    ctx.options.workspaceId,
+  ).catch((err) => {
     logAgentEvent(ctx.logger, "ERROR", "Agent", "persist_failed", {
       sessionId: ctx.sessionId,
       error: err instanceof Error ? err.message : String(err),
@@ -481,7 +486,7 @@ async function runReadOnlyMode(ctx: RunContext): Promise<void> {
 async function runAgentMode(ctx: RunContext): Promise<void> {
   const { config, sessionId, modelDef, linkedAbort, conversationHistory, options, logger } = ctx;
 
-  const offloader = await initOffloader(options.workspacePath);
+  const offloader = await initOffloader(options.workspacePath, options.workspaceId);
 
   const toolCtx: ToolContext = {
     sessionId,
@@ -754,7 +759,7 @@ async function runAgent(
 
   const userMessage = { role: "user", content: userContent } as ModelMessage;
   conversationHistory.push(userMessage);
-  appendMessages(options.workspacePath, sessionId, [userMessage]).catch((err) => {
+  appendMessages(options.workspacePath, sessionId, [userMessage], options.workspaceId).catch((err) => {
     logAgentEvent(logger, "ERROR", "Persistence", "append user message failed", {
       sessionId,
       error: err instanceof Error ? err.message : String(err),

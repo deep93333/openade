@@ -1,4 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { DiffStats, FileName, basename } from "@/components/primitives";
+import { getAgentBridge } from "@/lib/agent-bridge";
+import { getElectronAPI } from "@/lib/electron";
+import { useChatEditorStore } from "@/store/editor";
+import { useUIStore } from "@/store/ui";
+import { useWorkspaceStore } from "@/store/workspace";
 import type {
   AgentProvider,
   CommitMessageGeneratorFile,
@@ -7,13 +12,7 @@ import type {
   GitUnstagedChange,
   IpcResult,
 } from "@agentide/shared";
-import {
-  Button,
-  PlusIcon,
-  Textarea,
-  CircleCheckIcon,
-  cn,
-} from "@agentide/ui";
+import { Button, CircleCheckIcon, PlusIcon, Textarea, cn } from "@agentide/ui";
 import {
   IconArrowBackUp,
   IconChevronDown,
@@ -26,11 +25,7 @@ import {
   IconSparkles,
   IconUpload,
 } from "@tabler/icons-react";
-import { getElectronAPI } from "@/lib/electron";
-import { useWorkspaceStore } from "@/store/workspace";
-import { useUIStore } from "@/store/ui";
-import { useChatEditorStore } from "@/store/editor";
-import { FileName, basename, DiffStats } from "@/components/primitives";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type GitChangesPanelProps = {
   className?: string;
@@ -90,8 +85,12 @@ function FileRow({
       )}
       onClick={() => onSelect(file.path)}
     >
-      <FileName path={file.path} nameClassName="text-xs text-foreground" className="min-w-0 flex-1" />
-      
+      <FileName
+        path={file.path}
+        nameClassName="text-xs text-foreground"
+        className="min-w-0 flex-1"
+      />
+
       <div className="flex items-center gap-0.5 shrink-0">
         <div className="flex items-center gap-0.5 opacity-0 group-hover/row:opacity-100 transition-opacity ml-0.5">
           {action === "stage" && onRevert && (
@@ -100,7 +99,10 @@ function FileRow({
               size="icon-xs"
               variant="ghost"
               disabled={revertLoading}
-              onClick={(e) => { e.stopPropagation(); onRevert(file.path); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onRevert(file.path);
+              }}
               className="size-5"
             >
               <IconArrowBackUp className="size-3" />
@@ -111,10 +113,17 @@ function FileRow({
             size="icon-xs"
             variant="ghost"
             disabled={actionLoading}
-            onClick={(e) => { e.stopPropagation(); onAction(file.path); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onAction(file.path);
+            }}
             className="size-5"
           >
-            {action === "stage" ? <PlusIcon className="size-3" /> : <IconMinus className="size-3" />}
+            {action === "stage" ? (
+              <PlusIcon className="size-3" />
+            ) : (
+              <IconMinus className="size-3" />
+            )}
           </Button>
         </div>
       </div>
@@ -197,9 +206,7 @@ function Section({ title, count, defaultOpen = true, headerAction, children }: S
         <span className="text-xxs  font-semibold  text-muted-foreground">{title}</span>
         <span className="text-xxs  text-muted-foreground">({count})</span>
         <div className="flex-1" />
-        {headerAction && (
-          <div onClick={(e) => e.stopPropagation()}>{headerAction}</div>
-        )}
+        {headerAction && <div onClick={(e) => e.stopPropagation()}>{headerAction}</div>}
       </div>
       {open && children}
     </div>
@@ -239,10 +246,13 @@ function clipPatchForCommitMessage(patch: string): string {
   return kept.join("\n");
 }
 
-export const GitChangesPanel = ({ className, onFileSelect: _onFileSelect }: GitChangesPanelProps) => {
+export const GitChangesPanel = ({
+  className,
+  onFileSelect: _onFileSelect,
+}: GitChangesPanelProps) => {
   const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
-  const activeWorkspace = useWorkspaceStore((s) =>
-    s.workspaces.find((w) => w.id === s.activeWorkspaceId) ?? null
+  const activeWorkspace = useWorkspaceStore(
+    (s) => s.workspaces.find((w) => w.id === s.activeWorkspaceId) ?? null
   );
   const gitChangeVersion = useWorkspaceStore((s) =>
     activeWorkspaceId ? (s.gitChangeVersions[activeWorkspaceId] ?? 0) : 0
@@ -274,12 +284,23 @@ export const GitChangesPanel = ({ className, onFileSelect: _onFileSelect }: GitC
   const hasLoadedOnceRef = useRef(false);
 
   const totalCount = staged.length + unstaged.length;
-  const totalAdded = useMemo(() => [...staged, ...unstaged].reduce((s, c) => s + c.added, 0), [staged, unstaged]);
+  const totalAdded = useMemo(
+    () => [...staged, ...unstaged].reduce((s, c) => s + c.added, 0),
+    [staged, unstaged]
+  );
   const commitMessageModelOptions = useMemo(
-    () => modelOptions.map((option) => ({ value: option.value, label: option.label, provider: option.provider })),
+    () =>
+      modelOptions.map((option) => ({
+        value: option.value,
+        label: option.label,
+        provider: option.provider,
+      })),
     [modelOptions]
   );
-  const totalDeleted = useMemo(() => [...staged, ...unstaged].reduce((s, c) => s + c.deleted, 0), [staged, unstaged]);
+  const totalDeleted = useMemo(
+    () => [...staged, ...unstaged].reduce((s, c) => s + c.deleted, 0),
+    [staged, unstaged]
+  );
   const totalStagedAdded = useMemo(() => staged.reduce((s, c) => s + c.added, 0), [staged]);
   const totalStagedDeleted = useMemo(() => staged.reduce((s, c) => s + c.deleted, 0), [staged]);
 
@@ -301,11 +322,15 @@ export const GitChangesPanel = ({ className, onFileSelect: _onFileSelect }: GitC
       const [unstagedRes, stagedRes, aheadRes] = await Promise.all([
         Promise.race([
           api.workspace.getUnstagedChanges(activeWorkspace.id),
-          new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Request timed out")), timeoutMs)),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error("Request timed out")), timeoutMs)
+          ),
         ]),
         Promise.race([
           api.workspace.getStagedChanges(activeWorkspace.id),
-          new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Request timed out")), timeoutMs)),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error("Request timed out")), timeoutMs)
+          ),
         ]),
         (api.workspace as ElectronAPI["workspace"]).getAheadCount(activeWorkspace.id),
       ]);
@@ -352,29 +377,47 @@ export const GitChangesPanel = ({ className, onFileSelect: _onFileSelect }: GitC
     };
   }, []);
 
-  const handleStage = useCallback(async (path: string) => {
-    const api = getElectronAPI();
-    const stage = (api?.workspace as { stageFile?: (w: string, p: string) => Promise<{ success?: boolean }> } | undefined)?.stageFile;
-    if (!stage || !activeWorkspace?.id) return;
-    setStageLoading(path);
-    const result = await stage(activeWorkspace.id, path);
-    setStageLoading(null);
-    if (result?.success) load();
-  }, [activeWorkspace?.id, load]);
+  const handleStage = useCallback(
+    async (path: string) => {
+      const api = getElectronAPI();
+      const stage = (
+        api?.workspace as
+          | { stageFile?: (w: string, p: string) => Promise<{ success?: boolean }> }
+          | undefined
+      )?.stageFile;
+      if (!stage || !activeWorkspace?.id) return;
+      setStageLoading(path);
+      const result = await stage(activeWorkspace.id, path);
+      setStageLoading(null);
+      if (result?.success) load();
+    },
+    [activeWorkspace?.id, load]
+  );
 
-  const handleUnstage = useCallback(async (path: string) => {
-    const api = getElectronAPI();
-    const unstage = (api?.workspace as { unstageFile?: (w: string, p: string) => Promise<{ success?: boolean }> } | undefined)?.unstageFile;
-    if (!unstage || !activeWorkspace?.id) return;
-    setUnstageLoading(path);
-    const result = await unstage(activeWorkspace.id, path);
-    setUnstageLoading(null);
-    if (result?.success) load();
-  }, [activeWorkspace?.id, load]);
+  const handleUnstage = useCallback(
+    async (path: string) => {
+      const api = getElectronAPI();
+      const unstage = (
+        api?.workspace as
+          | { unstageFile?: (w: string, p: string) => Promise<{ success?: boolean }> }
+          | undefined
+      )?.unstageFile;
+      if (!unstage || !activeWorkspace?.id) return;
+      setUnstageLoading(path);
+      const result = await unstage(activeWorkspace.id, path);
+      setUnstageLoading(null);
+      if (result?.success) load();
+    },
+    [activeWorkspace?.id, load]
+  );
 
   const handleStageAll = useCallback(async () => {
     const api = getElectronAPI();
-    const stage = (api?.workspace as { stageFile?: (w: string, p: string) => Promise<{ success?: boolean }> } | undefined)?.stageFile;
+    const stage = (
+      api?.workspace as
+        | { stageFile?: (w: string, p: string) => Promise<{ success?: boolean }> }
+        | undefined
+    )?.stageFile;
     if (!stage || !activeWorkspace?.id || unstaged.length === 0) return;
     setStageAllLoading(true);
     for (const c of unstaged) {
@@ -384,15 +427,22 @@ export const GitChangesPanel = ({ className, onFileSelect: _onFileSelect }: GitC
     load();
   }, [activeWorkspace?.id, unstaged, load]);
 
-  const handleRevert = useCallback(async (path: string) => {
-    const api = getElectronAPI();
-    const revert = (api?.workspace as { revertFileChange?: (w: string, p: string) => Promise<IpcResult> } | undefined)?.revertFileChange;
-    if (!revert || !activeWorkspace?.id) return;
-    setRevertLoading(path);
-    const result = await revert(activeWorkspace.id, path);
-    setRevertLoading(null);
-    if (result?.success) load();
-  }, [activeWorkspace?.id, load]);
+  const handleRevert = useCallback(
+    async (path: string) => {
+      const api = getElectronAPI();
+      const revert = (
+        api?.workspace as
+          | { revertFileChange?: (w: string, p: string) => Promise<IpcResult> }
+          | undefined
+      )?.revertFileChange;
+      if (!revert || !activeWorkspace?.id) return;
+      setRevertLoading(path);
+      const result = await revert(activeWorkspace.id, path);
+      setRevertLoading(null);
+      if (result?.success) load();
+    },
+    [activeWorkspace?.id, load]
+  );
 
   const handleStagedFileSelect = useCallback(
     (path: string) => {
@@ -412,7 +462,13 @@ export const GitChangesPanel = ({ className, onFileSelect: _onFileSelect }: GitC
 
   const handleGenerateCommitMessage = useCallback(async () => {
     const api = getElectronAPI();
-    if (!api?.agent?.generateCommitMessage || !api.workspace.getFileDiffContent || !activeWorkspace?.id || staged.length === 0) return;
+    if (
+      !api?.agent?.generateCommitMessage ||
+      !api.workspace.getFileDiffContent ||
+      !activeWorkspace?.id ||
+      staged.length === 0
+    )
+      return;
 
     setCommitMessageLoading(true);
     setCommitError(null);
@@ -421,33 +477,43 @@ export const GitChangesPanel = ({ className, onFileSelect: _onFileSelect }: GitC
       const filesForContext = staged.slice(0, MAX_COMMIT_MESSAGE_CONTEXT_FILES);
       let remainingPatchBudget = MAX_COMMIT_MESSAGE_TOTAL_PATCH_CHARS;
 
-      const files = (await Promise.all(
-        filesForContext.map(async (file): Promise<CommitMessageGeneratorFile> => {
-          let patch = "";
-          if (remainingPatchBudget > 0) {
-            const diffResult = await api.workspace.getFileDiffContent(activeWorkspace.id, file.path, true);
-            if (diffResult.success && diffResult.data?.patch) {
-              patch = clipPatchForCommitMessage(diffResult.data.patch).slice(0, remainingPatchBudget);
-              remainingPatchBudget -= patch.length;
+      const files = (
+        await Promise.all(
+          filesForContext.map(async (file): Promise<CommitMessageGeneratorFile> => {
+            let patch = "";
+            if (remainingPatchBudget > 0) {
+              const diffResult = await api.workspace.getFileDiffContent(
+                activeWorkspace.id,
+                file.path,
+                true
+              );
+              if (diffResult.success && diffResult.data?.patch) {
+                patch = clipPatchForCommitMessage(diffResult.data.patch).slice(
+                  0,
+                  remainingPatchBudget
+                );
+                remainingPatchBudget -= patch.length;
+              }
             }
-          }
 
-          return {
-            path: file.path,
-            added: file.added,
-            deleted: file.deleted,
-            patch,
-          };
-        })
-      )).filter((file) => file.added > 0 || file.deleted > 0 || file.patch);
+            return {
+              path: file.path,
+              added: file.added,
+              deleted: file.deleted,
+              patch,
+            };
+          })
+        )
+      ).filter((file) => file.added > 0 || file.deleted > 0 || file.patch);
 
       const selectedCommitModel = commitMessageModel || undefined;
       const selectedCommitProvider =
         commitMessageProvider ||
-        commitMessageModelOptions.find((option) => option.value === selectedCommitModel)?.provider ||
+        commitMessageModelOptions.find((option) => option.value === selectedCommitModel)
+          ?.provider ||
         "claude";
 
-      const result = await api.agent.generateCommitMessage({
+      const result = await agent.generateCommitMessage({
         files,
         model: selectedCommitModel,
         provider: selectedCommitProvider,
@@ -474,7 +540,11 @@ export const GitChangesPanel = ({ className, onFileSelect: _onFileSelect }: GitC
 
   const handleCommit = useCallback(async () => {
     const api = getElectronAPI();
-    const commit = (api?.workspace as { commit?: (w: string, m: string) => Promise<{ success?: boolean; error?: string }> })?.commit;
+    const commit = (
+      api?.workspace as {
+        commit?: (w: string, m: string) => Promise<{ success?: boolean; error?: string }>;
+      }
+    )?.commit;
     if (!commit || !activeWorkspace?.id || !commitMessage.trim()) return;
     setCommitLoading(true);
     setCommitError(null);
@@ -490,7 +560,9 @@ export const GitChangesPanel = ({ className, onFileSelect: _onFileSelect }: GitC
 
   const handlePush = useCallback(async () => {
     const api = getElectronAPI();
-    const push = (api?.workspace as { push?: (w: string) => Promise<{ success?: boolean; error?: string }> })?.push;
+    const push = (
+      api?.workspace as { push?: (w: string) => Promise<{ success?: boolean; error?: string }> }
+    )?.push;
     if (!push || !activeWorkspace?.id) return;
     setPushLoading(true);
     setCommitError(null);
@@ -534,7 +606,12 @@ export const GitChangesPanel = ({ className, onFileSelect: _onFileSelect }: GitC
 
   if (!activeWorkspace) {
     return (
-      <div className={cn("flex flex-col items-center justify-center py-8 text-xs text-muted-foreground", className)}>
+      <div
+        className={cn(
+          "flex flex-col items-center justify-center py-8 text-xs text-muted-foreground",
+          className
+        )}
+      >
         No workspace selected
       </div>
     );
@@ -542,14 +619,20 @@ export const GitChangesPanel = ({ className, onFileSelect: _onFileSelect }: GitC
 
   if (!activeWorkspace.isGitRepository) {
     return (
-      <div className={cn("flex h-full flex-col items-center justify-center gap-4 px-6 text-center", className)}>
+      <div
+        className={cn(
+          "flex h-full flex-col items-center justify-center gap-4 px-6 text-center",
+          className
+        )}
+      >
         <div className="flex size-10 items-center justify-center rounded-full bg-foreground/5">
           <IconGitBranch className="size-5 text-muted-foreground" />
         </div>
         <div className="space-y-1">
           <p className="text-sm font-medium">This workspace is not a Git repository</p>
           <p className="text-xs text-muted-foreground">
-            Chat and agent tasks still work. Initialize Git to enable branches, commits, and changes.
+            Chat and agent tasks still work. Initialize Git to enable branches, commits, and
+            changes.
           </p>
         </div>
         <Button size="sm" onClick={handleInitializeGit} loading={loading}>
@@ -561,7 +644,12 @@ export const GitChangesPanel = ({ className, onFileSelect: _onFileSelect }: GitC
 
   if (loading) {
     return (
-      <div className={cn("flex flex-col items-center justify-center py-8 text-xs text-muted-foreground", className)}>
+      <div
+        className={cn(
+          "flex flex-col items-center justify-center py-8 text-xs text-muted-foreground",
+          className
+        )}
+      >
         <IconLoader className="size-4 animate-spin mb-2" />
         Loading changes...
       </div>
@@ -574,7 +662,10 @@ export const GitChangesPanel = ({ className, onFileSelect: _onFileSelect }: GitC
         <p className="text-xs text-destructive">{error}</p>
         <button
           type="button"
-          onClick={() => { setError(null); load(); }}
+          onClick={() => {
+            setError(null);
+            load();
+          }}
           className="text-xs text-accent hover:underline"
         >
           Retry
@@ -614,9 +705,7 @@ export const GitChangesPanel = ({ className, onFileSelect: _onFileSelect }: GitC
                 className="min-h-[60px] p-3 resize-none text-xs bg-transparent border-0 shadow-none focus-visible:ring-0"
                 rows={2}
               />
-              {commitError && (
-                <p className="text-xxs  text-destructive mt-1">{commitError}</p>
-              )}
+              {commitError && <p className="text-xxs  text-destructive mt-1">{commitError}</p>}
               <div className="flex items-center justify-between mt-1 gap-2">
                 <span className="text-xxs  text-muted-foreground inline-flex items-center gap-1">
                   {staged.length} staged
@@ -705,7 +794,9 @@ export const GitChangesPanel = ({ className, onFileSelect: _onFileSelect }: GitC
               }
             >
               {unstaged.length === 0 ? (
-                <p className="px-3 py-3 m-2 text-center border border-dashed border-foreground/5 rounded-md text-xxs  text-muted-foreground">No unstaged changes</p>
+                <p className="px-3 py-3 m-2 text-center border border-dashed border-foreground/5 rounded-md text-xxs  text-muted-foreground">
+                  No unstaged changes
+                </p>
               ) : (
                 <GroupedFileList
                   files={unstaged}
@@ -730,12 +821,24 @@ export const GitChangesPanel = ({ className, onFileSelect: _onFileSelect }: GitC
             </span>
           </div>
           <p className="text-xs text-muted-foreground">
-            Push to <span className="font-medium text-foreground">{activeWorkspace.branch || "remote"}</span>?
+            Push to{" "}
+            <span className="font-medium text-foreground">
+              {activeWorkspace.branch || "remote"}
+            </span>
+            ?
           </p>
           {commitError && <p className="text-xs text-destructive">{commitError}</p>}
           <div className="flex items-center gap-2">
-            <Button size="sm" variant="secondary" onClick={handleDone}>Done</Button>
-            <Button size="sm" onClick={handlePush} disabled={pushLoading} loading={pushLoading} className="gap-1">
+            <Button size="sm" variant="secondary" onClick={handleDone}>
+              Done
+            </Button>
+            <Button
+              size="sm"
+              onClick={handlePush}
+              disabled={pushLoading}
+              loading={pushLoading}
+              className="gap-1"
+            >
               <IconUpload className="size-3" />
               Push
             </Button>

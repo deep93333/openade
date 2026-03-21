@@ -1,4 +1,3 @@
-import { registerAgentHandlers } from "./agent";
 import { registerWorkspaceHandlers } from "./workspace";
 import { registerGitHandlers } from "./git";
 import { registerChatHandlers } from "./chat";
@@ -15,7 +14,6 @@ export function registerIpcHandlers(): void {
     if (window) window.webContents.send(channel, payload);
   });
 
-  registerAgentHandlers();
   registerWorkspaceHandlers();
   registerGitHandlers();
   registerChatHandlers();

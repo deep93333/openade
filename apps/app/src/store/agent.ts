@@ -1,3 +1,7 @@
+import { getToolTitle } from "@/components/agent/tools/labels";
+import { getAgentBridge } from "@/lib/agent-bridge";
+import { getElectronAPI } from "@/lib/electron";
+import { normalizeUserMessageContentToText } from "@/utils/message";
 import type {
   AgentMessage,
   AgentMode,
@@ -13,11 +17,8 @@ import type {
   TaskStatus,
   ToolApprovalRequest,
 } from "@agentide/shared";
-import { create } from "zustand";
 import { getProviderForModel } from "@agentide/shared";
-import { getToolTitle } from "@/components/agent/tools/labels";
-import { getElectronAPI } from "@/lib/electron";
-import { normalizeUserMessageContentToText } from "@/utils/message";
+import { create } from "zustand";
 import { useCostStore } from "./cost";
 import { useChatEditorStore } from "./editor";
 import { useWorkspaceStore } from "./workspace";
@@ -120,7 +121,10 @@ function getLikelyChangedFiles(messages: AgentMessage[], workspacePath?: string)
 
 function buildReviewPrompt(basePrompt: string, changedFiles: string[]): string {
   if (changedFiles.length === 0) return basePrompt;
-  const fileList = changedFiles.slice(0, 25).map((path) => `- ${path}`).join("\n");
+  const fileList = changedFiles
+    .slice(0, 25)
+    .map((path) => `- ${path}`)
+    .join("\n");
   return `${basePrompt}\n\nReview hint: these files were likely changed earlier in this thread, so inspect them first, but do not limit your review to them if the task, surrounding code, or validation suggests you should inspect other files too.\n\nLikely changed files:\n${fileList}`;
 }
 
@@ -134,10 +138,14 @@ function estimateMessageTokens(messages: AgentMessage[]): number {
     const content = normalizeUserMessageContentToText(msg.content);
     total += estimateTokens(content);
     if (msg.toolInput) {
-      total += estimateTokens(typeof msg.toolInput === "string" ? msg.toolInput : JSON.stringify(msg.toolInput));
+      total += estimateTokens(
+        typeof msg.toolInput === "string" ? msg.toolInput : JSON.stringify(msg.toolInput)
+      );
     }
     if (msg.toolResult) {
-      total += estimateTokens(typeof msg.toolResult === "string" ? msg.toolResult : JSON.stringify(msg.toolResult));
+      total += estimateTokens(
+        typeof msg.toolResult === "string" ? msg.toolResult : JSON.stringify(msg.toolResult)
+      );
     }
   }
   return total;
@@ -151,19 +159,23 @@ function createMessageSummaries(messages: AgentMessage[]): ContextMessageSummary
   return messages.map((msg) => {
     const content = normalizeUserMessageContentToText(msg.content);
     let preview = "";
-    
+
     if (msg.role === "tool") {
-      const inputStr = msg.toolInput 
-        ? (typeof msg.toolInput === "string" ? msg.toolInput : JSON.stringify(msg.toolInput))
+      const inputStr = msg.toolInput
+        ? typeof msg.toolInput === "string"
+          ? msg.toolInput
+          : JSON.stringify(msg.toolInput)
         : "";
       const resultStr = msg.toolResult
-        ? (typeof msg.toolResult === "string" ? msg.toolResult : JSON.stringify(msg.toolResult))
+        ? typeof msg.toolResult === "string"
+          ? msg.toolResult
+          : JSON.stringify(msg.toolResult)
         : content;
       preview = `INPUT: ${truncate(inputStr, 200)}\nRESULT: ${truncate(resultStr, 300)}`;
     } else {
       preview = truncate(content, 200);
     }
-    
+
     return {
       id: msg.id,
       role: msg.role,
@@ -173,7 +185,6 @@ function createMessageSummaries(messages: AgentMessage[]): ContextMessageSummary
     };
   });
 }
-
 
 type WorkspaceAgentState = {
   threads: ChatThread[];
@@ -218,7 +229,12 @@ type AgentStoreState = {
   switchThread: (workspaceId: string, threadId: string) => void;
   deleteThread: (workspaceId: string, threadId: string) => Promise<void>;
   markThreadRead: (workspaceId: string, threadId: string) => void;
-  updateThreadTaskStatus: (workspaceId: string, threadId: string, taskStatus: TaskStatus, options?: { autoStart?: boolean }) => Promise<void>;
+  updateThreadTaskStatus: (
+    workspaceId: string,
+    threadId: string,
+    taskStatus: TaskStatus,
+    options?: { autoStart?: boolean }
+  ) => Promise<void>;
   updateThreadModel: (workspaceId: string, threadId: string, model: string) => Promise<void>;
   generateThreadTitle: (workspaceId: string, threadId: string) => Promise<void>;
 
@@ -385,8 +401,7 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
   listenersInitialized: false,
   listenersCleanup: null,
 
-  getWorkspaceState: (workspaceId) =>
-    get().workspaces[workspaceId] ?? EMPTY_WORKSPACE_STATE,
+  getWorkspaceState: (workspaceId) => get().workspaces[workspaceId] ?? EMPTY_WORKSPACE_STATE,
 
   getActiveThread: (workspaceId) => {
     const ws = get().workspaces[workspaceId];
@@ -405,8 +420,7 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
     return ws?.threadRuntime[threadId] ?? EMPTY_RUNTIME;
   },
 
-  getPendingToolApproval: (workspaceId) =>
-    get().pendingToolApprovals[workspaceId] ?? null,
+  getPendingToolApproval: (workspaceId) => get().pendingToolApprovals[workspaceId] ?? null,
 
   loadWorkspace: async (workspaceId) => {
     const existing = get().workspaces[workspaceId];
@@ -609,9 +623,7 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
 
     const updatedThreads = ws.threads.filter((t) => t.id !== threadId);
     const newActiveId =
-      ws.activeThreadId === threadId
-        ? updatedThreads[0]?.id ?? ""
-        : ws.activeThreadId;
+      ws.activeThreadId === threadId ? (updatedThreads[0]?.id ?? "") : ws.activeThreadId;
 
     const { [threadId]: _removed, ...remainingRuntime } = ws.threadRuntime;
 
@@ -651,7 +663,9 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
         },
       };
     });
-    get().persistWorkspace(workspaceId).catch(() => {});
+    get()
+      .persistWorkspace(workspaceId)
+      .catch(() => {});
   },
 
   updateThreadTaskStatus: async (workspaceId, threadId, taskStatus, options) => {
@@ -662,9 +676,7 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
       const thread = ws.threads.find((t) => t.id === threadId);
       prevStatus = thread?.taskStatus ?? "backlog";
 
-      const updatedThreads = ws.threads.map((t) =>
-        t.id === threadId ? { ...t, taskStatus } : t
-      );
+      const updatedThreads = ws.threads.map((t) => (t.id === threadId ? { ...t, taskStatus } : t));
 
       return {
         ...s,
@@ -682,10 +694,12 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
     if (updatedData) {
       const api = getElectronAPI();
       if (api?.chat) {
-        await api.chat.save(workspaceId, {
-          threads: updatedData.threads,
-          activeThreadId: updatedData.activeThreadId,
-        }).catch(console.error);
+        await api.chat
+          .save(workspaceId, {
+            threads: updatedData.threads,
+            activeThreadId: updatedData.activeThreadId,
+          })
+          .catch(console.error);
       } else {
         saveToLocalStorage(workspaceId, {
           threads: updatedData.threads,
@@ -738,9 +752,9 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
       const runtime = ws?.threadRuntime[threadId];
       const isAlreadyRunning = runtime?.status === "running" && !!runtime?.sessionId;
       if (thread && !isAlreadyRunning) {
-        const planMessage = [...thread.messages].reverse().find(
-          (m) => m.role === "assistant" && m.planContent
-        );
+        const planMessage = [...thread.messages]
+          .reverse()
+          .find((m) => m.role === "assistant" && m.planContent);
         if (planMessage?.planContent) {
           await get().buildFromPlan(workspaceId, planMessage.planContent);
         } else {
@@ -793,9 +807,7 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
       const ws = s.workspaces[workspaceId];
       if (!ws) return s;
 
-      const updatedThreads = ws.threads.map((t) =>
-        t.id === threadId ? { ...t, model } : t
-      );
+      const updatedThreads = ws.threads.map((t) => (t.id === threadId ? { ...t, model } : t));
 
       return {
         ...s,
@@ -813,10 +825,12 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
     if (updatedData) {
       const api = getElectronAPI();
       if (api?.chat) {
-        await api.chat.save(workspaceId, {
-          threads: updatedData.threads,
-          activeThreadId: updatedData.activeThreadId,
-        }).catch(console.error);
+        await api.chat
+          .save(workspaceId, {
+            threads: updatedData.threads,
+            activeThreadId: updatedData.activeThreadId,
+          })
+          .catch(console.error);
       } else {
         saveToLocalStorage(workspaceId, {
           threads: updatedData.threads,
@@ -831,8 +845,8 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
     const thread = ws?.threads.find((t) => t.id === threadId);
     if (!ws || !thread || thread.title?.trim()) return;
 
-    const firstUser = thread.messages.find((message) =>
-      message.role === "user" && message.content.trim()
+    const firstUser = thread.messages.find(
+      (message) => message.role === "user" && message.content.trim()
     );
     if (!firstUser) return;
 
@@ -840,10 +854,8 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
       .reverse()
       .find((message) => message.role === "assistant" && message.content.trim());
 
-    const api = getElectronAPI();
-    if (!api?.agent?.generateThreadTitle) return;
-
-    const result = await api.agent.generateThreadTitle({
+    const api = getAgentBridge();
+    const result = await api.generateThreadTitle({
       messages: lastAssistant ? [firstUser, lastAssistant] : [firstUser],
       model: get().selectedModel,
       provider: thread.provider ?? get().selectedProvider,
@@ -871,8 +883,36 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
   },
 
   startAgent: async (workspaceId, prompt, options) => {
-    const api = getElectronAPI();
-    if (!api) return;
+    const api = getAgentBridge();
+    const workspacePath = useWorkspaceStore
+      .getState()
+      .workspaces.find((w) => w.id === workspaceId)?.path;
+    if (!workspacePath?.trim()) {
+      const tid = options?.threadId ?? get().workspaces[workspaceId]?.activeThreadId;
+      if (tid) {
+        set((s) => {
+          const ws = s.workspaces[workspaceId];
+          if (!ws) return s;
+          return {
+            workspaces: {
+              ...s.workspaces,
+              [workspaceId]: {
+                ...ws,
+                threadRuntime: {
+                  ...ws.threadRuntime,
+                  [tid]: {
+                    ...(ws.threadRuntime[tid] ?? EMPTY_RUNTIME),
+                    status: "error",
+                    error: "Workspace path is missing. Re-open the project folder.",
+                  },
+                },
+              },
+            },
+          };
+        });
+      }
+      return;
+    }
 
     const { selectedModel, selectedMode, requireApproval, createCheckpoint } = get();
     const ws = get().workspaces[workspaceId];
@@ -885,13 +925,10 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
     // Brainstorm threads always run in ask mode (no tools).
     // Explicit mode option from caller takes precedence over selectedMode.
     const effectiveMode: AgentMode =
-      targetThread.taskStatus === "brainstorm"
-        ? "ask"
-        : (options?.mode ?? selectedMode);
+      targetThread.taskStatus === "brainstorm" ? "ask" : (options?.mode ?? selectedMode);
 
     const useExistingPrompt = options?.useExistingPrompt ?? false;
-    const isRepromptFromReview =
-      (targetThread.taskStatus ?? "backlog") === "in_review";
+    const isRepromptFromReview = (targetThread.taskStatus ?? "backlog") === "in_review";
 
     if (isRepromptFromReview) {
       set((s) => {
@@ -909,7 +946,9 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
           },
         };
       });
-      get().persistWorkspace(workspaceId).catch(() => {});
+      get()
+        .persistWorkspace(workspaceId)
+        .catch(() => {});
     }
 
     set((s) => {
@@ -931,9 +970,11 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
       if (!lastUser || !normalizeUserMessageContentToText(lastUser.content).trim()) return;
       resolvedPrompt = normalizeUserMessageContentToText(lastUser.content);
       const lastIdx = targetThread.messages.findIndex((m) => m.id === lastUser.id);
-      existingMessages = targetThread.messages.slice(0, lastIdx).map((m) =>
-        m.role === "user" ? { ...m, content: normalizeUserMessageContentToText(m.content) } : m
-      );
+      existingMessages = targetThread.messages
+        .slice(0, lastIdx)
+        .map((m) =>
+          m.role === "user" ? { ...m, content: normalizeUserMessageContentToText(m.content) } : m
+        );
       if (effectiveMode === "agent_review") {
         const workspacePath = useWorkspaceStore
           .getState()
@@ -946,14 +987,14 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
       skipAddingMessage = true;
     }
 
-    const messagesForApi =
-      skipAddingMessage
-        ? existingMessages
-        : (targetThread.messages.map((m) =>
-            m.role === "user" ? { ...m, content: normalizeUserMessageContentToText(m.content) } : m
-          ) ?? []);
+    const messagesForApi = skipAddingMessage
+      ? existingMessages
+      : (targetThread.messages.map((m) =>
+          m.role === "user" ? { ...m, content: normalizeUserMessageContentToText(m.content) } : m
+        ) ?? []);
 
-    const estimatedContextTokens = estimateMessageTokens(messagesForApi) + estimateTokens(resolvedPrompt);
+    const estimatedContextTokens =
+      estimateMessageTokens(messagesForApi) + estimateTokens(resolvedPrompt);
 
     const userMessage: AgentMessage = {
       id: crypto.randomUUID(),
@@ -1003,7 +1044,8 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
         if (!w) return s;
         const thread = w.threads.find((t) => t.id === tid);
         if (!thread) return s;
-        const existingTokens = estimateMessageTokens(existingMessages) + estimateTokens(resolvedPrompt);
+        const existingTokens =
+          estimateMessageTokens(existingMessages) + estimateTokens(resolvedPrompt);
         const updatedMessages = thread.messages.map((msg, idx) => {
           if (idx !== thread.messages.length - 1 || msg.role !== "user") return msg;
           return {
@@ -1023,7 +1065,9 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
             ...s.workspaces,
             [workspaceId]: {
               ...w,
-              threads: w.threads.map((t) => (t.id === tid ? { ...t, messages: updatedMessages } : t)),
+              threads: w.threads.map((t) =>
+                t.id === tid ? { ...t, messages: updatedMessages } : t
+              ),
               threadRuntime: {
                 ...w.threadRuntime,
                 [tid]: { ...EMPTY_RUNTIME, status: "running" },
@@ -1089,18 +1133,22 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
         },
       };
     });
-    get().persistWorkspace(workspaceId).catch(() => {});
+    get()
+      .persistWorkspace(workspaceId)
+      .catch(() => {});
 
-    const messagesForApiForStart =
-      skipAddingMessage
-        ? existingMessages
-        : (activeThread?.messages.slice(0, -1).map((m) =>
+    const messagesForApiForStart = skipAddingMessage
+      ? existingMessages
+      : (activeThread?.messages
+          .slice(0, -1)
+          .map((m) =>
             m.role === "user" ? { ...m, content: normalizeUserMessageContentToText(m.content) } : m
           ) ?? []);
 
-    const result = await api.agent.start({
+    const result = await api.start({
       prompt: resolvedPrompt,
       workspaceId,
+      workspacePath,
       activeThreadId: tid || undefined,
       existingMessages: messagesForApi,
       activeMemory: activeThread?.activeMemory,
@@ -1115,7 +1163,8 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
 
     if (result.success && result.data) {
       const sessionId = result.data.sessionId;
-      const pendingMetaMessages = get().workspaces[workspaceId]?.pendingSessionMetaMessages[sessionId] ?? [];
+      const pendingMetaMessages =
+        get().workspaces[workspaceId]?.pendingSessionMetaMessages[sessionId] ?? [];
       set((s) => {
         const ws = s.workspaces[workspaceId];
         if (!ws) return s;
@@ -1139,7 +1188,7 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
       for (const pendingMessage of pendingMetaMessages) {
         get().addMessage(pendingMessage);
       }
-    } else { 
+    } else {
       set((s) => {
         const ws = s.workspaces[workspaceId];
         if (!ws) return s;
@@ -1178,9 +1227,7 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
         if (t.id !== threadId) return t;
         return {
           ...t,
-          messages: t.messages.map((m) =>
-            m.id === messageId ? { ...m, ...updates } : m
-          ),
+          messages: t.messages.map((m) => (m.id === messageId ? { ...m, ...updates } : m)),
         };
       });
 
@@ -1201,9 +1248,9 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
   },
 
   stopAgent: async (workspaceId) => {
-    const api = getElectronAPI();
+    const api = getAgentBridge();
     const ws = get().workspaces[workspaceId];
-    if (!api || !ws) return;
+    if (!ws) return;
 
     const activeRuntime = ws.threadRuntime[ws.activeThreadId];
     const activeIsRunning = activeRuntime?.status === "running" && !!activeRuntime.sessionId;
@@ -1213,11 +1260,11 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
 
     const targetThreadId = activeIsRunning ? ws.activeThreadId : (fallback?.[0] ?? null);
     const sessionId = activeIsRunning
-      ? activeRuntime?.sessionId ?? null
+      ? (activeRuntime?.sessionId ?? null)
       : (fallback?.[1].sessionId ?? null);
     if (!targetThreadId || !sessionId) return;
 
-    await api.agent.stop(sessionId);
+    await api.stop(sessionId);
 
     set((s) => {
       const ws = s.workspaces[workspaceId];
@@ -1329,7 +1376,8 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
         const ws = s.workspaces[wsId];
         if (!ws) return s;
         const runtime = ws.threadRuntime[threadId] ?? EMPTY_RUNTIME;
-        const raw = typeof message.content === "string" ? message.content : String(message.content ?? "");
+        const raw =
+          typeof message.content === "string" ? message.content : String(message.content ?? "");
         const prefix = runtime.streamingCommittedPrefix;
         const text = prefix && raw.startsWith(prefix) ? raw.slice(prefix.length) : raw;
         return {
@@ -1371,13 +1419,18 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
           nextStreamingText = "";
         }
 
-        const updatedThreads = messagesToAdd.length > 0
-          ? ws.threads.map((t) =>
-              t.id === threadId
-                ? { ...t, messages: [...t.messages, ...messagesToAdd], updatedAt: messagesToAdd[messagesToAdd.length - 1]?.timestamp ?? Date.now() }
-                : t
-            )
-          : ws.threads;
+        const updatedThreads =
+          messagesToAdd.length > 0
+            ? ws.threads.map((t) =>
+                t.id === threadId
+                  ? {
+                      ...t,
+                      messages: [...t.messages, ...messagesToAdd],
+                      updatedAt: messagesToAdd[messagesToAdd.length - 1]?.timestamp ?? Date.now(),
+                    }
+                  : t
+              )
+            : ws.threads;
 
         return {
           workspaces: {
@@ -1421,37 +1474,37 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
         };
         titleContext.push(toolContextMessage);
 
-        const api = getElectronAPI();
-        if (api?.agent?.generateThreadTitle) {
-          const model = currentThread.model ?? get().selectedModel;
-          const provider = currentThread.provider ?? get().selectedProvider;
-          api.agent
-            .generateThreadTitle({ messages: titleContext, model, provider })
-            .then((result) => {
-              if (result.success && result.data) {
-                const title = result.data.trim();
-                if (title) {
-                  set((s) => {
-                    const ws = s.workspaces[wsId];
-                    if (!ws) return s;
-                    return {
-                      workspaces: {
-                        ...s.workspaces,
-                        [wsId]: {
-                          ...ws,
-                          threads: ws.threads.map((t) =>
-                            t.id === threadId && !t.title?.trim() ? { ...t, title } : t
-                          ),
-                        },
+        const api = getAgentBridge();
+        const model = currentThread.model ?? get().selectedModel;
+        const provider = currentThread.provider ?? get().selectedProvider;
+        api
+          .generateThreadTitle({ messages: titleContext, model, provider })
+          .then((result) => {
+            if (result.success && result.data) {
+              const title = result.data.trim();
+              if (title) {
+                set((s) => {
+                  const ws = s.workspaces[wsId];
+                  if (!ws) return s;
+                  return {
+                    workspaces: {
+                      ...s.workspaces,
+                      [wsId]: {
+                        ...ws,
+                        threads: ws.threads.map((t) =>
+                          t.id === threadId && !t.title?.trim() ? { ...t, title } : t
+                        ),
                       },
-                    };
-                  });
-                  get().persistWorkspace(wsId).catch(() => {});
-                }
+                    },
+                  };
+                });
+                get()
+                  .persistWorkspace(wsId)
+                  .catch(() => {});
               }
-            })
-            .catch(() => {});
-        }
+            }
+          })
+          .catch(() => {});
       }
       return;
     }
@@ -1504,7 +1557,11 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
 
       const updatedThreads = ws.threads.map((t) =>
         t.id === threadId
-          ? { ...t, messages: [...t.messages, ...messagesToAdd], updatedAt: messagesToAdd[messagesToAdd.length - 1]?.timestamp ?? Date.now() }
+          ? {
+              ...t,
+              messages: [...t.messages, ...messagesToAdd],
+              updatedAt: messagesToAdd[messagesToAdd.length - 1]?.timestamp ?? Date.now(),
+            }
           : t
       );
       const shouldCleanupSession =
@@ -1526,17 +1583,24 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
             threads: updatedThreads,
             sessionToThread: nextSessionToThread,
             threadRuntime: {
-                ...ws.threadRuntime,
-                [threadId]: {
-                  ...runtime,
-                  streamingText: streamingTextToClear,
-                  streamingCommittedPrefix:
-                    streamingCommittedPrefixUpdate ?? runtime.streamingCommittedPrefix,
-                  activeToolCalls: nextActiveToolCalls,
-                  lastCompletedActivity: nextLastCompletedActivity,
-                  ...(shouldCleanupSession ? { sessionId: null, streamingCommittedPrefix: "", activeToolCalls: [], lastCompletedActivity: null } : {}),
-                },
+              ...ws.threadRuntime,
+              [threadId]: {
+                ...runtime,
+                streamingText: streamingTextToClear,
+                streamingCommittedPrefix:
+                  streamingCommittedPrefixUpdate ?? runtime.streamingCommittedPrefix,
+                activeToolCalls: nextActiveToolCalls,
+                lastCompletedActivity: nextLastCompletedActivity,
+                ...(shouldCleanupSession
+                  ? {
+                      sessionId: null,
+                      streamingCommittedPrefix: "",
+                      activeToolCalls: [],
+                      lastCompletedActivity: null,
+                    }
+                  : {}),
               },
+            },
           },
         },
       };
@@ -1565,8 +1629,7 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
       const prevRuntime = ws.threadRuntime[threadId] ?? EMPTY_RUNTIME;
       const prevThread = ws.threads.find((t) => t.id === threadId);
       const currentStatus = prevThread?.taskStatus ?? "backlog";
-      const moveToReview =
-        result.success && currentStatus === "in_progress";
+      const moveToReview = result.success && currentStatus === "in_progress";
       const threadTokenUpdate =
         inputTokens > 0 || outputTokens > 0
           ? {
@@ -1622,39 +1685,47 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
       };
     });
 
-    get().persistWorkspace(wsId).catch(() => {});
+    get()
+      .persistWorkspace(wsId)
+      .catch(() => {});
 
-    const api = getElectronAPI();
-    if (api?.checkpoint && result.success) {
-      api.checkpoint.finalize({ workspaceId: wsId, threadId }).then((res) => {
-        if (!res.success || !res.data) return;
-        const { checkpointId, modifiedFiles, createdFiles } = res.data;
-        set((s) => {
-          const ws = s.workspaces[wsId];
-          if (!ws) return s;
-          return {
-            workspaces: {
-              ...s.workspaces,
-              [wsId]: {
-                ...ws,
-                threads: ws.threads.map((t) =>
-                  t.id === threadId
-                    ? {
-                        ...t,
-                        checkpoints: (t.checkpoints ?? []).map((c) =>
-                          c.id === checkpointId
-                            ? { ...c, modifiedFiles, createdFiles }
-                            : c
-                        ),
-                      }
-                    : t
-                ),
+    void (async () => {
+      const electron = getElectronAPI();
+      if (electron?.checkpoint?.capturePostRun && result.success && threadId) {
+        await electron.checkpoint.capturePostRun({ workspaceId: wsId, threadId });
+      }
+      if (electron?.checkpoint && result.success) {
+        try {
+          const res = await electron.checkpoint.finalize({ workspaceId: wsId, threadId });
+          if (!res.success || !res.data) return;
+          const { checkpointId, modifiedFiles, createdFiles } = res.data;
+          set((s) => {
+            const ws = s.workspaces[wsId];
+            if (!ws) return s;
+            return {
+              workspaces: {
+                ...s.workspaces,
+                [wsId]: {
+                  ...ws,
+                  threads: ws.threads.map((t) =>
+                    t.id === threadId
+                      ? {
+                          ...t,
+                          checkpoints: (t.checkpoints ?? []).map((c) =>
+                            c.id === checkpointId ? { ...c, modifiedFiles, createdFiles } : c
+                          ),
+                        }
+                      : t
+                  ),
+                },
               },
-            },
-          };
-        });
-      }).catch(() => {});
-    }
+            };
+          });
+        } catch {
+          /* ignore */
+        }
+      }
+    })();
   },
 
   setError: (payload) => {
@@ -1678,7 +1749,7 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
       typeof payload.error === "string"
         ? payload.error
         : payload.error && typeof payload.error === "object"
-          ? (payload.error as { message?: string }).message ?? JSON.stringify(payload.error)
+          ? ((payload.error as { message?: string }).message ?? JSON.stringify(payload.error))
           : String(payload.error ?? "Unknown error");
 
     set((s) => {
@@ -1736,14 +1807,14 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
   },
 
   respondToolApproval: async (workspaceId, allow, message, updatedInput) => {
-    const api = getElectronAPI();
+    const api = getAgentBridge();
     const request = get().pendingToolApprovals[workspaceId];
-    if (!api || !request) return;
-    await api.agent.respondToolApproval({
+    if (!request) return;
+    await api.respondToolApproval({
       requestId: request.requestId,
       allow,
       updatedInput: allow ? updatedInput : undefined,
-      message: allow ? undefined : message ?? "Denied by user",
+      message: allow ? undefined : (message ?? "Denied by user"),
     });
     set((s) => ({
       pendingToolApprovals: { ...s.pendingToolApprovals, [workspaceId]: null },
@@ -1866,22 +1937,21 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
 
   initListeners: () => {
     if (get().listenersInitialized) return;
-    const api = getElectronAPI();
-    if (!api) return;
+    const api = getAgentBridge();
 
-    const removeMessage = api.agent.onMessage((message) => {
+    const removeMessage = api.onMessage((message) => {
       get().addMessage(message);
     });
 
-    const removeResult = api.agent.onResult((result) => {
+    const removeResult = api.onResult((result) => {
       get().setResult(result);
     });
 
-    const removeError = api.agent.onError((payload: { sessionId: string; error: string }) => {
+    const removeError = api.onError((payload: { sessionId: string; error: string }) => {
       get().setError(payload);
     });
 
-    const removeToolApproval = api.agent.onToolApprovalRequest?.(
+    const removeToolApproval = api.onToolApprovalRequest(
       (request: ToolApprovalRequest & { workspaceId?: string }) => {
         const workspaceId =
           request.workspaceId ?? findWorkspaceForSession(get().workspaces, request.sessionId);
@@ -1894,8 +1964,13 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
       }
     );
 
-    const removeSdkSessionId = api.agent.onSdkSessionId?.(
-      (payload: { sdkSessionId: string; threadId: string; workspaceId?: string; provider?: import("@agentide/shared").AgentProvider }) => {
+    const removeSdkSessionId = api.onSdkSessionId(
+      (payload: {
+        sdkSessionId: string;
+        threadId: string;
+        workspaceId?: string;
+        provider?: import("@agentide/shared").AgentProvider;
+      }) => {
         const workspaceId =
           payload.workspaceId ?? findWorkspaceForThread(get().workspaces, payload.threadId);
         if (!workspaceId) return;
@@ -1909,13 +1984,20 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
                 ...ws,
                 threads: ws.threads.map((t) =>
                   t.id === payload.threadId
-                    ? { ...t, sdkSessionId: payload.sdkSessionId, ...(payload.provider != null && { provider: payload.provider }) }
+                    ? {
+                        ...t,
+                        sdkSessionId: payload.sdkSessionId,
+                        ...(payload.provider != null && { provider: payload.provider }),
+                      }
                     : t
                 ),
               },
             },
           };
         });
+        get()
+          .persistWorkspace(workspaceId)
+          .catch(() => {});
       }
     );
 
@@ -1923,8 +2005,8 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
       removeMessage();
       removeResult();
       removeError();
-      removeToolApproval?.();
-      removeSdkSessionId?.();
+      removeToolApproval();
+      removeSdkSessionId();
     };
     set({ listenersInitialized: true, listenersCleanup: cleanup });
   },

@@ -1,19 +1,24 @@
 import { useCallback, useEffect, useState } from "react";
 import type { ProviderConfig } from "@agentide/shared";
 import { Badge, Button, Input, Label } from "@agentide/ui";
+import { IconChevronDown, IconChevronUp, IconExternalLink } from "@tabler/icons-react";
 import { getElectronAPI } from "@/lib/electron";
 
 type ProviderKeyInputProps = {
   config: ProviderConfig;
   maskedKey: string | null;
   onSaved?: () => void;
+  /** When true the form fields are always visible (no collapse toggle) */
+  inline?: boolean;
 };
 
 export const ProviderKeyInput = ({
   config,
   maskedKey,
   onSaved,
+  inline = false,
 }: ProviderKeyInputProps) => {
+  const [expanded, setExpanded] = useState(false);
   const [apiKey, setApiKey] = useState("");
   const [baseUrl, setBaseUrl] = useState("");
   const [saving, setSaving] = useState(false);
@@ -21,6 +26,7 @@ export const ProviderKeyInput = ({
 
   const api = getElectronAPI();
   const isMoonshot = config.id === "moonshot";
+  const isOpen = inline || expanded;
 
   useEffect(() => {
     if (!isMoonshot || !api?.settings) return;
@@ -49,7 +55,7 @@ export const ProviderKeyInput = ({
       return;
     }
     if (config.keyPrefix && !trimmed.startsWith(config.keyPrefix)) {
-      setError(`Invalid API key format. It should start with ${config.keyPrefix}`);
+      setError(`Key must start with ${config.keyPrefix}`);
       return;
     }
     setSaving(true);
@@ -70,6 +76,7 @@ export const ProviderKeyInput = ({
     }
 
     setApiKey("");
+    setExpanded(false);
     onSaved?.();
   }, [apiKey, config, api, onSaved]);
 
@@ -86,95 +93,135 @@ export const ProviderKeyInput = ({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") handleSave();
+    if (e.key === "Enter") void handleSave();
   };
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h3 className="text-sm font-medium text-foreground flex items-center gap-2">{config.name} API Key
+    <div className="rounded-lg border border-border/60 bg-card overflow-hidden">
+      {/* Row header — always visible */}
+      <div
+        className={[
+          "flex items-center gap-3 px-4 py-3",
+          !inline ? "cursor-pointer select-none hover:bg-muted/30 transition-colors" : "",
+        ].join(" ")}
+        onClick={inline ? undefined : () => setExpanded((v) => !v)}
+        role={inline ? undefined : "button"}
+        tabIndex={inline ? undefined : 0}
+        onKeyDown={inline ? undefined : (e) => e.key === "Enter" && setExpanded((v) => !v)}
+      >
+        <div className="flex-1 min-w-0 flex items-center gap-2.5">
+          <span className="text-sm font-medium">{config.name}</span>
           <Badge variant={maskedKey ? "green" : "gray"} size="sm">
-          {maskedKey ? "Configured" : "Not set"}
-        </Badge>
-
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            {config.helpText ?? "Keys are encrypted and stored locally."}
-          </p>
+            {maskedKey ? "Configured" : "Not set"}
+          </Badge>
         </div>
-     
+
+        {maskedKey && !isOpen && (
+          <span className="font-mono text-xs text-muted-foreground truncate max-w-[200px] hidden sm:block">
+            {maskedKey}
+          </span>
+        )}
+
+        <div className="flex items-center gap-2 shrink-0">
+          {config.helpUrl && (
+            <a
+              href={config.helpUrl}
+              target="_blank"
+              rel="noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <IconExternalLink className="size-3.5" />
+              <span className="hidden sm:inline">Docs</span>
+            </a>
+          )}
+          {!inline && (
+            <span className="text-muted-foreground">
+              {isOpen ? <IconChevronUp className="size-4" /> : <IconChevronDown className="size-4" />}
+            </span>
+          )}
+        </div>
       </div>
 
-      {config.helpUrl && (
-        <a
-          href={config.helpUrl}
-          target="_blank"
-          rel="noreferrer"
-          className="text-xs text-foreground underline underline-offset-4 hover:text-foreground/80"
-        >
-          Open {config.name} key settings
-        </a>
-      )}
+      {/* Expandable body */}
+      {isOpen && (
+        <div className="border-t border-border/50 px-4 py-4 space-y-4 bg-muted/10">
+          {/* Existing key */}
+          {maskedKey && !apiKey && (
+            <div className="space-y-1.5">
+              <Label className="text-xs">Current key</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  value={maskedKey}
+                  disabled
+                  className="font-mono text-xs flex-1"
+                />
+                <Button size="sm" variant="secondary" onClick={handleRemove}>
+                  Remove
+                </Button>
+              </div>
+            </div>
+          )}
 
-      {isMoonshot && (
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="moonshot-base-url">Base URL (optional)</Label>
-          <p className="text-xs text-muted-foreground">
-            Use <code className="rounded bg-muted px-1">https://api.moonshot.cn/v1</code> for China-region keys from platform.moonshot.cn. Leave empty for international (api.moonshot.ai).
-          </p>
-          <div className="flex gap-2">
-            <Input
-              id="moonshot-base-url"
-              type="url"
-              placeholder="https://api.moonshot.ai/v1"
-              value={baseUrl}
-              onChange={(e) => setBaseUrl(e.target.value)}
-              className="font-mono text-xs"
-            />
-            <Button size="sm" variant="secondary" onClick={() => void handleBaseUrlSave()}>
-              Save
-            </Button>
+          {/* Moonshot base URL */}
+          {isMoonshot && (
+            <div className="space-y-1.5">
+              <Label htmlFor="moonshot-base-url" className="text-xs">
+                Base URL{" "}
+                <span className="text-muted-foreground font-normal">(optional)</span>
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Use{" "}
+                <code className="rounded bg-muted px-1 font-mono text-[10px]">
+                  https://api.moonshot.cn/v1
+                </code>{" "}
+                for China-region keys. Leave empty for international.
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  id="moonshot-base-url"
+                  type="url"
+                  placeholder="https://api.moonshot.ai/v1"
+                  value={baseUrl}
+                  onChange={(e) => setBaseUrl(e.target.value)}
+                  className="font-mono text-xs flex-1"
+                />
+                <Button size="sm" variant="secondary" onClick={() => void handleBaseUrlSave()}>
+                  Save
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* New key input + save */}
+          <div className="space-y-1.5">
+            <Label htmlFor={`${config.id}-api-key`} className="text-xs">
+              {maskedKey ? "Replace key" : "API key"}
+            </Label>
+            <div className="flex gap-2">
+              <Input
+                id={`${config.id}-api-key`}
+                type="password"
+                placeholder={config.keyPlaceholder}
+                value={apiKey}
+                onChange={(e) => handleChange(e.target.value)}
+                onKeyDown={handleKeyDown}
+                className="font-mono flex-1"
+                autoFocus
+              />
+              <Button
+                variant="brand"
+                size="sm"
+                onClick={() => void handleSave()}
+                disabled={saving || !apiKey.trim()}
+              >
+                {saving ? "Saving…" : "Save"}
+              </Button>
+            </div>
+            {error && <p className="text-xs text-destructive">{error}</p>}
           </div>
         </div>
       )}
-
-      {maskedKey && !apiKey && (
-        <div className="flex items-center gap-2">
-          <Input value={maskedKey} disabled className="font-mono text-xs" />
-          <Button size="sm" variant="secondary" onClick={handleRemove}>
-            Remove
-          </Button>
-        </div>
-      )}
-
-      <div className="flex flex-col gap-2">
-        <Label htmlFor={`${config.id}-api-key`}>API Key</Label>
-        <Input
-          id={`${config.id}-api-key`}
-          type="password"
-          placeholder={config.keyPlaceholder}
-          value={apiKey}
-          onChange={(e) => handleChange(e.target.value)}
-          onKeyDown={handleKeyDown}
-          className="font-mono"
-        />
-      </div>
-
-      {error && <div className="text-sm text-destructive">{error}</div>}
-
-      <div className="flex items-center justify-between">
-        <span className="text-xs text-muted-foreground">
-          Your key never leaves this machine.
-        </span>
-        <Button
-          variant="brand"
-          onClick={handleSave}
-          disabled={saving || !apiKey.trim()}
-        >
-          {saving ? "Saving…" : `Save API Key`}
-        </Button>
-      </div>
     </div>
   );
 };

@@ -9,11 +9,14 @@ export type AuthStatus = {
   cliEmail?: string;
 };
 
+export type ThemeAppearance = "light" | "dark" | "system";
+
 export type GlobalSettings = {
   mcpServers: MCPServerConfig[];
   commitMessageModel?: string;
   commitMessageProvider?: AgentProvider;
   moonshotBaseUrl?: string;
+  appearance?: ThemeAppearance;
 };
 
 export type TaskStatus = "brainstorm" | "backlog" | "planning" | "in_progress" | "agent_review" | "in_review" | "completed" | "archived";
@@ -174,6 +177,7 @@ export type MCPValidationResult = {
 export type AgentStartParams = {
   prompt: string;
   workspaceId: string;
+  workspacePath?: string;
   activeThreadId?: string;
   existingMessages?: AgentMessage[];
   activeMemory?: string;

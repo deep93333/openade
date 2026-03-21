@@ -81,7 +81,6 @@ vi.mock("./services/snapshot-store", () => ({
   runGarbageCollection: vi.fn().mockResolvedValue({ deletedDirs: 0, freedBytes: 0 }),
 }));
 
-vi.mock("./services/agent-manager", () => ({ agentManager: {}, getAllModels: vi.fn().mockReturnValue([]), generateThreadTitle: vi.fn().mockResolvedValue(null) }));
 vi.mock("./services/config-storage", () => ({ get: vi.fn(), set: vi.fn() }));
 vi.mock("./services/terminal-service", () => ({ create: vi.fn() }));
 vi.mock("./windows/app-window", () => ({ getAppWindow: () => null }));

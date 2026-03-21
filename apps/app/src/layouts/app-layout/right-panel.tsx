@@ -1,51 +1,44 @@
 import { Panel, Separator } from "react-resizable-panels";
-import type { NavigationView } from "@/store/ui";
 import { FileTree } from "@/components/file-tree";
 import { GitChangesPanel } from "@/components/gitpanel";
-import { Button, cn } from "@agentide/ui";
-import { IconExchange, IconFiles } from "@tabler/icons-react";
+import { cn } from "@agentide/ui";
+import { useUIStore } from "@/store/ui";
 import { PANEL_SEPARATOR_CLASS } from "./constants";
 
 type RightPanelProps = {
-  activeView: NavigationView;
-  setActiveView: (view: NavigationView) => void;
   onFileSelect: (path: string) => void;
   showSeparator: boolean;
 };
 
-export function RightPanel({ activeView, setActiveView, onFileSelect, showSeparator }: RightPanelProps) {
+export function RightPanel({ onFileSelect, showSeparator }: RightPanelProps) {
+  const activeView = useUIStore((s) => s.activeView);
+
   return (
     <>
       {showSeparator && <Separator className={PANEL_SEPARATOR_CLASS} />}
       <Panel id="right-panel" minSize={220} maxSize={360} defaultSize={260}>
-        <div className="flex h-full min-h-0 min-w-[260px] flex-1 flex-col overflow-hidden">
-          <div className="flex shrink-0 items-center border-b px-2 border-foreground/5 h-[48px] drag-region gap-1">
-            <Button
-              variant={activeView === "files" ? "secondary" : "ghost"}
-              size="sm"
-              onClick={() => setActiveView("files")}
+        <div className="flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden">
+          <div className="grid min-h-0 min-w-0 h-full w-full flex-1 grid-cols-1 grid-rows-1">
+            <div
+              className={cn(
+                "col-start-1 row-start-1 flex min-h-0 min-w-0 flex-col overflow-hidden",
+                activeView !== "files" && "invisible pointer-events-none",
+                activeView === "files" && "z-[1]"
+              )}
+              aria-hidden={activeView !== "files"}
             >
-              <IconFiles className="size-4" stroke={1} />
-              Files
-            </Button>
-            <Button
-              variant={activeView === "changes" ? "secondary" : "ghost"}
-              size="sm"
-              onClick={() => setActiveView("changes")}
+              <FileTree className="h-full min-h-0 min-w-0" onFileSelect={onFileSelect} />
+            </div>
+            <div
+              className={cn(
+                "col-start-1 row-start-1 flex min-h-0 min-w-0 flex-col overflow-hidden",
+                activeView !== "changes" && "invisible pointer-events-none",
+                activeView === "changes" && "z-[1]"
+              )}
+              aria-hidden={activeView !== "changes"}
             >
-              <IconExchange className="size-4" stroke={1} />
-              Changes
-            </Button>
-          </div>
-          <div
-            className={cn("mt-0 min-h-0 flex-1 overflow-hidden", activeView !== "files" && "hidden")}
-          >
-            <FileTree className="h-full" onFileSelect={onFileSelect} />
-          </div>
-          <div
-            className={cn("mt-0 min-h-0 flex-1 overflow-hidden", activeView !== "changes" && "hidden")}
-          >
-            <GitChangesPanel className="h-full min-h-0" onFileSelect={onFileSelect} />
+              <GitChangesPanel className="h-full min-h-0 min-w-0" onFileSelect={onFileSelect} />
+            </div>
           </div>
         </div>
       </Panel>

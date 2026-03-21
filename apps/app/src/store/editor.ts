@@ -1,6 +1,6 @@
+import { getAgentBridge } from "@/lib/agent-bridge";
 import type { AgentModelOption, ImageAttachment } from "@agentide/shared";
 import { create } from "zustand";
-import { getElectronAPI } from "@/lib/electron";
 
 const DEFAULT_MODEL_OPTIONS: { value: string; label: string }[] = [
   { value: "claude-sonnet-4-6", label: "Claude Sonnet 4.6" },
@@ -43,12 +43,10 @@ export const useChatEditorStore = create<ChatEditorState>()((set, get) => ({
   clearImageAttachments: () => set({ imageAttachments: [] }),
 
   fetchModelOptions: async () => {
-    const api = getElectronAPI();
-    if (!api?.agent?.getModels) return;
-
+    const api = getAgentBridge();
     set({ isLoadingModels: true });
     try {
-      const res = await api.agent.getModels();
+      const res = await api.getModels();
       if (res.success && Array.isArray(res.data) && res.data.length > 0) {
         set({ modelOptions: res.data as AgentModelOption[] });
       }
@@ -57,4 +55,3 @@ export const useChatEditorStore = create<ChatEditorState>()((set, get) => ({
     }
   },
 }));
-

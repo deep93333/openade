@@ -1,17 +1,4 @@
 export const IPC = {
-  AGENT_START: "agent:start",
-  AGENT_STOP: "agent:stop",
-  AGENT_STATUS: "agent:status",
-  AGENT_GET_MODELS: "agent:get-models",
-  AGENT_GENERATE_THREAD_TITLE: "agent:generate-thread-title",
-  AGENT_GENERATE_COMMIT_MESSAGE: "agent:generate-commit-message",
-  AGENT_MESSAGE: "agent:message",
-  AGENT_RESULT: "agent:result",
-  AGENT_ERROR: "agent:error",
-  AGENT_SDK_SESSION_ID: "agent:sdk-session-id",
-  AGENT_TOOL_APPROVAL_REQUEST: "agent:tool-approval-request",
-  AGENT_TOOL_APPROVAL_RESPONSE: "agent:tool-approval-response",
-
   WORKSPACE_LIST: "workspace:list",
   WORKSPACE_CREATE: "workspace:create",
   WORKSPACE_DELETE: "workspace:delete",
@@ -86,6 +73,7 @@ export const IPC = {
   SKILLS_GET_CONTENT: "skills:get-content",
 
   CHECKPOINT_CREATE: "checkpoint:create",
+  CHECKPOINT_CAPTURE_POST_RUN: "checkpoint:capture-post-run",
   CHECKPOINT_RESTORE: "checkpoint:restore",
   CHECKPOINT_FINALIZE: "checkpoint:finalize",
   CHECKPOINT_SAVE_SNAPSHOTS: "checkpoint:save-snapshots",

@@ -12,11 +12,75 @@ Inspired by [Conductor](https://conductor.build).
 - **Stop / abort** — Cancel a running agent at any time.
 - **Dark UI** — Sidebar + chat layout with Tailwind v4.
 
+## Where session data lives
+
+AgentIDE keeps its own files out of the repo by default (tools still read and write normal project files as part of coding tasks).
+
+**Agent server** (`bun run dev:server`, web workflow) — default root `~/.agentide-server/` (override with `AGENTIDE_DATA_DIR`):
+
+- Threads (model JSONL): `…/threads/<workspace-id>/`
+- Large tool-output spill files: `…/context/<workspace-id>/`
+- Checkpoint file snapshots: `…/snapshots/<workspace-id>/<thread-id>/<checkpoint-id>/`
+- Stash for untracked files during checkpoint restore: `…/checkpoint-trash/<workspace-path-hash>/`
+
+**Electron app** — under the app user data directory (e.g. `~/Library/Application Support/<app>/agentide/` on macOS):
+
+- Same idea: `agentide/snapshots/…`, `agentide/checkpoint-trash/…`, plus existing `agentide/chats/` and `config.json`.
+
+Chat UI state on the server remains `chats/<workspace-id>.json` next to the paths above.
+
+To store thread JSONL and tool spill files **inside** the project again (legacy layout: `.agentide/threads`, `.agentide/context`), set `AGENTIDE_THREADS_IN_WORKSPACE=1`. Old JSONL under the project is still read when no file exists in the new location yet.
+
+**Not on disk in the project:** the read tool’s duplicate-read warnings use an in-memory map for that run only. **Outside AgentIDE:** MCP servers, language tooling, and build tools may still create normal caches in the repo (e.g. `node_modules/.cache`, `.turbo`); those are unrelated to AgentIDE’s own storage.
+
 ## Prerequisites
 
-- [Bun](https://bun.sh) (or npm)
+- [Git](https://git-scm.com)
+- [Bun](https://bun.sh) (optional if you use the one-liner below — it can install Bun for you)
 - [Claude Code](https://docs.anthropic.com/en/docs/claude-code) installed and authenticated (CLI or API key)
-- Node.js 18+
+- Node.js 18+ (for contributors using npm in some scripts)
+
+## One command
+
+From any directory (requires Git; installs [Bun](https://bun.sh) if it is missing):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/deep93333/agentide/main/scripts/install.sh | bash
+```
+
+This clones into `./agentide`, runs `bun install`, then `bun run dev`. Use another folder: `…/install.sh my-agentide`. For a fork:
+
+```bash
+export AGENTIDE_REPO=https://github.com/you/agentide.git
+curl -fsSL https://raw.githubusercontent.com/deep93333/agentide/main/scripts/install.sh | bash
+```
+
+(`export` must run in the same shell session before the `curl` line so the piped `bash` inherits it.)
+
+If you already cloned the repo:
+
+```bash
+./scripts/install.sh .
+```
+
+(`cd` into the clone first so `.` resolves to that directory.)
+
+## Install via npm
+
+After `@agentide/cli` is published:
+
+```bash
+npx @agentide/cli
+```
+
+Global install:
+
+```bash
+npm install -g @agentide/cli
+agentide
+```
+
+Maintainers: from the repo root, `npm run publish:cli` (npm login with access to the `@agentide` scope).
 
 ## Quick Start
 

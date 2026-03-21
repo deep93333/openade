@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import { getElectronAPI } from "@/lib/electron";
+import { useUIStore } from "@/store/ui";
 import {
   Badge,
   BookIcon,
@@ -12,15 +13,9 @@ import {
   Input,
   SearchIcon,
 } from "@agentide/ui";
-import { useUIStore } from "@/store/ui";
+import React, { useState, useEffect } from "react";
 
 type AgentSkillItem = { id: string; name: string; description: string };
-
-declare const window: Window & {
-  electronAPI?: {
-    skills: { list: () => Promise<{ success: boolean; data?: AgentSkillItem[]; error?: string }> };
-  };
-};
 
 export function AgentSkills() {
   const [skills, setSkills] = useState<AgentSkillItem[]>([]);
@@ -31,7 +26,7 @@ export function AgentSkills() {
   const setSkillsCount = useUIStore((s) => s.setSkillsCount);
 
   useEffect(() => {
-    const api = window.electronAPI?.skills;
+    const api = getElectronAPI()?.skills;
     if (!api) {
       setLoading(false);
       setSkills([]);
@@ -87,12 +82,8 @@ export function AgentSkills() {
       </div>
 
       <div className="flex-1 overflow-auto p-4">
-        {loading && (
-          <p className="text-sm text-muted-foreground">Loading skills...</p>
-        )}
-        {error && (
-          <p className="text-sm text-destructive">{error}</p>
-        )}
+        {loading && <p className="text-sm text-muted-foreground">Loading skills...</p>}
+        {error && <p className="text-sm text-destructive">{error}</p>}
         {!loading && !error && filteredSkills.length === 0 && (
           <p className="text-sm text-muted-foreground">
             No skills found. Add SKILL.md in ~/.cursor/skills or ~/.claude/skills.
@@ -101,20 +92,13 @@ export function AgentSkills() {
         {!loading && !error && filteredSkills.length > 0 && (
           <div className="flex flex-col gap-2">
             {filteredSkills.map((skill) => (
-              <SkillRow
-                key={skill.id}
-                skill={skill}
-                onSelect={() => setDetailSkill(skill)}
-              />
+              <SkillRow key={skill.id} skill={skill} onSelect={() => setDetailSkill(skill)} />
             ))}
           </div>
         )}
       </div>
 
-      <Dialog
-        open={!!detailSkill}
-        onOpenChange={(open) => !open && setDetailSkill(null)}
-      >
+      <Dialog open={!!detailSkill} onOpenChange={(open) => !open && setDetailSkill(null)}>
         <DialogContent className="max-w-md">
           {detailSkill && (
             <>
@@ -155,9 +139,7 @@ function SkillRow({ skill, onSelect }: SkillRowProps) {
       onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), onSelect())}
     >
       <BookIcon className="h-5 w-5 text-muted-foreground shrink-0" />
-      <CardTitle className="text-base font-medium truncate min-w-0 flex-1">
-        {skill.name}
-      </CardTitle>
+      <CardTitle className="text-base font-medium truncate min-w-0 flex-1">{skill.name}</CardTitle>
     </div>
   );
 }

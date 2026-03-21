@@ -3,7 +3,7 @@
 
 @plugin '@tailwindcss/typography';
 
-@custom-variant dark (&:where(.dark, .dark *));
+@custom-variant dark (&:where(.dark:not(.light-theme-island), .dark *:not(.light-theme-island, .light-theme-island *)));
 
 html,
 body {

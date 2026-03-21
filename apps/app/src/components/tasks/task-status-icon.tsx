@@ -333,14 +333,14 @@ const statusConfig: Record<
     colorClass: string;
   }
 > = {
-  brainstorm: { Icon: BrainstormIcon, colorClass: "text-orange-400" },
-  backlog: { Icon: BacklogIcon, colorClass: "text-zinc-400" },
-  planning: { Icon: PlanningIcon, colorClass: "text-purple-400" },
-  in_progress: { Icon: InProgressIcon, colorClass: "text-blue-400" },
-  agent_review: { Icon: AgentReviewIcon, colorClass: "text-violet-400" },
-  in_review: { Icon: InReviewIcon, colorClass: "text-yellow-400" },
-  completed: { Icon: CompletedIcon, colorClass: "text-emerald-500" },
-  archived: { Icon: ArchivedIcon, colorClass: "text-zinc-500" },
+  brainstorm: { Icon: BrainstormIcon, colorClass: "text-orange-600" },
+  backlog: { Icon: BacklogIcon, colorClass: "text-zinc-600" },
+  planning: { Icon: PlanningIcon, colorClass: "text-purple-600" },
+  in_progress: { Icon: InProgressIcon, colorClass: "text-blue-600" },
+  agent_review: { Icon: AgentReviewIcon, colorClass: "text-violet-600" },
+  in_review: { Icon: InReviewIcon, colorClass: "text-yellow-600" },
+  completed: { Icon: CompletedIcon, colorClass: "text-emerald-600" },
+  archived: { Icon: ArchivedIcon, colorClass: "text-zinc-600" },
 };
 
 export function TaskStatusIcon({ status, size = 18, className }: TaskStatusIconProps) {

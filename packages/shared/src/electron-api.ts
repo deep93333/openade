@@ -1,14 +1,7 @@
 import type {
-  AgentErrorPayload,
   AgentMessage,
-  AgentModelOption,
-  AgentResult,
   AgentSkillItem,
-  AgentStartParams,
-  AgentStatus,
   ApiKeyProvider,
-  ThreadTitleParams,
-  CommitMessageParams,
   ChatData,
   Checkpoint,
   FileDiffContent,
@@ -17,9 +10,6 @@ import type {
   GitStagedChange,
   GitUnstagedChange,
   IpcResult,
-  SdkSessionIdPayload,
-  ToolApprovalRequest,
-  ToolApprovalResponse,
   Workspace,
 } from "./types.js";
 
@@ -71,20 +61,6 @@ export type ElectronAPI = {
       updates: Partial<Pick<AgentMessage, "content" | "planContent" | "reviewContent">>
     ) => Promise<IpcResult>;
   };
-  agent: {
-    start: (params: AgentStartParams) => Promise<IpcResult<{ sessionId: string }>>;
-    stop: (sessionId: string) => Promise<IpcResult>;
-    status: () => Promise<IpcResult<{ status: AgentStatus; sessionId?: string }>>;
-    getModels: () => Promise<IpcResult<AgentModelOption[]>>;
-    generateThreadTitle: (params: ThreadTitleParams) => Promise<IpcResult<string | null>>;
-    generateCommitMessage: (params: CommitMessageParams) => Promise<IpcResult<string | null>>;
-    onMessage: (callback: (message: AgentMessage) => void) => () => void;
-    onResult: (callback: (result: AgentResult) => void) => () => void;
-    onError: (callback: (payload: AgentErrorPayload) => void) => () => void;
-    onSdkSessionId: (callback: (payload: SdkSessionIdPayload) => void) => () => void;
-    onToolApprovalRequest: (callback: (request: ToolApprovalRequest) => void) => () => void;
-    respondToolApproval: (response: ToolApprovalResponse) => Promise<void>;
-  };
   workspace: {
     list: () => Promise<IpcResult<Workspace[]>>;
     create: (params: { name: string; path: string }) => Promise<IpcResult<Workspace>>;
@@ -97,7 +73,11 @@ export type ElectronAPI = {
     initializeGit: (id: string) => Promise<IpcResult<Workspace>>;
     getUnstagedChanges: (id: string) => Promise<IpcResult<GitUnstagedChange[]>>;
     getStagedChanges: (id: string) => Promise<IpcResult<GitStagedChange[]>>;
-    getFileDiffContent: (workspaceId: string, path: string, staged?: boolean) => Promise<IpcResult<FileDiffContent>>;
+    getFileDiffContent: (
+      workspaceId: string,
+      path: string,
+      staged?: boolean
+    ) => Promise<IpcResult<FileDiffContent>>;
     revertFileChange: (workspaceId: string, path: string) => Promise<IpcResult>;
     stageFile: (workspaceId: string, path: string) => Promise<IpcResult>;
     unstageFile: (workspaceId: string, path: string) => Promise<IpcResult>;
@@ -120,7 +100,9 @@ export type ElectronAPI = {
     clone: (repoUrl: string, parentDir: string) => Promise<IpcResult<string>>;
   };
   terminal: {
-    create: (params: { cwd?: string; cols?: number; rows?: number }) => Promise<IpcResult<{ terminalId: string }>>;
+    create: (params: { cwd?: string; cols?: number; rows?: number }) => Promise<
+      IpcResult<{ terminalId: string }>
+    >;
     write: (terminalId: string, data: string) => Promise<IpcResult>;
     resize: (terminalId: string, cols: number, rows: number) => Promise<IpcResult>;
     destroy: (terminalId: string) => Promise<IpcResult>;
@@ -136,10 +118,13 @@ export type ElectronAPI = {
       activeThreadId: string;
       messageIndex: number;
     }) => Promise<IpcResult<{ checkpoint: Checkpoint; finalizedPrev: Checkpoint | null }>>;
+    capturePostRun: (params: { workspaceId: string; threadId: string }) => Promise<IpcResult>;
     finalize: (params: {
       workspaceId: string;
       threadId: string;
-    }) => Promise<IpcResult<{ checkpointId: string; modifiedFiles: string[]; createdFiles: string[] } | null>>;
+    }) => Promise<
+      IpcResult<{ checkpointId: string; modifiedFiles: string[]; createdFiles: string[] } | null>
+    >;
     restore: (params: {
       workspaceId: string;
       stashRef: string | null;

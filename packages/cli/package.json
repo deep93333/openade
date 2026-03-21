@@ -1,0 +1,25 @@
+{
+  "name": "@agentide/cli",
+  "version": "0.1.0",
+  "description": "Clone AgentIDE from GitHub, install dependencies, and start the dev stack",
+  "type": "commonjs",
+  "bin": {
+    "agentide": "./bin/agentide.cjs"
+  },
+  "files": ["bin"],
+  "keywords": ["agentide", "ide", "claude", "electron"],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deep93333/agentide.git",
+    "directory": "packages/cli"
+  },
+  "bugs": {
+    "url": "https://github.com/deep93333/agentide/issues"
+  },
+  "homepage": "https://github.com/deep93333/agentide#readme",
+  "engines": {
+    "node": ">=18"
+  },
+  "author": "AgentIDE Contributors",
+  "license": "MIT"
+}

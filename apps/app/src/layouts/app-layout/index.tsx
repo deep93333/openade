@@ -28,8 +28,6 @@
     const {
       activeWorkspace,
       rightPanelOpen,
-      activeView,
-      setActiveView,
       centerPage,
       secondaryPane,
       hasSecondaryPane,
@@ -72,10 +70,10 @@
 
     return (
       <TooltipProvider>
-        <div className="flex h-screen w-full min-w-0 flex-col overflow-hidden bg-tertiary dark:bg-background">
+        <div className="flex h-screen w-full min-w-0 flex-col overflow-hidden bg-secondary dark:bg-background">
           <AppTopBar onRemoveWorkspace={setWorkspaceToRemove} />
-          <div className="flex min-h-0 min-w-0 gap-1 flex-1 flex-row overflow-hidden bg-tertiary dark:bg-background">
-            <Group orientation="horizontal" className="min-h-0 min-w-0 gap-1.5 px-1.5 pb-1.5 flex-1 bg-tertiary dark:bg-background gap-0">
+          <div className="light-theme-island flex min-h-0 min-w-0 gap-1 flex-1 flex-row overflow-hidden">
+            <Group orientation="horizontal" className="min-h-0 min-w-0 gap-1.5 px-1.5 pb-1.5 flex-1 gap-0">
               <Panel id="main" minSize={360}>
                 <div
                   className={cn(
@@ -100,11 +98,8 @@
               )}
 
               {rightPanelOpen && (
-                                <div className={cn("flex min-h-0 flex-row overflow-hidden", CARD_CLASS)}>
-
+                <div className={cn("flex h-full min-h-0 min-w-0 flex-row overflow-hidden", CARD_CLASS)}>
                 <RightPanel
-                  activeView={activeView}
-                  setActiveView={setActiveView}
                   onFileSelect={openFileViewer}
                   showSeparator={!hasSecondaryPane}
                 />

@@ -339,8 +339,8 @@ const DEFAULT_CONTEXT_WINDOW = 200_000;
           onDragEnd={handleDragEnd}
           onClick={isBrainstormTask ? () => handleBrainstormDialogOpenChange(true) : undefined}
           className={cn(
-            "group super-ellipse cursor-pointer shadow-[0_0px_60px_0px_rgba(255,255,255,.04)_inset,0_0.5px_1px_rgba(255,255,255,.2)_inset] rounded-xl bg-background px-2 py-2 transition-all active:cursor-grabbing opacity-90 hover:scale-100 hover:opacity-100",
-            previewOpen && "ring-2 ring-accent-foreground/50 ring-offset-4 ring-offset-background opacity-100"
+            "group super-ellipse cursor-pointer  ring-1 ring-foreground/10 rounded-xl bg-background px-2 py-2 transition-all active:cursor-grabbing opacity-90 hover:scale-100 hover:opacity-100",
+            previewOpen && "ring-2 ring-accent ring-offset-4 ring-offset-background opacity-100"
           )}
         >
           <div className="flex flex-col gap-1.5">

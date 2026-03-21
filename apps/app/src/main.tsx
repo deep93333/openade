@@ -5,6 +5,13 @@ import "@vscode/codicons/dist/codicon.css";
 import "devicon/devicon.min.css";
 import "@/lib/register-diffs-theme";
 import "./styles/index.css";
+import {
+  applyResolvedTheme,
+  getStoredAppearance,
+  resolveAppearance,
+} from "@/lib/document-theme";
+
+applyResolvedTheme(resolveAppearance(getStoredAppearance() ?? "dark"));
 
 const root = document.getElementById("root");
 if (!root) throw new Error("Root element not found");

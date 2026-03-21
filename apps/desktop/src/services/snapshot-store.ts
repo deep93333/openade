@@ -14,11 +14,12 @@ type RestoreResult = {
   errors: string[];
 };
 
+function snapshotsBaseDir(): string {
+  return path.join(app.getPath("userData"), "agentide", "snapshots");
+}
+
 function getSnapshotDir(workspaceId: string, threadId: string, checkpointId: string): string {
-  const base = app?.isPackaged
-    ? path.join(app.getPath("userData"), "snapshots")
-    : path.join(process.cwd(), "snapshots");
-  return path.join(base, workspaceId, threadId, checkpointId);
+  return path.join(snapshotsBaseDir(), workspaceId, threadId, checkpointId);
 }
 
 export async function saveSnapshots(
@@ -71,13 +72,7 @@ export async function restoreFromSnapshots(snapshots: FileSnapshot[]): Promise<R
 }
 
 export async function deleteThreadSnapshots(workspaceId: string, threadId: string): Promise<void> {
-  const dir = path.join(
-    app?.isPackaged
-      ? path.join(app.getPath("userData"), "snapshots")
-      : path.join(process.cwd(), "snapshots"),
-    workspaceId,
-    threadId,
-  );
+  const dir = path.join(snapshotsBaseDir(), workspaceId, threadId);
   await fs.rm(dir, { recursive: true, force: true });
 }
 
@@ -96,13 +91,7 @@ export async function runGarbageCollection(
   keepCheckpointIds: string[],
 ): Promise<{ deletedDirs: number; freedBytes: number }> {
   const keepSet = new Set(keepCheckpointIds);
-  const dir = path.join(
-    app?.isPackaged
-      ? path.join(app.getPath("userData"), "snapshots")
-      : path.join(process.cwd(), "snapshots"),
-    workspaceId,
-    threadId,
-  );
+  const dir = path.join(snapshotsBaseDir(), workspaceId, threadId);
 
   let deletedDirs = 0;
   let freedBytes = 0;

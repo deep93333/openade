@@ -1,19 +1,6 @@
-import { contextBridge, ipcRenderer } from "electron";
 import { IPC } from "@agentide/shared";
-import type {
-  AgentErrorPayload,
-  AgentMessage,
-  AgentResult,
-  AgentStartParams,
-  CommitMessageParams,
-  ApiKeyProvider,
-  AuthMethod,
-  ChatData,
-  SdkSessionIdPayload,
-  ThreadTitleParams,
-  ToolApprovalRequest,
-  ToolApprovalResponse,
-} from "@agentide/shared";
+import type { ApiKeyProvider, AuthMethod, ChatData } from "@agentide/shared";
+import { contextBridge, ipcRenderer } from "electron";
 
 contextBridge.exposeInMainWorld("electronAPI", {
   config: {
@@ -64,64 +51,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
       workspaceId: string,
       threadId: string,
       messageId: string,
-      updates: Partial<Pick<import("@agentide/shared").AgentMessage, "content" | "planContent" | "reviewContent">>
+      updates: Partial<
+        Pick<import("@agentide/shared").AgentMessage, "content" | "planContent" | "reviewContent">
+      >
     ) => ipcRenderer.invoke(IPC.CHAT_UPDATE_MESSAGE, workspaceId, threadId, messageId, updates),
   },
-  agent: {
-    start: (params: AgentStartParams) =>
-      ipcRenderer.invoke(IPC.AGENT_START, params),
-
-    stop: (sessionId: string) => ipcRenderer.invoke(IPC.AGENT_STOP, sessionId),
-
-    status: () => ipcRenderer.invoke(IPC.AGENT_STATUS),
-
-    getModels: () => ipcRenderer.invoke(IPC.AGENT_GET_MODELS),
-
-    generateThreadTitle: (params: ThreadTitleParams) =>
-      ipcRenderer.invoke(IPC.AGENT_GENERATE_THREAD_TITLE, params),
-
-    generateCommitMessage: (params: CommitMessageParams) =>
-      ipcRenderer.invoke(IPC.AGENT_GENERATE_COMMIT_MESSAGE, params),
-
-    onMessage: (callback: (message: AgentMessage) => void) => {
-      const handler = (_event: Electron.IpcRendererEvent, message: AgentMessage) => callback(message);
-      ipcRenderer.on(IPC.AGENT_MESSAGE, handler);
-      return () => ipcRenderer.removeListener(IPC.AGENT_MESSAGE, handler);
-    },
-
-    onResult: (callback: (result: AgentResult) => void) => {
-      const handler = (_event: Electron.IpcRendererEvent, result: AgentResult) => callback(result);
-      ipcRenderer.on(IPC.AGENT_RESULT, handler);
-      return () => ipcRenderer.removeListener(IPC.AGENT_RESULT, handler);
-    },
-
-    onError: (callback: (payload: AgentErrorPayload) => void) => {
-      const handler = (_event: Electron.IpcRendererEvent, payload: AgentErrorPayload) =>
-        callback(payload);
-      ipcRenderer.on(IPC.AGENT_ERROR, handler);
-      return () => ipcRenderer.removeListener(IPC.AGENT_ERROR, handler);
-    },
-
-    onSdkSessionId: (callback: (payload: SdkSessionIdPayload) => void) => {
-      const handler = (
-        _event: Electron.IpcRendererEvent,
-        payload: SdkSessionIdPayload
-      ) => callback(payload);
-      ipcRenderer.on(IPC.AGENT_SDK_SESSION_ID, handler);
-      return () => ipcRenderer.removeListener(IPC.AGENT_SDK_SESSION_ID, handler);
-    },
-
-    onToolApprovalRequest: (callback: (request: ToolApprovalRequest) => void) => {
-      const handler = (_event: Electron.IpcRendererEvent, request: ToolApprovalRequest) =>
-        callback(request);
-      ipcRenderer.on(IPC.AGENT_TOOL_APPROVAL_REQUEST, handler);
-      return () => ipcRenderer.removeListener(IPC.AGENT_TOOL_APPROVAL_REQUEST, handler);
-    },
-
-    respondToolApproval: (response: ToolApprovalResponse) =>
-      ipcRenderer.invoke(IPC.AGENT_TOOL_APPROVAL_RESPONSE, response),
-  },
-
   workspace: {
     list: () => ipcRenderer.invoke(IPC.WORKSPACE_LIST),
 
@@ -144,11 +78,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
     initializeGit: (id: string) => ipcRenderer.invoke(IPC.WORKSPACE_GIT_INIT, id),
 
-    getUnstagedChanges: (id: string) =>
-      ipcRenderer.invoke(IPC.WORKSPACE_GIT_UNSTAGED_CHANGES, id),
+    getUnstagedChanges: (id: string) => ipcRenderer.invoke(IPC.WORKSPACE_GIT_UNSTAGED_CHANGES, id),
 
-    getStagedChanges: (id: string) =>
-      ipcRenderer.invoke(IPC.WORKSPACE_GIT_STAGED_CHANGES, id),
+    getStagedChanges: (id: string) => ipcRenderer.invoke(IPC.WORKSPACE_GIT_STAGED_CHANGES, id),
 
     getFileDiffContent: (workspaceId: string, filePath: string, staged = false) =>
       ipcRenderer.invoke(IPC.WORKSPACE_GET_FILE_DIFF, workspaceId, filePath, staged),
@@ -165,8 +97,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     commit: (workspaceId: string, message: string) =>
       ipcRenderer.invoke(IPC.WORKSPACE_GIT_COMMIT, workspaceId, message),
 
-    push: (workspaceId: string) =>
-      ipcRenderer.invoke(IPC.WORKSPACE_GIT_PUSH, workspaceId),
+    push: (workspaceId: string) => ipcRenderer.invoke(IPC.WORKSPACE_GIT_PUSH, workspaceId),
 
     getAheadCount: (workspaceId: string) =>
       ipcRenderer.invoke(IPC.WORKSPACE_GIT_AHEAD_COUNT, workspaceId),
@@ -212,11 +143,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
       ipcRenderer.invoke(IPC.TERMINAL_WRITE, terminalId, data),
     resize: (terminalId: string, cols: number, rows: number) =>
       ipcRenderer.invoke(IPC.TERMINAL_RESIZE, terminalId, cols, rows),
-    destroy: (terminalId: string) =>
-      ipcRenderer.invoke(IPC.TERMINAL_DESTROY, terminalId),
+    destroy: (terminalId: string) => ipcRenderer.invoke(IPC.TERMINAL_DESTROY, terminalId),
     onData: (callback: (payload: { terminalId: string; data: string }) => void) => {
-      const handler = (_event: Electron.IpcRendererEvent, payload: { terminalId: string; data: string }) =>
-        callback(payload);
+      const handler = (
+        _event: Electron.IpcRendererEvent,
+        payload: { terminalId: string; data: string }
+      ) => callback(payload);
       ipcRenderer.on(IPC.TERMINAL_DATA, handler);
       return () => ipcRenderer.removeListener(IPC.TERMINAL_DATA, handler);
     },
@@ -230,10 +162,16 @@ contextBridge.exposeInMainWorld("electronAPI", {
   checkpoint: {
     create: (params: { workspaceId: string; activeThreadId: string; messageIndex: number }) =>
       ipcRenderer.invoke(IPC.CHECKPOINT_CREATE, params),
+    capturePostRun: (params: { workspaceId: string; threadId: string }) =>
+      ipcRenderer.invoke(IPC.CHECKPOINT_CAPTURE_POST_RUN, params),
     finalize: (params: { workspaceId: string; threadId: string }) =>
       ipcRenderer.invoke(IPC.CHECKPOINT_FINALIZE, params),
-    restore: (params: { workspaceId: string; stashRef: string | null; modifiedFiles?: string[]; createdFiles?: string[] }) =>
-      ipcRenderer.invoke(IPC.CHECKPOINT_RESTORE, params),
+    restore: (params: {
+      workspaceId: string;
+      stashRef: string | null;
+      modifiedFiles?: string[];
+      createdFiles?: string[];
+    }) => ipcRenderer.invoke(IPC.CHECKPOINT_RESTORE, params),
   },
   agentLog: {
     getPath: () => ipcRenderer.invoke(IPC.AGENT_LOG_GET_PATH),

@@ -2,7 +2,13 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { app, safeStorage } from "electron";
-import type { ApiKeyProvider, AuthMethod, GlobalSettings, MCPServerConfig } from "@agentide/shared";
+import type {
+  ApiKeyProvider,
+  AuthMethod,
+  GlobalSettings,
+  MCPServerConfig,
+  ThemeAppearance,
+} from "@agentide/shared";
 
 type AppConfig = {
   activeWorkspaceId: string | null;
@@ -15,6 +21,7 @@ type AppConfig = {
   commitMessageModel?: string;
   commitMessageProvider?: GlobalSettings["commitMessageProvider"];
   moonshotBaseUrl?: string | null;
+  appearance?: ThemeAppearance;
 };
 
 const getConfigPath = (): string => {
@@ -137,6 +144,10 @@ function loadConfig(): AppConfig {
         data?.commitMessageProvider === "minimax" ||
         data?.commitMessageProvider === "moonshot"
           ? data.commitMessageProvider
+          : undefined,
+      appearance:
+        data?.appearance === "light" || data?.appearance === "dark" || data?.appearance === "system"
+          ? data.appearance
           : undefined,
     };
   } catch {
@@ -363,6 +374,7 @@ export function getGlobalSettings(): GlobalSettings {
     commitMessageModel: config.commitMessageModel,
     commitMessageProvider: config.commitMessageProvider,
     moonshotBaseUrl: config.moonshotBaseUrl ?? undefined,
+    appearance: config.appearance ?? "dark",
   };
 }
 
@@ -375,6 +387,9 @@ export function setGlobalSettings(settings: GlobalSettings): void {
     config.commitMessageModel = settings.commitMessageModel?.trim() || undefined;
     config.commitMessageProvider = settings.commitMessageProvider;
     config.moonshotBaseUrl = settings.moonshotBaseUrl?.trim() || undefined;
+    if (settings.appearance !== undefined) {
+      config.appearance = settings.appearance;
+    }
     saveConfig(config);
   } catch {
     // ignore

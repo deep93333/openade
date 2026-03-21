@@ -5,7 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AgentIDE</title>
   </head>
-  <body class="antialiased dark">
+  <body class="antialiased">
+    <script>
+      (() => {
+        try {
+          const r = localStorage.getItem("agentide-appearance");
+          const p = r === "light" || r === "dark" || r === "system" ? r : "dark";
+          const dark =
+            p === "dark" ||
+            (p === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
+          document.documentElement.classList.toggle("dark", dark);
+          document.documentElement.style.colorScheme = dark ? "dark" : "light";
+        } catch {
+          document.documentElement.classList.add("dark");
+          document.documentElement.style.colorScheme = "dark";
+        }
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

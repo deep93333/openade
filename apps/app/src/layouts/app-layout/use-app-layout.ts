@@ -16,8 +16,6 @@ export function useAppLayout() {
   const pendingToolApprovals = useAgentStore((s) => s.pendingToolApprovals);
   const leftPanelOpen = useUIStore((s) => s.leftPanelOpen);
   const rightPanelOpen = useUIStore((s) => s.rightPanelOpen);
-  const activeView = useUIStore((s) => s.activeView);
-  const setActiveView = useUIStore((s) => s.setActiveView);
   const centerPage = useUIStore((s) => s.centerPage);
   const secondaryPane = useUIStore((s) => s.secondaryPane);
   const openFileViewer = useUIStore((s) => s.openFileViewer);
@@ -83,8 +81,6 @@ export function useAppLayout() {
     activeWorkspaceId,
     leftPanelOpen,
     rightPanelOpen,
-    activeView,
-    setActiveView,
     centerPage,
     secondaryPane,
     hasSecondaryPane,

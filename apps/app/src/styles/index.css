@@ -326,3 +326,58 @@ button {
     transition-duration: 0.01ms !important;
   }
 }
+
+.dark .light-theme-island {
+  color-scheme: light;
+  --oklch-zinc-100: 97% 0.001 241.23;
+  --oklch-zinc-150: 96% 0.001 241.23;
+  --oklch-zinc-200: 95% 0.001 241.23;
+  --oklch-zinc-300: 93% 0.001 241.23;
+  --oklch-zinc-400: 90% 0.001 241.23;
+  --oklch-zinc-500: 75.35% 0.001 241.23;
+  --oklch-zinc-600: 65.57% 0.001 241.8;
+  --oklch-zinc-700: 50.57% 0.001 241.23;
+  --oklch-zinc-800: 32.21% 0.001 241.23;
+  --oklch-zinc-900: 20.54% 0.001 241.23;
+  --oklch-brand: 65% 0.23 253;
+  --oklch-brand-foreground: 100% 0.01 0;
+  --oklch-dark: 20.54% 0.003 241.23;
+  --oklch-light: 100% 0 95.8;
+  --oklch-inverse: 100% 0 95.8;
+  --oklch-popover: 55% 0.003 241.23;
+  --oklch-white: 99% 0.003 241.23;
+  --oklch-accent-2: 62.00% 0.1896200874605505 260.15244303046654;
+  --oklch-accent: 65% 0.23 253;
+  --oklch-accent-foreground: 84% 0.23 253;
+  --oklch-accent-hover: 68% 0.23 253;
+  --oklch-highlight-bg: 85% 0.2 93;
+  --oklch-highlight-foreground: 45.10% 0.056 76.50;
+  --oklch-accent-shadow: 56.20% 0.21 257;
+  --oklch-accent-hover-shadow: 47.00% 0.21 257;
+  --oklch-destructive: 55.20% 0.22 17;
+  --oklch-destructive-hover: 45.00% 0.22 17;
+  --oklch-destructive-shadow: 49.00% 0.22 17;
+  --oklch-destructive-hover-shadow: 39.00% 0.22 17;
+  --oklch-success: 86% 0.34 143;
+  --oklch-selection: 61% 0.2065 259.35;
+}
+
+.dark .light-theme-island,
+.dark .light-theme-island * {
+  --box-shadow-2xs: 0px 1px 2px 0 oklch(0 0 0 / 0.02), 0 0 0 1px oklch(0 0 0 / 0.08);
+  --box-shadow-xs: 0px 2px 4px 0 oklch(0 0 0 / 0.04), 0 0 0 1px oklch(0 0 0 / 0.08);
+  --box-shadow-sm: 0px 4px 12px -2px oklch(0 0 0 / 0.08), 0 0 0 1px oklch(0 0 0 / 0.08);
+  --box-shadow-md: 0px 14px 28px -6px oklch(0 0 0 / 0.1), 0px 2px 4px -1px oklch(0 0 0 / 0.06), 0 0 0 1px oklch(0 0 0 / 0.08);
+  --box-shadow-lg: 0px 24px 48px -12px oklch(0 0 0 / 0.16), 0px 4px 8px -2px oklch(0 0 0 / 0.08), 0 0 0 1px oklch(0 0 0 / 0.08);
+  --box-shadow-xl: 0px 32px 64px -16px oklch(0 0 0 / 0.20), 0px 6px 12px -3px oklch(0 0 0 / 0.1), 0 0 0 1px oklch(0 0 0 / 0.08);
+  --box-shadow-2xl: 0px 48px 96px -24px oklch(0 0 0 / 0.24), 0px 8px 16px -4px oklch(0 0 0 / 0.11), 0 0 0 1px oklch(0 0 0 / 0.08);
+  --popover-shadow: rgba(0, 0, 0, 0.07) 0px 4px 9px 0px, rgba(0, 0, 0, 0.06) 0px 16px 16px 0px, rgba(0, 0, 0, 0.04) 0px 36px 22px 0px,
+    rgba(0, 0, 0, 0.01) 0px 65px 26px 0px, rgba(0, 0, 0, 0) 0px 101px 28px 0px, rgba(0, 0, 0, 0.04) 0px 0px 0px 1px,
+    rgba(255, 255, 255) 0px 0px 0px 0.5px inset;
+  --button-shadow: rgba(0, 0, 0, 0.07) 0px 4px 9px 0px, rgba(0, 0, 0, 0.06) 0px 16px 16px 0px, rgba(0, 0, 0, 0.01) 0px 65px 26px 0px,
+    rgba(0, 0, 0, 0.08) 0px 0px 0px 1px, rgba(255, 255, 255) 0px 0px 0px 0.5px inset;
+  --card-shadow: rgba(0, 0, 0, 0.04) 0px 1px 1px 0px, rgba(0, 0, 0, 0.02) 0px 3px 3px 0px, rgba(0, 0, 0, 0.05) 0px 4px 4px 0px,
+    rgba(0, 0, 0, 0.05) 0px 0px 0px 1px, rgba(255, 255, 255) 0px 0px 0px 0.5px inset;
+  --page-shadow: rgba(0, 0, 0, 0.04) 0px 1px 1px 0px, rgba(0, 0, 0, 0.02) 0px 3px 3px 0px, rgba(0, 0, 0, 0.05) 0px 0px 0px 1px,
+    rgba(255, 255, 255) 0px 0px 0px 0.5px inset;
+}

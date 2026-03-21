@@ -1,21 +1,21 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import type { IpcResult } from "@agentide/shared";
 import { File, PatchDiff } from "@pierre/diffs/react";
-import { Button, ChevronDownIcon, CircleXIcon, RotateIcon } from "@agentide/ui";
+import { Button, ChevronDownIcon, CircleXIcon, RotateIcon, cn } from "@agentide/ui";
 import { IconLoader } from "@tabler/icons-react";
 import { getElectronAPI } from "@/lib/electron";
 import { useWorkspaceStore } from "@/store/workspace";
 import { DiffStats, FileName, basename } from "@/components/primitives";
 
 const DIFF_OPTIONS = {
-  theme: { dark: "agentide-dark" as const, light: "agentide-dark" as const },
+  theme: { dark: "agentide-light" as const, light: "agentide-light" as const },
   diffStyle: "unified" as const,
   diffIndicators: "bars" as const,
   disableFileHeader: true,
 };
 
 const FILE_OPTIONS = {
-  theme: { dark: "agentide-dark" as const, light: "agentide-dark" as const },
+  theme: { dark: "agentide-light" as const, light: "agentide-light" as const },
   disableFileHeader: true,
 };
 
@@ -171,7 +171,7 @@ export function DiffViewer({ open, onOpenChange, filePath, staged = false, class
 
   const name = filePath ? basename(filePath) : "";
 
-  const rootClassName = className ? `min-w-0 ${className}` : "min-w-0";
+  const rootClassName = cn("light-theme-island min-w-0 bg-background text-foreground", className);
 
   return (
     <div className={rootClassName}>
@@ -211,7 +211,7 @@ export function DiffViewer({ open, onOpenChange, filePath, staged = false, class
               Loading file…
             </div>
           ) : fileContent !== null && !fileError ? (
-            <div className="pierre-file-viewer min-h-0 flex-1 overflow-auto bg-secondary">
+            <div className="pierre-file-viewer min-h-0 flex-1 overflow-auto bg-background">
               <File
                 file={{ name, contents: fileContent }}
                 options={FILE_OPTIONS}
@@ -394,7 +394,7 @@ export function DiffStackViewer({ open, items, staged = false, className, hideSi
 
   if (!open) return null;
 
-  const rootClassName = className ? `min-w-0 ${className}` : "min-w-0";
+  const rootClassName = cn("light-theme-island min-w-0 bg-background text-foreground", className);
 
   return (
     <div className={rootClassName}>
