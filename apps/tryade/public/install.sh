@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO="${AGENTIDE_REPO:-https://github.com/deep93333/agentide.git}"
-TARGET_DIR="${1:-agentide}"
+REPO="${AGENTIDE_REPO:-https://github.com/deep93333/openade.git}"
+TARGET_DIR="${1:-openade}"
 
 resolve_bun() {
   if command -v bun >/dev/null 2>&1; then

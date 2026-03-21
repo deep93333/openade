@@ -37,7 +37,7 @@ export function App() {
           </span>
           <a
             className="text-sm font-medium text-slate-400 transition hover:text-emerald-400"
-            href="https://github.com/deep93333/agentide"
+            href="https://github.com/deep93333/openade"
             target="_blank"
             rel="noreferrer"
           >
@@ -57,7 +57,7 @@ export function App() {
           tryade.sh hosts a short install bootstrap and the full setup script for{" "}
           <a
             className="text-slate-300 underline decoration-white/20 underline-offset-4 transition hover:text-emerald-400 hover:decoration-emerald-400/50"
-            href="https://github.com/deep93333/agentide"
+            href="https://github.com/deep93333/openade"
             target="_blank"
             rel="noreferrer"
           >

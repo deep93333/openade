@@ -49,26 +49,26 @@ From any directory (requires Git; installs [Bun](https://bun.sh) if it is missin
 **GitHub raw** (bootstrap → full `scripts/install.sh` on `main`):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/deep93333/agentide/main/i | bash
+curl -fsSL https://raw.githubusercontent.com/deep93333/openade/main/i | bash
 ```
 
 Same behavior, canonical script path:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/deep93333/agentide/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/deep93333/openade/main/scripts/install.sh | bash
 ```
 
-This clones into `./agentide`, runs `bun install`, then `bun run dev`. Use another folder: add `my-agentide` at the end of the `bash` line (arguments pass through). For a fork:
+This clones into `./openade`, runs `bun install`, then `bun run dev`. Use another folder: add a directory name at the end of the `bash` line (arguments pass through). For a fork:
 
 ```bash
-export AGENTIDE_REPO=https://github.com/you/agentide.git
-curl -fsSL https://raw.githubusercontent.com/deep93333/agentide/main/i | bash
+export AGENTIDE_REPO=https://github.com/you/openade.git
+curl -fsSL https://raw.githubusercontent.com/deep93333/openade/main/i | bash
 ```
 
 ### Even shorter to share
 
 - **After you publish `@agentide/cli`:** `npx @agentide/cli` — no install URL at all.
-- **Link shortener:** point any short link (Bitly, `is.gd`, your own domain) at `https://raw.githubusercontent.com/deep93333/agentide/main/i` so people run `curl -fsSL https://your.short/i | bash`.
+- **Link shortener:** point any short link (Bitly, `is.gd`, your own domain) at `https://raw.githubusercontent.com/deep93333/openade/main/i` so people run `curl -fsSL https://your.short/i | bash`.
 - **Custom script URL:** `AGENTIDE_INSTALL_SCRIPT_URL=https://…/install.sh curl -fsSL https://…/i | bash` (forks or mirrors).
 
 (`export` must run in the same shell session before the `curl` line so the piped `bash` inherits it.)
@@ -102,7 +102,7 @@ Maintainers: from the repo root, `npm run publish:cli` (npm login with access to
 
 ```bash
 # Clone and enter the repo
-cd agentide
+cd openade
 
 # Install dependencies
 bun install

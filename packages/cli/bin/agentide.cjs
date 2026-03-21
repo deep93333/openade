@@ -4,7 +4,7 @@ const { spawnSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const DEFAULT_REPO = "https://github.com/deep93333/agentide.git";
+const DEFAULT_REPO = "https://github.com/deep93333/openade.git";
 
 function run(cmd, args, opts) {
   const r = spawnSync(cmd, args, { stdio: "inherit", ...opts });
@@ -50,14 +50,14 @@ function printHelp() {
   agentide [directory]
 
 One-liner (short URL):
-  curl -fsSL https://raw.githubusercontent.com/deep93333/agentide/main/i | bash
+  curl -fsSL https://raw.githubusercontent.com/deep93333/openade/main/i | bash
 
 Clones AgentIDE (if needed), installs dependencies, and runs the dev stack.
 
 Environment:
   AGENTIDE_REPO   Git URL (default: ${DEFAULT_REPO})
 
-Default directory: ./agentide
+Default directory: ./openade
 `);
 }
 
@@ -74,7 +74,7 @@ function main() {
   }
 
   const repo = process.env.AGENTIDE_REPO || DEFAULT_REPO;
-  const target = path.resolve(process.cwd(), argv[0] || "agentide");
+  const target = path.resolve(process.cwd(), argv[0] || "openade");
 
   if (fs.existsSync(target) && !fs.statSync(target).isDirectory()) {
     console.error(`Not a directory: ${target}`);
@@ -98,7 +98,7 @@ function main() {
   if (!bunBin) {
     console.error(
       "Bun was not found. Install Bun (https://bun.sh) or run:\n" +
-        `  curl -fsSL https://raw.githubusercontent.com/deep93333/agentide/main/i | bash`,
+        `  curl -fsSL https://raw.githubusercontent.com/deep93333/openade/main/i | bash`,
     );
     process.exit(1);
   }

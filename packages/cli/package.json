@@ -10,13 +10,13 @@
   "keywords": ["agentide", "ide", "claude", "electron"],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/deep93333/agentide.git",
+    "url": "git+https://github.com/deep93333/openade.git",
     "directory": "packages/cli"
   },
   "bugs": {
-    "url": "https://github.com/deep93333/agentide/issues"
+    "url": "https://github.com/deep93333/openade/issues"
   },
-  "homepage": "https://github.com/deep93333/agentide#readme",
+  "homepage": "https://github.com/deep93333/openade#readme",
   "engines": {
     "node": ">=18"
   },
