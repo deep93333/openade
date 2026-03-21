@@ -183,7 +183,7 @@ export function TaskThreadDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl  p-0 bg-background mb-8 overflow-hidden gap-0">
+      <DialogContent className="max-w-2xl h-[90dvh] max-h-[90dvh] p-0 bg-background overflow-hidden gap-0">
         <DialogHeader className="px-4 py-3">
           <div className="flex items-center justify-between gap-2">
             <DialogTitle className="text-sm font-medium">
@@ -205,7 +205,7 @@ export function TaskThreadDialog({
             </div>
           </div>
         </DialogHeader>
-        <div className="flex h-[46rem] min-h-0 w-full flex-col overflow-hidden">
+        <div className="flex h-full min-h-0 w-full flex-col overflow-hidden">
           {runtime.error ? (
             <div className="shrink-0  px-4 pb-3">
               <TaskErrorNotice error={runtime.error} tone="panel" actions={<TaskErrorActions error={runtime.error} />} />

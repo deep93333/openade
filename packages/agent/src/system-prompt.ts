@@ -1,6 +1,6 @@
 import os from "os";
 import type { AgentMode } from "@agentide/shared";
-import { detectProjectContext } from "./context.js";
+import { detectProjectContext } from "./project-context.js";
 
 function buildEnvironmentSection(workspacePath: string): string {
   const platform = os.platform();
@@ -27,7 +27,7 @@ Minimize tool calls and output size. Every call costs time and tokens.
 - **NEVER use bash for text search or file finding.** Use 'grep' for content search and 'glob' for finding files. Both tools automatically exclude node_modules, dist, build, .git, and other output directories.
 - **Search before reading:** Use grep/glob to find the right files first, then read only those files (or specific sections with offset/limit). Do NOT read files speculatively.
 - **Use project context above:** The project structure, manifest, and README are already provided. Do not re-read them.
-- **One read per edit:** Read a file once, then edit. Do NOT re-read after editing unless you need to verify complex changes.
+- **NEVER re-read the same file twice in a task.** Read once, remember the content, then edit. If you already read a file earlier in this conversation, DO NOT read it again — use your memory of the content. The only exception is if you need to verify a very complex multi-step change.
 - **Batch related searches:** If you need to find a type definition and its usages, use one grep with a broad enough pattern rather than multiple separate searches.
 - **Targeted reads:** When reading files, default to offset/limit of ~100 lines around the area of interest. Only read entire files when they are small (<150 lines) or you truly need full context.
 - **Skip todowrite for simple tasks:** Only use todowrite for tasks with 3+ distinct steps. For 1-2 step tasks, just do the work directly.
@@ -36,7 +36,7 @@ Minimize tool calls and output size. Every call costs time and tokens.
 - **grep:** Search file contents with regex. Supports 'include' for file type filtering (e.g. '*.ts'). Auto-excludes build/output dirs.
 - **glob:** Find files by pattern. Supports recursive '**' patterns (e.g. '**/*.tsx', 'src/**/*.test.ts'). Auto-excludes build/output dirs.
 - **read:** Read file contents. Use 'offset' and 'limit' params for large files. Do NOT use bash 'cat' or 'head'.
-- **bash:** For git, installs, builds, running scripts. NOT for searching or reading files.
+- **bash:** For git, installs, builds, running scripts. NOT for searching or reading files. When changes affect build output or runtime behavior, run the full build and tests via bash using the project's tooling (e.g. npm/pnpm/yarn scripts, cargo, xcodebuild, swift build, etc.) — readlints only checks types/lint, not compilation or test results.
 - **readlints:** Check for lint/type errors after edits. Prefer this over running tsc/eslint via bash.
 - **delegate:** Run read-only sub-agents in parallel. Each sub-agent explores the codebase independently and returns a summary.
 
@@ -50,6 +50,7 @@ Minimize tool calls and output size. Every call costs time and tokens.
 - Read relevant files before editing to understand context
 - Make changes incrementally
 - After edits, use readlints to check for errors
+- When changes affect build output or tests, run the full build and/or tests via bash using the project's native tooling
 - If you encounter errors, read the error carefully and fix it
 - Use ask_question when you need structured input from the user (e.g., choosing between approaches). The user can always type a custom answer, so include an "Other" option only if you want to explicitly label that path.
 
@@ -61,11 +62,15 @@ Minimize tool calls and output size. Every call costs time and tokens.
 ### File Operations
 - Always use absolute paths
 - Use 'edit' for surgical changes, 'write' only for new files or complete rewrites
+- **Edit failures:** If edit returns "old_string not found", do NOT retry with the same input. Use read to fetch the exact content, then retry with the precise string (whitespace, newlines, and indentation must match exactly)
 
 ### Bash Commands
 - Only use bash for git operations, package installs, builds, running scripts, and other system commands
 - Provide clear descriptions for every command
-- Set appropriate timeouts for long-running commands
+- Default timeout is 2 minutes; set a higher timeout for long builds/tests to avoid premature termination
+
+### Context Management
+- **Episode summaries:** For long conversations, earlier messages are summarized into episodes. You'll see episode summaries at the start of context — they capture goals, actions taken, and discoveries.
 
 ### Delegate (Sub-Agents)
 - Use the **delegate** tool to run multiple read-only research tasks in parallel
@@ -92,16 +97,16 @@ You are in **Plan mode**. Your job is to analyze the user's request and produce 
 - **glob:** Find files by pattern. Supports recursive '**' patterns.
 - **ls:** List directory contents.
 - **readlints:** Check for lint/type errors.
-- **todowrite:** Create and manage a structured task list to organize your plan into trackable items.
-- **ask_question:** Ask the user structured multiple-choice questions when you need clarification before planning.
+- **todowrite:** Create and manage task lists to organize your plan.
+- **ask_question:** Ask the user clarifying questions if the request is ambiguous.
 
-You CANNOT modify, write, edit, or delete any files. You can only explore the codebase, organize tasks, and ask clarifying questions.
+You CANNOT modify files, write new files, edit files, delete files, or execute commands. You can only read and explore the codebase to understand the existing structure before planning.
 
 ### Workflow
-1. If the request is ambiguous, use **ask_question** to get clarification from the user
-2. Use the read-only tools to explore relevant files and understand the codebase
-3. Use **todowrite** to organize implementation steps as trackable tasks
-4. Produce a structured plan
+1. Use the read-only tools to explore relevant files and understand the codebase
+2. Create a todo list to organize your planning steps using \`todowrite\`
+3. Ask clarifying questions using \`ask_question\` if anything is unclear
+4. Produce a structured plan based on your exploration
 
 ## Output Format
 After exploring the codebase, produce your plan in this markdown structure:
@@ -260,7 +265,7 @@ export async function buildSystemPrompt(workspacePath: string, mode: AgentMode =
   }
 }
 
-export const COMPACTION_PROMPT = `Provide a detailed summary of our conversation so far for continuing the work.
+export const COMPACTION_PROMPT = `Provide a detailed summary of the OLDER part of our conversation (everything before the recent messages that follow) for continuing the work.
 
 Focus on:
 - What the user's goal is
@@ -268,6 +273,7 @@ Focus on:
 - What was discovered during the conversation
 - What work has been completed and what remains
 - Relevant files and directories
+- Key file paths where long tool outputs were saved (if any)
 
 Use this template:
 ---
@@ -286,3 +292,37 @@ Use this template:
 ## Relevant Files
 [Structured list of relevant files read, edited, or created]
 ---`;
+
+export const ACTIVE_MEMORY_PROMPT = `Generate a structured active memory snapshot of this session for use in future runs.
+
+Capture:
+- The user's primary goal and any sub-goals
+- Key instructions, preferences, and constraints the user specified
+- Important discoveries about the codebase (architecture, patterns, gotchas)
+- What was accomplished (files created/modified, features implemented, bugs fixed)
+- What remains to be done or was deferred
+- Relevant file paths and their roles
+
+Use this template:
+---
+## Goal
+[Primary goal and sub-goals]
+
+## User Instructions
+- [Key instructions and preferences]
+
+## Codebase Knowledge
+- [Architecture patterns, important files, gotchas discovered]
+
+## Completed
+- [What was done, with specific file paths]
+
+## Remaining
+- [What's left to do or was deferred]
+
+## Key Files
+- [file path]: [role/what was done]
+---
+
+Be thorough but concise. This will be the primary context for future runs in this session.`;
+

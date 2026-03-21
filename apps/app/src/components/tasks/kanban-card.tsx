@@ -37,9 +37,12 @@
     "gpt-5.2-codex": 400_000,
     "gpt-5.3-codex": 400_000,
     "gpt-5.1-codex-mini": 400_000,
-  };
+    "kimi-k2": 128_000,
+    "kimi-k2.5": 128_000,
+    "kimi-k2-thinking": 128_000,
+};
 
-  const DEFAULT_CONTEXT_WINDOW = 200_000;
+const DEFAULT_CONTEXT_WINDOW = 200_000;
 
   function formatTokensShort(n: number): string {
     if (n == null || isNaN(n)) return "0";
@@ -268,7 +271,7 @@
     const isPlanningTask = task.thread.taskStatus === "planning";
     const isAgentReviewTask = task.thread.taskStatus === "agent_review";
     const isBrainstormTask = task.thread.taskStatus === "brainstorm";
-    const hasUnread = (task.thread.updatedAt ?? task.thread.createdAt) > (task.thread.lastReadAt ?? task.thread.createdAt);
+    const hasUnread = !isRunning && (task.thread.updatedAt ?? task.thread.createdAt) > (task.thread.lastReadAt ?? task.thread.createdAt);
     const dragPayload = JSON.stringify({ workspaceId: task.workspaceId, threadId: task.thread.id });
 
     const handleMarkRead = useCallback(() => {

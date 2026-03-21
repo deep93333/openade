@@ -13,6 +13,7 @@ export type GlobalSettings = {
   mcpServers: MCPServerConfig[];
   commitMessageModel?: string;
   commitMessageProvider?: AgentProvider;
+  moonshotBaseUrl?: string;
 };
 
 export type TaskStatus = "brainstorm" | "backlog" | "planning" | "in_progress" | "agent_review" | "in_review" | "completed" | "archived";
@@ -30,6 +31,24 @@ export type ImageAttachment = {
 
 export type ToolMessageStatus = "pending" | "running" | "completed" | "cancelled" | "failed";
 
+export type ContextMessageSummary = {
+  id: string;
+  role: AgentMessageRole;
+  preview: string;
+  toolName?: string;
+  timestamp: number;
+};
+
+export type AgentMessageContextInfo = {
+  prompt: string;
+  previousMessages: number;
+  systemPrompt?: string;
+  generatedSystemPrompt?: string;
+  messageSummaries?: ContextMessageSummary[];
+  estimatedTokens?: number;
+  wasCompacted?: boolean;
+};
+
 export type AgentMessage = {
   id: string;
   role: AgentMessageRole;
@@ -42,6 +61,8 @@ export type AgentMessage = {
   toolStatus?: ToolMessageStatus;
   isPartial?: boolean;
   sessionId?: string;
+  isMeta?: boolean;
+  metaType?: "generated_system_prompt";
   imageAttachments?: ImageAttachment[];
   inputTokens?: number;
   outputTokens?: number;
@@ -49,6 +70,7 @@ export type AgentMessage = {
   planContent?: string;
   reviewContent?: string;
   agentMode?: AgentMode;
+  contextInfo?: AgentMessageContextInfo;
 };
 
 export type Workspace = {
@@ -62,9 +84,9 @@ export type Workspace = {
 
 export type AgentMode = "ask" | "plan" | "agent" | "agent_review";
 
-export type AgentProvider = "claude" | "codex" | "minimax";
+export type AgentProvider = "claude" | "codex" | "minimax" | "moonshot";
 
-export type ApiKeyProvider = "claude" | "codex" | "minimax";
+export type ApiKeyProvider = "claude" | "codex" | "minimax" | "moonshot";
 
 export type ProviderConfig = {
   id: ApiKeyProvider;
@@ -102,6 +124,14 @@ export const PROVIDER_CONFIGS: ProviderConfig[] = [
     keyPlaceholder: "mk-...",
     helpUrl: "https://platform.minimax.io/",
     helpText: "Get a key from MiniMax platform",
+  },
+  {
+    id: "moonshot",
+    name: "Moonshot",
+    icon: "IconCloud",
+    keyPlaceholder: "sk-...",
+    helpUrl: "https://platform.moonshot.ai",
+    helpText: "Get a key from Moonshot platform",
   },
 ];
 
@@ -146,6 +176,7 @@ export type AgentStartParams = {
   workspaceId: string;
   activeThreadId?: string;
   existingMessages?: AgentMessage[];
+  activeMemory?: string;
   model?: string;
   mode?: AgentMode;
   provider?: AgentProvider;
@@ -212,6 +243,7 @@ export type AgentResult = {
   outputTokens?: number;
   cacheReadTokens?: number;
   cacheWriteTokens?: number;
+  activeMemory?: string;
 };
 
 export type Checkpoint = {
@@ -242,6 +274,7 @@ export type ChatThread = {
   lastRunInputTokens?: number;
   lastRunOutputTokens?: number;
   lastReadAt?: number;
+  activeMemory?: string;
 };
 
 export type ChatData = {

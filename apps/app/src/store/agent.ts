@@ -7,6 +7,7 @@ import type {
   ChatData,
   ChatThread,
   Checkpoint,
+  ContextMessageSummary,
   ImageAttachment,
   MCPServerConfig,
   TaskStatus,
@@ -18,6 +19,7 @@ import { getToolTitle } from "@/components/agent/tools/labels";
 import { getElectronAPI } from "@/lib/electron";
 import { normalizeUserMessageContentToText } from "@/utils/message";
 import { useCostStore } from "./cost";
+import { useChatEditorStore } from "./editor";
 import { useWorkspaceStore } from "./workspace";
 
 const CHAT_STORAGE_KEY = "agentide-chat";
@@ -122,11 +124,63 @@ function buildReviewPrompt(basePrompt: string, changedFiles: string[]): string {
   return `${basePrompt}\n\nReview hint: these files were likely changed earlier in this thread, so inspect them first, but do not limit your review to them if the task, surrounding code, or validation suggests you should inspect other files too.\n\nLikely changed files:\n${fileList}`;
 }
 
+function estimateTokens(text: string): number {
+  return Math.ceil(text.length / 4);
+}
+
+function estimateMessageTokens(messages: AgentMessage[]): number {
+  let total = 0;
+  for (const msg of messages) {
+    const content = normalizeUserMessageContentToText(msg.content);
+    total += estimateTokens(content);
+    if (msg.toolInput) {
+      total += estimateTokens(typeof msg.toolInput === "string" ? msg.toolInput : JSON.stringify(msg.toolInput));
+    }
+    if (msg.toolResult) {
+      total += estimateTokens(typeof msg.toolResult === "string" ? msg.toolResult : JSON.stringify(msg.toolResult));
+    }
+  }
+  return total;
+}
+
+function truncate(str: string, maxLen: number): string {
+  return str.length > maxLen ? str.slice(0, maxLen) + "…" : str;
+}
+
+function createMessageSummaries(messages: AgentMessage[]): ContextMessageSummary[] {
+  return messages.map((msg) => {
+    const content = normalizeUserMessageContentToText(msg.content);
+    let preview = "";
+    
+    if (msg.role === "tool") {
+      const inputStr = msg.toolInput 
+        ? (typeof msg.toolInput === "string" ? msg.toolInput : JSON.stringify(msg.toolInput))
+        : "";
+      const resultStr = msg.toolResult
+        ? (typeof msg.toolResult === "string" ? msg.toolResult : JSON.stringify(msg.toolResult))
+        : content;
+      preview = `INPUT: ${truncate(inputStr, 200)}\nRESULT: ${truncate(resultStr, 300)}`;
+    } else {
+      preview = truncate(content, 200);
+    }
+    
+    return {
+      id: msg.id,
+      role: msg.role,
+      preview,
+      toolName: msg.toolName,
+      timestamp: msg.timestamp,
+    };
+  });
+}
+
+
 type WorkspaceAgentState = {
   threads: ChatThread[];
   activeThreadId: string;
   threadRuntime: Record<string, ThreadRuntime>;
   sessionToThread: Record<string, string>;
+  pendingSessionMetaMessages: Record<string, AgentMessage[]>;
 };
 
 const EMPTY_WORKSPACE_STATE: WorkspaceAgentState = {
@@ -134,6 +188,7 @@ const EMPTY_WORKSPACE_STATE: WorkspaceAgentState = {
   activeThreadId: "",
   threadRuntime: {},
   sessionToThread: {},
+  pendingSessionMetaMessages: {},
 };
 
 type AgentStoreState = {
@@ -283,7 +338,8 @@ const saveSelectedModel = (model: string): void => {
 const loadSelectedProvider = (): AgentProvider => {
   try {
     const p = localStorage.getItem(PROVIDER_STORAGE_KEY);
-    return p === "codex" ? "codex" : "claude";
+    if (p === "codex" || p === "minimax" || p === "moonshot") return p;
+    return "claude";
   } catch {
     return "claude";
   }
@@ -323,7 +379,7 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
   selectedModel: loadSelectedModel(),
   selectedProvider: loadSelectedProvider(),
   selectedMode: "agent",
-  requireApproval: true,
+  requireApproval: false,
   pendingToolApprovals: {},
   sessionAllowedTools: new Set<string>(),
   listenersInitialized: false,
@@ -394,6 +450,7 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
           activeThreadId: resolvedId,
           threadRuntime,
           sessionToThread: {},
+          pendingSessionMetaMessages: {},
         },
       },
     }));
@@ -889,12 +946,27 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
       skipAddingMessage = true;
     }
 
+    const messagesForApi =
+      skipAddingMessage
+        ? existingMessages
+        : (targetThread.messages.map((m) =>
+            m.role === "user" ? { ...m, content: normalizeUserMessageContentToText(m.content) } : m
+          ) ?? []);
+
+    const estimatedContextTokens = estimateMessageTokens(messagesForApi) + estimateTokens(resolvedPrompt);
+
     const userMessage: AgentMessage = {
       id: crypto.randomUUID(),
       role: "user",
       content: options?.displayContent ?? resolvedPrompt,
       timestamp: Date.now(),
       imageAttachments: images,
+      contextInfo: {
+        prompt: resolvedPrompt,
+        previousMessages: messagesForApi.length,
+        messageSummaries: createMessageSummaries(messagesForApi),
+        estimatedTokens: estimatedContextTokens,
+      },
     };
 
     const shouldGenerateTitle =
@@ -929,11 +1001,29 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
       set((s) => {
         const w = s.workspaces[workspaceId];
         if (!w) return s;
+        const thread = w.threads.find((t) => t.id === tid);
+        if (!thread) return s;
+        const existingTokens = estimateMessageTokens(existingMessages) + estimateTokens(resolvedPrompt);
+        const updatedMessages = thread.messages.map((msg, idx) => {
+          if (idx !== thread.messages.length - 1 || msg.role !== "user") return msg;
+          return {
+            ...msg,
+            contextInfo: {
+              prompt: resolvedPrompt,
+              previousMessages: existingMessages.length,
+              systemPrompt: msg.contextInfo?.systemPrompt,
+              generatedSystemPrompt: msg.contextInfo?.generatedSystemPrompt,
+              messageSummaries: createMessageSummaries(existingMessages),
+              estimatedTokens: existingTokens,
+            },
+          };
+        });
         return {
           workspaces: {
             ...s.workspaces,
             [workspaceId]: {
               ...w,
+              threads: w.threads.map((t) => (t.id === tid ? { ...t, messages: updatedMessages } : t)),
               threadRuntime: {
                 ...w.threadRuntime,
                 [tid]: { ...EMPTY_RUNTIME, status: "running" },
@@ -946,15 +1036,62 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
 
     const activeThread = get().workspaces[workspaceId]?.threads.find((t) => t.id === tid);
     const resumeSessionId = activeThread?.sdkSessionId;
-    const isTaskThread = options?.useExistingPrompt && activeThread?.model;
-    const modelToUse = isTaskThread ? activeThread.model : selectedModel;
-    const provider =
-      getProviderForModel(modelToUse) ??
-      options?.provider ??
-      activeThread?.provider ??
-      get().selectedProvider;
+    const modelOptions = useChatEditorStore.getState().modelOptions;
+    let modelToUse: string;
+    let provider: AgentProvider;
+    if (options?.useExistingPrompt && activeThread) {
+      if (activeThread.model) {
+        modelToUse = activeThread.model;
+        provider =
+          getProviderForModel(modelToUse, modelOptions) ??
+          activeThread.provider ??
+          get().selectedProvider;
+      } else if (activeThread.provider) {
+        const fallback = modelOptions.find((o) => o.provider === activeThread!.provider);
+        if (fallback) {
+          modelToUse = fallback.value;
+          provider = activeThread.provider;
+        } else {
+          modelToUse = selectedModel;
+          provider =
+            getProviderForModel(modelToUse, modelOptions) ??
+            options?.provider ??
+            get().selectedProvider;
+        }
+      } else {
+        modelToUse = selectedModel;
+        provider =
+          getProviderForModel(modelToUse, modelOptions) ??
+          options?.provider ??
+          get().selectedProvider;
+      }
+    } else {
+      modelToUse = selectedModel;
+      provider =
+        getProviderForModel(modelToUse, modelOptions) ??
+        options?.provider ??
+        activeThread?.provider ??
+        get().selectedProvider;
+    }
 
-    const messagesForApi =
+    set((s) => {
+      const w = s.workspaces[workspaceId];
+      if (!w || !tid) return s;
+      return {
+        workspaces: {
+          ...s.workspaces,
+          [workspaceId]: {
+            ...w,
+            threads: w.threads.map((t) =>
+              t.id === tid ? { ...t, model: modelToUse, provider } : t
+            ),
+          },
+        },
+      };
+    });
+    get().persistWorkspace(workspaceId).catch(() => {});
+
+    const messagesForApiForStart =
       skipAddingMessage
         ? existingMessages
         : (activeThread?.messages.slice(0, -1).map((m) =>
@@ -966,6 +1103,7 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
       workspaceId,
       activeThreadId: tid || undefined,
       existingMessages: messagesForApi,
+      activeMemory: activeThread?.activeMemory,
       model: modelToUse,
       mode: effectiveMode,
       provider,
@@ -977,15 +1115,19 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
 
     if (result.success && result.data) {
       const sessionId = result.data.sessionId;
+      const pendingMetaMessages = get().workspaces[workspaceId]?.pendingSessionMetaMessages[sessionId] ?? [];
       set((s) => {
         const ws = s.workspaces[workspaceId];
         if (!ws) return s;
+        const nextPendingSessionMetaMessages = { ...ws.pendingSessionMetaMessages };
+        delete nextPendingSessionMetaMessages[sessionId];
         return {
           workspaces: {
             ...s.workspaces,
             [workspaceId]: {
               ...ws,
               sessionToThread: { ...ws.sessionToThread, [sessionId]: tid },
+              pendingSessionMetaMessages: nextPendingSessionMetaMessages,
               threadRuntime: {
                 ...ws.threadRuntime,
                 [tid]: { ...(ws.threadRuntime[tid] ?? EMPTY_RUNTIME), sessionId },
@@ -994,7 +1136,10 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
           },
         };
       });
-    } else {
+      for (const pendingMessage of pendingMetaMessages) {
+        get().addMessage(pendingMessage);
+      }
+    } else { 
       set((s) => {
         const ws = s.workspaces[workspaceId];
         if (!ws) return s;
@@ -1114,9 +1259,70 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
       }
     }
 
-    if (!targetWorkspaceId || !targetThreadId) return;
+    if (!targetWorkspaceId || !targetThreadId) {
+      if (message.sessionId && message.isMeta) {
+        const fallbackWorkspaceId = Object.keys(workspaces)[0];
+        if (!fallbackWorkspaceId) return;
+        set((s) => {
+          const workspace = s.workspaces[fallbackWorkspaceId];
+          if (!workspace) return s;
+          return {
+            workspaces: {
+              ...s.workspaces,
+              [fallbackWorkspaceId]: {
+                ...workspace,
+                pendingSessionMetaMessages: {
+                  ...workspace.pendingSessionMetaMessages,
+                  [message.sessionId!]: [
+                    ...(workspace.pendingSessionMetaMessages[message.sessionId!] ?? []),
+                    message,
+                  ],
+                },
+              },
+            },
+          };
+        });
+      }
+      return;
+    }
     const wsId = targetWorkspaceId;
     const threadId = targetThreadId;
+
+    if (message.isMeta && message.metaType === "generated_system_prompt") {
+      set((s) => {
+        const ws = s.workspaces[wsId];
+        if (!ws) return s;
+        const updatedThreads = ws.threads.map((t) => {
+          if (t.id !== threadId) return t;
+          const nextMessages = [...t.messages];
+          for (let i = nextMessages.length - 1; i >= 0; i--) {
+            const candidate = nextMessages[i];
+            if (candidate.role !== "user") continue;
+            nextMessages[i] = {
+              ...candidate,
+              contextInfo: {
+                ...candidate.contextInfo,
+                prompt: candidate.contextInfo?.prompt ?? candidate.content,
+                previousMessages: candidate.contextInfo?.previousMessages ?? 0,
+                generatedSystemPrompt: message.content,
+              },
+            };
+            break;
+          }
+          return { ...t, messages: nextMessages };
+        });
+        return {
+          workspaces: {
+            ...s.workspaces,
+            [wsId]: {
+              ...ws,
+              threads: updatedThreads,
+            },
+          },
+        };
+      });
+      return;
+    }
 
     if (message.isPartial) {
       set((s) => {
@@ -1370,6 +1576,7 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
               lastRunOutputTokens: outputTokens,
             }
           : {};
+      const activeMemoryUpdate = result.activeMemory ? { activeMemory: result.activeMemory } : {};
       return {
         workspaces: {
           ...s.workspaces,
@@ -1380,6 +1587,7 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
                 ? {
                     ...t,
                     ...threadTokenUpdate,
+                    ...activeMemoryUpdate,
                     ...(moveToReview ? { taskStatus: "in_review" as TaskStatus } : {}),
                     ...(hasUsage && t.messages.length > 0
                       ? {

@@ -14,29 +14,57 @@ export function estimateTokens(text: string): number {
   return Math.ceil(text.length / CHARS_PER_TOKEN_ESTIMATE);
 }
 
+function messageText(msg: ModelMessage): string {
+  if (typeof msg.content === "string") return msg.content;
+  if (Array.isArray(msg.content)) {
+    return msg.content
+      .map((part) => {
+        if (typeof part === "string") return part;
+        if (part && typeof part === "object") {
+          if ("text" in part && typeof part.text === "string") return part.text;
+          if ("output" in part) {
+            const out = (part as { output?: { value?: string } }).output;
+            if (out && typeof out.value === "string") return out.value;
+          }
+        }
+        return "";
+      })
+      .join("");
+  }
+  return JSON.stringify(msg.content);
+}
+
+export function estimateConversationTokens(messages: ModelMessage[]): number {
+  let total = 0;
+  for (const msg of messages) {
+    total += estimateTokens(messageText(msg));
+  }
+  return total;
+}
+
 export function computeCost(usage: LanguageModelUsage, modelDef: ModelDef): number {
   const inputTokens = usage.inputTokens ?? 0;
   const outputTokens = usage.outputTokens ?? 0;
-  const inputRate =
-    modelDef.inputPricePer1k ??
-    (modelDef.llmProvider === "anthropic" ? 0.003 : modelDef.llmProvider === "minimax" ? 0.0002 : 0.002);
-  const outputRate =
-    modelDef.outputPricePer1k ??
-    (modelDef.llmProvider === "anthropic" ? 0.015 : modelDef.llmProvider === "minimax" ? 0.0008 : 0.010);
+  const { pricing } = modelDef;
+  const inputRate = pricing.inputPer1M;
+  const outputRate = pricing.outputPer1M;
 
   const cacheRead = usage.inputTokenDetails?.cacheReadTokens ?? 0;
   const cacheWrite = usage.inputTokenDetails?.cacheWriteTokens ?? 0;
 
-  if (modelDef.llmProvider === "anthropic" && (cacheRead > 0 || cacheWrite > 0)) {
+  if (cacheRead > 0 || cacheWrite > 0) {
     const uncachedTokens = inputTokens - cacheRead - cacheWrite;
-    const inputCost =
+    const cacheReadRate = pricing.cacheReadPer1M ?? inputRate * 0.1;
+    const cacheWriteRate = pricing.cacheWritePer1M ?? inputRate * 1.25;
+    return (
       uncachedTokens * inputRate +
-      cacheRead * inputRate * 0.1 +
-      cacheWrite * inputRate * 1.25;
-    return (inputCost + outputTokens * outputRate) / 1000;
+      cacheRead * cacheReadRate +
+      cacheWrite * cacheWriteRate +
+      outputTokens * outputRate
+    ) / 1_000_000;
   }
 
-  return (inputTokens * inputRate + outputTokens * outputRate) / 1000;
+  return (inputTokens * inputRate + outputTokens * outputRate) / 1_000_000;
 }
 
 export function parseRetryDelay(error: unknown, attempt: number): number | null {
@@ -129,6 +157,9 @@ export function pruneConversation(messages: ModelMessage[]): ModelMessage[] {
 
   return messages.map((msg, i) => {
     if (!toPrune.has(i)) return msg;
+    if (msg.role === "tool" && typeof msg.content === "string") {
+      return { ...msg, content: "[Old tool result content cleared]" } as unknown as ModelMessage;
+    }
     if (msg.role === "tool" && Array.isArray(msg.content)) {
       const pruned = {
         ...msg,

@@ -23,7 +23,7 @@ import { EditorArea } from "./editor-area";
 import { ChangedFilesBar } from "./changes";
 import { EmbeddedToolbar } from "./toolbar";
 
-import type { AgentMessage } from "@agentide/shared";
+import type { AgentMessage, AgentMode } from "@agentide/shared";
 import type { ChatEditorProps } from "./types";
 
 const CHAT_PLACEHOLDER = "Send a message to the agent...";
@@ -81,11 +81,12 @@ export const ChatEditor = ({ embedded = false }: ChatEditorProps) => {
 
   const openDiffViewer = useUIStore((s) => s.openDiffViewer);
 
-  const threadMessages = useAgentStore((s) => {
+  const activeThread = useAgentStore((s) => {
     const wsId = activeWorkspaceId ?? "";
-    const thread = s.getActiveThread(wsId);
-    return thread?.messages ?? EMPTY_THREAD_MESSAGES;
+    return s.getActiveThread(wsId);
   });
+  const threadMessages = activeThread?.messages ?? EMPTY_THREAD_MESSAGES;
+  const threadTaskStatus = activeThread?.taskStatus;
 
   const threadChangedFiles = useThreadChangedFiles(threadMessages, activeWorkspace?.path ?? null);
   const unstagedChanges = useGitUnstagedChanges();
@@ -498,14 +499,18 @@ export const ChatEditor = ({ embedded = false }: ChatEditorProps) => {
     const augmentedText = augmentWithSkillHint(ed, text);
     const images = imageAttachments.length ? imageAttachments : undefined;
 
+    // Determine mode based on thread status - planning threads should stay in plan mode
+    const mode: AgentMode | undefined = threadTaskStatus === "planning" ? "plan" : undefined;
+
     startAgent(currentWorkspaceId, augmentedText, {
       displayContent: html || undefined,
       imageAttachments: images,
+      mode,
     });
 
     ed.commands.clearContent();
     clearImageAttachments();
-  }, [isRunning, imageAttachments, augmentWithSkillHint, loadWorkspace, startAgent, clearImageAttachments]);
+  }, [isRunning, imageAttachments, augmentWithSkillHint, loadWorkspace, startAgent, clearImageAttachments, threadTaskStatus]);
 
   const editor = useEditor({
     extensions: [StarterKit, Placeholder.configure({ placeholder }), mentionExtension],

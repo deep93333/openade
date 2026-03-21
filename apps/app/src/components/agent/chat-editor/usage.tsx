@@ -13,6 +13,9 @@ const MODEL_CONTEXT_WINDOW: Record<string, number> = {
   "gpt-5.2-codex": 400_000,
   "gpt-5.3-codex": 400_000,
   "gpt-5.1-codex-mini": 400_000,
+  "kimi-k2": 128_000,
+  "kimi-k2.5": 128_000,
+  "kimi-k2-thinking": 128_000,
 };
 
 const DEFAULT_CONTEXT_WINDOW = 200_000;

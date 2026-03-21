@@ -1,5 +1,5 @@
 import { ipcMain } from "electron";
-import { validateMCPServers } from "@agentide/agent/src/tools/mcp.js";
+import { validateMCPServers } from "@agentide/agent";
 import { IPC } from "@agentide/shared";
 import type { ApiKeyProvider, GlobalSettings, MCPServerConfig } from "@agentide/shared";
 import * as configStorage from "../services/config-storage";

@@ -16,6 +16,7 @@ export type AgentBackendStartOptions = {
   workspacePath: string;
   prompt: string;
   existingMessages?: AgentMessage[];
+  activeMemory?: string;
   model?: string;
   mode?: AgentMode;
   resumeSessionId?: string;

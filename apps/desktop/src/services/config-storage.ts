@@ -9,10 +9,12 @@ type AppConfig = {
   encryptedApiKey: string | null;
   encryptedCodexApiKey: string | null;
   encryptedMinimaxApiKey: string | null;
+  encryptedMoonshotApiKey: string | null;
   authMethod: AuthMethod;
   mcpServers: MCPServerConfig[];
   commitMessageModel?: string;
   commitMessageProvider?: GlobalSettings["commitMessageProvider"];
+  moonshotBaseUrl?: string | null;
 };
 
 const getConfigPath = (): string => {
@@ -29,6 +31,7 @@ const DEFAULT_CONFIG: AppConfig = {
   encryptedApiKey: null,
   encryptedCodexApiKey: null,
   encryptedMinimaxApiKey: null,
+  encryptedMoonshotApiKey: null,
   authMethod: "claude_login",
   mcpServers: [],
   commitMessageModel: undefined,
@@ -109,6 +112,12 @@ function loadConfig(): AppConfig {
         typeof data?.encryptedCodexApiKey === "string" ? data.encryptedCodexApiKey : null,
       encryptedMinimaxApiKey:
         typeof data?.encryptedMinimaxApiKey === "string" ? data.encryptedMinimaxApiKey : null,
+      encryptedMoonshotApiKey:
+        typeof data?.encryptedMoonshotApiKey === "string" ? data.encryptedMoonshotApiKey : null,
+      moonshotBaseUrl:
+        typeof data?.moonshotBaseUrl === "string" && data.moonshotBaseUrl.trim()
+          ? data.moonshotBaseUrl.trim()
+          : undefined,
       authMethod:
         data?.authMethod === "api_key" || data?.authMethod === "claude_login"
           ? data.authMethod
@@ -125,7 +134,8 @@ function loadConfig(): AppConfig {
       commitMessageProvider:
         data?.commitMessageProvider === "claude" ||
         data?.commitMessageProvider === "codex" ||
-        data?.commitMessageProvider === "minimax"
+        data?.commitMessageProvider === "minimax" ||
+        data?.commitMessageProvider === "moonshot"
           ? data.commitMessageProvider
           : undefined,
     };
@@ -239,6 +249,35 @@ export function setMinimaxApiKey(apiKey: string | null): void {
   }
 }
 
+export function getMoonshotApiKey(): string | null {
+  try {
+    const config = loadConfig();
+    if (!config.encryptedMoonshotApiKey) return null;
+    if (!safeStorage.isEncryptionAvailable()) return null;
+    const decrypted = safeStorage.decryptString(
+      Buffer.from(config.encryptedMoonshotApiKey, "base64")
+    );
+    return decrypted || null;
+  } catch {
+    return null;
+  }
+}
+
+export function setMoonshotApiKey(apiKey: string | null): void {
+  try {
+    const config = loadConfig();
+    if (!apiKey) {
+      config.encryptedMoonshotApiKey = null;
+    } else if (safeStorage.isEncryptionAvailable()) {
+      const encrypted = safeStorage.encryptString(apiKey);
+      config.encryptedMoonshotApiKey = encrypted.toString("base64");
+    }
+    saveConfig(config);
+  } catch {
+    // ignore
+  }
+}
+
 export function hasApiKey(): boolean {
   const config = loadConfig();
   return !!config.encryptedApiKey;
@@ -254,6 +293,26 @@ export function hasMinimaxApiKey(): boolean {
   return !!config.encryptedMinimaxApiKey;
 }
 
+export function hasMoonshotApiKey(): boolean {
+  const config = loadConfig();
+  return !!config.encryptedMoonshotApiKey;
+}
+
+export function getMoonshotBaseUrl(): string | null {
+  const config = loadConfig();
+  return config.moonshotBaseUrl ?? null;
+}
+
+export function setMoonshotBaseUrl(url: string | null): void {
+  try {
+    const config = loadConfig();
+    config.moonshotBaseUrl = url?.trim() || undefined;
+    saveConfig(config);
+  } catch {
+    // ignore
+  }
+}
+
 export function getApiKeyByProvider(provider: ApiKeyProvider): string | null {
   switch (provider) {
     case "claude":
@@ -262,6 +321,8 @@ export function getApiKeyByProvider(provider: ApiKeyProvider): string | null {
       return getCodexApiKey();
     case "minimax":
       return getMinimaxApiKey();
+    case "moonshot":
+      return getMoonshotApiKey();
   }
 }
 
@@ -273,6 +334,8 @@ export function setApiKeyByProvider(provider: ApiKeyProvider, apiKey: string | n
       return setCodexApiKey(apiKey);
     case "minimax":
       return setMinimaxApiKey(apiKey);
+    case "moonshot":
+      return setMoonshotApiKey(apiKey);
   }
 }
 
@@ -284,6 +347,8 @@ export function hasApiKeyByProvider(provider: ApiKeyProvider): boolean {
       return hasCodexApiKey();
     case "minimax":
       return hasMinimaxApiKey();
+    case "moonshot":
+      return hasMoonshotApiKey();
   }
 }
 
@@ -297,6 +362,7 @@ export function getGlobalSettings(): GlobalSettings {
     mcpServers: config.mcpServers,
     commitMessageModel: config.commitMessageModel,
     commitMessageProvider: config.commitMessageProvider,
+    moonshotBaseUrl: config.moonshotBaseUrl ?? undefined,
   };
 }
 
@@ -308,6 +374,7 @@ export function setGlobalSettings(settings: GlobalSettings): void {
       .filter((server): server is MCPServerConfig => server !== null);
     config.commitMessageModel = settings.commitMessageModel?.trim() || undefined;
     config.commitMessageProvider = settings.commitMessageProvider;
+    config.moonshotBaseUrl = settings.moonshotBaseUrl?.trim() || undefined;
     saveConfig(config);
   } catch {
     // ignore

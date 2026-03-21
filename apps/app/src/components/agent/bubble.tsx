@@ -8,10 +8,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   PlayIcon,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
   Textarea,
   RotateIcon,
 } from "@agentide/ui";
-import { IconCheck, IconPencil } from "@tabler/icons-react";
+import { IconCheck, IconInfoCircle, IconPencil } from "@tabler/icons-react";
 import { cn } from "@/lib/cn";
 import { UserMessagePreview } from "./mention-chip";
 import { useAgentStore } from "@/store/agent";
@@ -275,6 +278,173 @@ function ReviewFooter({ message }: { message: AgentMessage }) {
   );
 }
 
+function ContextMessageList({ summaries }: { summaries: NonNullable<AgentMessage["contextInfo"]>["messageSummaries"] }) {
+  if (!summaries || summaries.length === 0) return null;
+
+  const roleColors: Record<string, string> = {
+    user: "text-blue-400",
+    assistant: "text-green-400",
+    tool: "text-yellow-400",
+    system: "text-purple-400",
+  };
+
+  const roleBg: Record<string, string> = {
+    user: "bg-blue-500/10",
+    assistant: "bg-green-500/10",
+    tool: "bg-yellow-500/10",
+    system: "bg-purple-500/10",
+  };
+
+  return (
+    <div className="space-y-1.5 max-h-[50vh] overflow-y-auto">
+      {summaries.map((msg, idx) => (
+        <div key={msg.id} className={cn("rounded px-2 py-1.5 text-[10px]", roleBg[msg.role] ?? "bg-muted")}>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="shrink-0 text-muted-foreground/60 tabular-nums font-mono">#{idx + 1}</span>
+            <span className={cn("font-mono font-medium px-1.5 py-0.5 rounded text-[9px]", roleColors[msg.role] ?? "text-muted-foreground", roleBg[msg.role])}>
+              {msg.role === "tool" ? `${msg.toolName ?? "tool"}` : msg.role.toUpperCase()}
+            </span>
+          </div>
+          <div className="text-muted-foreground whitespace-pre-wrap break-words font-mono text-[9px] leading-relaxed">
+            {msg.preview || "(empty)"}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function UserMessageContextPopover({ message }: { message: AgentMessage }) {
+  const contextInfo = message.contextInfo;
+  if (!contextInfo) {
+    return (
+      <span className="text-[10px] text-muted-foreground/50 px-2 py-0.5">
+        (no context info)
+      </span>
+    );
+  }
+
+  const hasSummaries = contextInfo.messageSummaries && contextInfo.messageSummaries.length > 0;
+  const toolCount = contextInfo.messageSummaries?.filter((m) => m.role === "tool").length ?? 0;
+  const userCount = contextInfo.messageSummaries?.filter((m) => m.role === "user").length ?? 0;
+  const assistantCount = contextInfo.messageSummaries?.filter((m) => m.role === "assistant").length ?? 0;
+  
+  const debugInfo = {
+    hasContextInfo: !!contextInfo,
+    previousMessages: contextInfo.previousMessages,
+    hasSummariesArray: !!contextInfo.messageSummaries,
+    summariesLength: contextInfo.messageSummaries?.length ?? 0,
+    estimatedTokens: contextInfo.estimatedTokens,
+    keys: Object.keys(contextInfo),
+  };
+
+  const tokenDisplay = contextInfo.estimatedTokens 
+    ? `~${(contextInfo.estimatedTokens / 1000).toFixed(1)}k tokens`
+    : null;
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-medium rounded-full bg-foreground/5 text-muted-foreground hover:bg-foreground/10 hover:text-foreground transition-colors"
+        >
+          <IconInfoCircle className="size-3" />
+          <span>{contextInfo.previousMessages} msgs</span>
+          {tokenDisplay && (
+            <>
+              <span className="text-muted-foreground/40">|</span>
+              <span className="text-orange-400">{tokenDisplay}</span>
+            </>
+          )}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="start" side="top" className="w-[32rem] p-4 max-h-[80vh] overflow-y-auto">
+        <div className="space-y-4 text-xs">
+          <div className="flex items-center justify-between">
+            <div className="font-medium text-foreground text-sm">Context Debug Info</div>
+            {contextInfo.wasCompacted && (
+              <span className="px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 text-[10px] font-medium">
+                COMPACTED
+              </span>
+            )}
+          </div>
+
+          <div className="grid grid-cols-5 gap-2">
+            <div className="rounded-md bg-secondary p-2 text-center">
+              <div className="text-lg font-semibold tabular-nums">{contextInfo.previousMessages}</div>
+              <div className="text-[10px] text-muted-foreground">messages</div>
+            </div>
+            {contextInfo.estimatedTokens && (
+              <div className="rounded-md bg-orange-500/10 p-2 text-center">
+                <div className="text-lg font-semibold tabular-nums text-orange-400">
+                  {(contextInfo.estimatedTokens / 1000).toFixed(1)}k
+                </div>
+                <div className="text-[10px] text-muted-foreground">est. tokens</div>
+              </div>
+            )}
+            {hasSummaries && (
+              <>
+                <div className="rounded-md bg-blue-500/10 p-2 text-center">
+                  <div className="text-lg font-semibold tabular-nums text-blue-400">{userCount}</div>
+                  <div className="text-[10px] text-muted-foreground">user</div>
+                </div>
+                <div className="rounded-md bg-yellow-500/10 p-2 text-center">
+                  <div className="text-lg font-semibold tabular-nums text-yellow-400">{toolCount}</div>
+                  <div className="text-[10px] text-muted-foreground">tool calls</div>
+                </div>
+              </>
+            )}
+          </div>
+
+          {hasSummaries && (
+            <div className="space-y-2">
+              <div className="font-medium text-foreground">
+                Recent Messages in context ({contextInfo.messageSummaries?.length})
+              </div>
+              <div className="rounded-md bg-secondary p-2">
+                <ContextMessageList summaries={contextInfo.messageSummaries} />
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <div className="font-medium text-foreground">Resolved prompt</div>
+            <div className="max-h-32 overflow-y-auto whitespace-pre-wrap rounded-md bg-secondary p-2 text-muted-foreground font-mono text-[10px]">
+              {contextInfo.prompt}
+            </div>
+          </div>
+
+          {contextInfo.generatedSystemPrompt ? (
+            <div className="space-y-2">
+              <div className="font-medium text-foreground">Generated system prompt</div>
+              <div className="max-h-40 overflow-y-auto whitespace-pre-wrap rounded-md bg-secondary p-2 text-muted-foreground font-mono text-[10px]">
+                {contextInfo.generatedSystemPrompt}
+              </div>
+            </div>
+          ) : null}
+
+          {contextInfo.systemPrompt ? (
+            <div className="space-y-2">
+              <div className="font-medium text-foreground">System prompt override</div>
+              <div className="max-h-40 overflow-y-auto whitespace-pre-wrap rounded-md bg-secondary p-2 text-muted-foreground font-mono text-[10px]">
+                {contextInfo.systemPrompt}
+              </div>
+            </div>
+          ) : null}
+
+          <div className="space-y-2 border-t border-foreground/10 pt-3 mt-3">
+            <div className="font-medium text-foreground text-[10px] text-muted-foreground">Debug Info</div>
+            <div className="rounded-md bg-secondary p-2 text-muted-foreground font-mono text-[9px] whitespace-pre-wrap">
+              {JSON.stringify(debugInfo, null, 2)}
+            </div>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export const MessageBubble = ({ message, messageIndex, isPreview = false }: MessageBubbleProps) => {
   const [copied, setCopied] = useState(false);
   const isUser = message.role === "user";
@@ -314,7 +484,12 @@ export const MessageBubble = ({ message, messageIndex, isPreview = false }: Mess
         )}
       >
         {isUser ? (
-          <UserMessagePreview content={message.content} />
+          <div className="flex flex-col gap-1.5">
+            <div className="min-w-0 flex-1">
+              <UserMessagePreview content={message.content} />
+            </div>
+            <UserMessageContextPopover message={message} />
+          </div>
         ) : (
           <div className="py-1">
             <MarkdownMessage content={message.content} />

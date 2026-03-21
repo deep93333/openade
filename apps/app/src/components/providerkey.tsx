@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { ProviderConfig } from "@agentide/shared";
 import { Badge, Button, Input, Label } from "@agentide/ui";
 import { getElectronAPI } from "@/lib/electron";
@@ -15,10 +15,32 @@ export const ProviderKeyInput = ({
   onSaved,
 }: ProviderKeyInputProps) => {
   const [apiKey, setApiKey] = useState("");
+  const [baseUrl, setBaseUrl] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const api = getElectronAPI();
+  const isMoonshot = config.id === "moonshot";
+
+  useEffect(() => {
+    if (!isMoonshot || !api?.settings) return;
+    void api.settings.get().then((result) => {
+      if (result.success && result.data?.moonshotBaseUrl) {
+        setBaseUrl(result.data.moonshotBaseUrl);
+      }
+    });
+  }, [isMoonshot, api]);
+
+  const handleBaseUrlSave = useCallback(async () => {
+    if (!isMoonshot || !api?.settings) return;
+    const current = await api.settings.get();
+    if (!current.success || !current.data) return;
+    await api.settings.set({
+      ...current.data,
+      moonshotBaseUrl: baseUrl.trim() || undefined,
+    });
+    onSaved?.();
+  }, [isMoonshot, api, baseUrl, onSaved]);
 
   const handleSave = useCallback(async () => {
     const trimmed = apiKey.trim();
@@ -93,6 +115,28 @@ export const ProviderKeyInput = ({
         >
           Open {config.name} key settings
         </a>
+      )}
+
+      {isMoonshot && (
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="moonshot-base-url">Base URL (optional)</Label>
+          <p className="text-xs text-muted-foreground">
+            Use <code className="rounded bg-muted px-1">https://api.moonshot.cn/v1</code> for China-region keys from platform.moonshot.cn. Leave empty for international (api.moonshot.ai).
+          </p>
+          <div className="flex gap-2">
+            <Input
+              id="moonshot-base-url"
+              type="url"
+              placeholder="https://api.moonshot.ai/v1"
+              value={baseUrl}
+              onChange={(e) => setBaseUrl(e.target.value)}
+              className="font-mono text-xs"
+            />
+            <Button size="sm" variant="secondary" onClick={() => void handleBaseUrlSave()}>
+              Save
+            </Button>
+          </div>
+        </div>
       )}
 
       {maskedKey && !apiKey && (

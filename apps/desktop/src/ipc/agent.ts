@@ -1,7 +1,7 @@
 import { ipcMain } from "electron";
 import { IPC } from "@agentide/shared";
 import type { AgentStartParams, CommitMessageParams, ThreadTitleParams, ToolApprovalResponse } from "@agentide/shared";
-import type { ToolApprovalResult } from "@agentide/agent";
+import { refreshModelPricing, type ToolApprovalResult } from "@agentide/agent";
 import { ulid } from "ulid";
 import { agentManager, generateCommitMessage, generateThreadTitle, getAllModels } from "../services/agent-manager";
 import * as chatStorage from "../services/chat-storage";
@@ -33,13 +33,28 @@ export function registerAgentHandlers(): void {
 
       const ALWAYS_APPROVE_BYPASS = new Set(["ask_question"]);
 
+      const TOOL_APPROVAL_TIMEOUT_MS = 5 * 60 * 1000;
       const canUseTool = async (sessionId: string, toolName: string, input: unknown): Promise<ToolApprovalResult> => {
         if (!params.requireApproval && !ALWAYS_APPROVE_BYPASS.has(toolName)) {
           return { behavior: "allow", updatedInput: input };
         }
         const requestId = ulid();
         return new Promise<ToolApprovalResult>((resolve) => {
-          pendingToolApprovals.set(requestId, { resolve, input });
+          const timeout = setTimeout(() => {
+            if (pendingToolApprovals.delete(requestId)) {
+              resolve({
+                behavior: "deny",
+                message: "Tool approval timed out. Disable 'Require approval' in Settings to run without waiting.",
+              });
+            }
+          }, TOOL_APPROVAL_TIMEOUT_MS);
+          pendingToolApprovals.set(requestId, {
+            resolve: (r) => {
+              clearTimeout(timeout);
+              resolve(r);
+            },
+            input,
+          });
           window.webContents.send(IPC.AGENT_TOOL_APPROVAL_REQUEST, {
             requestId, toolName, input, sessionId, workspaceId: params.workspaceId,
           });
@@ -58,6 +73,7 @@ export function registerAgentHandlers(): void {
       const sessionId = await agentManager.start({
         prompt: params.prompt,
         existingMessages: params.existingMessages,
+        activeMemory: params.activeMemory,
         workspaceId: params.workspaceId,
         workspacePath: workspace.path,
         provider,
@@ -127,6 +143,7 @@ export function registerAgentHandlers(): void {
 
   ipcMain.handle(IPC.AGENT_GET_MODELS, async () => {
     try {
+      await refreshModelPricing().catch(() => {});
       return { success: true, data: getAllModels() };
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : "Failed to get models" };

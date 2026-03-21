@@ -13,6 +13,8 @@ const backendConfig: AgentBackendConfig = {
   getApiKey: () => configStorage.getApiKey(),
   getCodexApiKey: () => configStorage.getCodexApiKey(),
   getMinimaxApiKey: () => configStorage.getMinimaxApiKey(),
+  getMoonshotApiKey: () => configStorage.getMoonshotApiKey(),
+  getMoonshotBaseUrl: () => configStorage.getMoonshotBaseUrl() ?? process.env.MOONSHOT_BASE_URL ?? null,
   logger: agentLogger,
 };
 
@@ -24,6 +26,7 @@ export const agentManager = createAgentManager({
     ["claude", backend],
     ["codex", backend],
     ["minimax", backend],
+    ["moonshot", backend],
   ],
 });
 

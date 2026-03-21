@@ -33,6 +33,9 @@ const buttonVariants = cva(
           "bg-popover/70 text-white hover:bg-popover/80 [&_svg]:text-white backdrop-blur-[24px]",
         "backdrop-light":
           "bg-white/90 text-black hover:bg-white/80 [&_svg]:text-black backdrop-blur-[24px]",
+          "purple": "bg-purple-400 text-white hover:bg-purple-500 [&_.shortcut]:text-white/70",
+          "orange": "bg-orange-400 text-white hover:bg-orange-500 [&_.shortcut]:text-white/70",
+  
       },
       size: {
         default: "h-7.5 px-3 py-2 has-[>svg]:px-2 rounded-lg text-sm",

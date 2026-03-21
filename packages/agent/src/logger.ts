@@ -1,4 +1,4 @@
-export type AgentLogLevel = "INFO" | "WARN" | "ERROR";
+export type AgentLogLevel = "DEBUG" | "INFO" | "WARN" | "ERROR";
 
 export type AgentLogEntry = {
   level: AgentLogLevel;
@@ -79,11 +79,13 @@ export function createFileAgentLogger(options: FileAgentLoggerOptions): AgentLog
         // ignore logging failures
       }
       if (options.mirrorToConsole) {
-        const label = `[${entry.source}Backend]`;
+        const label = `[${entry.source}]`;
         if (entry.level === "ERROR") {
           console.error(label, ...entry.args);
         } else if (entry.level === "WARN") {
           console.warn(label, ...entry.args);
+        } else if (entry.level === "DEBUG") {
+          console.debug(label, ...entry.args);
         } else {
           console.log(label, ...entry.args);
         }

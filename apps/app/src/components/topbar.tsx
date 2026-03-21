@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useWorkspaceStore } from "@/store/workspace";
 import { useAgentStore } from "@/store/agent";
-import { cn, Button } from "@agentide/ui";
-import { IconBook, IconList, IconPlus, IconSettings2, IconX } from "@tabler/icons-react";
+import { cn, Button, ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@agentide/ui";
+import { IconBook, IconList, IconPlus, IconSettings2 } from "@tabler/icons-react";
 import { useUIStore } from "@/store/ui";
 import { CreateWorkspaceDialog } from "./sidebar/project";
 import type { ReactNode } from "react";
@@ -116,46 +116,40 @@ export function AppTopBar({ left, right, onRemoveWorkspace }: AppTopBarProps) {
                 const unreadCount = (agentWorkspaces[ws.id]?.threads ?? []).reduce((count, thread) => {
                   const updatedAt = thread.updatedAt ?? thread.createdAt;
                   const lastReadAt = thread.lastReadAt ?? thread.createdAt;
-                  return updatedAt > lastReadAt ? count + 1 : count;
+                  const isUnread = updatedAt > lastReadAt;
+                  const runtime = agentWorkspaces[ws.id]?.threadRuntime?.[thread.id];
+                  const isActive = runtime?.status === "running" && !!runtime?.sessionId;
+                  return isUnread && !isActive ? count + 1 : count;
                 }, 0);
                 return (
-                  <Button
-                    key={ws.id}
-                    type="button"
-                    size="xs"
-                    rounded="full"
-                    className={cn("group hover:pr-0.5 rounded-full! gap-0 overflow-hidden", isActive && unreadCount > 0 &&"pr-0.5")}
-                    variant={isActive ? "bordered" : "ghost"}
-                    onClick={() => handleSelectWorkspace(ws.id)}
-                  >
-                    <span className="max-w-[160px] truncate">{ws.name}</span>
-                    {unreadCount > 0 ? (
-                      <span className="ml-1 inline-flex min-w-4 items-center justify-center rounded-full bg-accent px-1.5 text-[10px] leading-4 text-foreground shadow-card">
-                        {unreadCount}
-                      </span>
-                    ) : null}
-                    <span className="w-0 overflow-hidden opacity-0 transition-all duration-150 group-hover:ml-1 group-hover:w-5 group-hover:opacity-100">
-                      <span
-                        role="button"
-                        tabIndex={0}
-                        className="flex size-5 items-center justify-center rounded-full hover:bg-foreground/10"
-                        aria-label={`Remove ${ws.name}`}
-                        title={`Remove ${ws.name}`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onRemoveWorkspace?.(ws);
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key !== "Enter" && e.key !== " ") return;
-                          e.preventDefault();
-                          e.stopPropagation();
-                          onRemoveWorkspace?.(ws);
-                        }}
+                  <ContextMenu key={ws.id}>
+                    <ContextMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        size="xs"
+                        rounded="full"
+                        className="rounded-full! gap-1 overflow-hidden"
+                        variant={isActive ? "bordered" : "ghost"}
+                        onClick={() => handleSelectWorkspace(ws.id)}
                       >
-                        <IconX stroke={1.75} className="size-3.5" />
-                      </span>
-                    </span>
-                  </Button>
+                        <span className="max-w-[160px] truncate">{ws.name}</span>
+                        {unreadCount > 0 && (
+                          <span className="inline-flex min-w-4 items-center justify-center rounded-full bg-accent px-1.5 text-[10px] leading-4 text-foreground shadow-card">
+                            {unreadCount}
+                          </span>
+                        )}
+                      </Button>
+                    </ContextMenuTrigger>
+                    <ContextMenuContent>
+                      <ContextMenuItem onClick={() => handleSelectWorkspace(ws.id)}>Open</ContextMenuItem>
+                      <ContextMenuItem
+                        onClick={() => onRemoveWorkspace?.(ws)}
+                        className="text-rose-500 focus:text-rose-500"
+                      >
+                        Remove
+                      </ContextMenuItem>
+                    </ContextMenuContent>
+                  </ContextMenu>
                 );
               })}
             </div>

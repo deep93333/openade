@@ -1,6 +1,8 @@
 import { z } from "zod";
 import type { LanguageModel, ToolSet } from "ai";
 import type { MCPServerConfig } from "@agentide/shared";
+import type { OffloaderState } from "../output-offloader.js";
+import type { AgentLogger } from "../logger.js";
 
 export type UserInputResponse = {
   updatedInput?: unknown;
@@ -25,6 +27,14 @@ export type SubAgentCapability = {
   systemPrompt: string;
 };
 
+export type ReadCacheEntry = {
+  path: string;
+  readCount: number;
+  lastOffset?: number;
+  lastLimit?: number;
+  firstReadAt: number;
+};
+
 export type ToolContext = {
   sessionId: string;
   workspacePath: string;
@@ -34,6 +44,9 @@ export type ToolContext = {
   onToolStart?: (meta: ToolStartMeta) => void;
   subAgent?: SubAgentCapability;
   mcpTools?: MCPToolRuntime[];
+  offloader?: OffloaderState;
+  readCache?: Map<string, ReadCacheEntry>;
+  logger?: AgentLogger;
 };
 
 export type ToolResult = {
@@ -49,7 +62,7 @@ export type ToolDefinition<T extends z.ZodType = z.ZodType> = {
   execute: (args: z.infer<T>, ctx: ToolContext) => Promise<ToolResult>;
 };
 
-const MAX_OUTPUT_CHARS = 30_000;
+const MAX_OUTPUT_CHARS = 50_000;
 const TRUNCATION_NOTICE =
   "\n\n[Output truncated — showing first portion only. Use offset/limit parameters for paginated reading.]";
 

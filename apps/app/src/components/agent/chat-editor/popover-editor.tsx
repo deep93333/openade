@@ -5,14 +5,43 @@ import Placeholder from "@tiptap/extension-placeholder";
 import StarterKit from "@tiptap/starter-kit";
 import type { MentionNodeAttrs } from "@tiptap/extension-mention";
 import type { SuggestionProps } from "@tiptap/suggestion";
-import { ArrowUpIcon, Button } from "@agentide/ui";
+import {
+  ArrowUpIcon,
+  Button,
+  ButtonGroup,
+  CheckmarkSmallIcon,
+  ChevronDownIcon,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@agentide/ui";
 import { cn } from "@/lib/cn";
 import { FileMentionList, type FileMentionItem } from "../mentions";
 import { useAgentStore } from "@/store/agent";
 import { useWorkspaceStore } from "@/store/workspace";
 import { useUIStore } from "@/store/ui";
 import { getElectronAPI } from "@/lib/electron";
-import type { FileTreeNode } from "@agentide/shared";
+import type { FileTreeNode, AgentMode, TaskStatus } from "@agentide/shared";
+
+const MODE_OPTIONS: { value: AgentMode; label: string; status: TaskStatus; description: string }[] = [
+  { value: "ask", label: "Ask", status: "brainstorm", description: "Quick questions without changing status" },
+  { value: "plan", label: "Plan", status: "planning", description: "Create a plan before executing" },
+  { value: "agent", label: "Agent", status: "in_progress", description: "Execute tasks automatically" },
+];
+
+// Default mode based on task status
+const STATUS_TO_MODE: Record<TaskStatus, AgentMode> = {
+  brainstorm: "ask",
+  planning: "plan",
+  in_progress: "agent",
+  backlog: "agent",
+  agent_review: "agent",
+  in_review: "agent",
+  completed: "agent",
+  archived: "agent",
+};
+
 
 function flattenFileTree(node: FileTreeNode, rootPath: string): FileMentionItem[] {
   const files: FileMentionItem[] = [];
@@ -47,6 +76,7 @@ type PopoverChatEditorProps = {
   workspacePath: string | null;
   navigateOnSend?: boolean;
   onSent?: () => void;
+  mode?: AgentMode;
 };
 
 export const PopoverChatEditor = ({
@@ -55,8 +85,13 @@ export const PopoverChatEditor = ({
   workspacePath,
   navigateOnSend = true,
   onSent,
+  mode: modeProp,
 }: PopoverChatEditorProps) => {
   const [workspaceFiles, setWorkspaceFiles] = useState<FileMentionItem[]>([]);
+  const [selectedMode, setSelectedMode] = useState<AgentMode>(() => {
+    // Initialize from thread status if available
+    return modeProp ?? "agent";
+  });
   const [mentionProps, setMentionProps] = useState<SuggestionProps<FileMentionItem, MentionNodeAttrs> | null>(null);
   const [mentionQuery, setMentionQuery] = useState("");
   const [isMentionTriggered, setIsMentionTriggered] = useState(false);
@@ -67,10 +102,25 @@ export const PopoverChatEditor = ({
   const loadWorkspace = useAgentStore((s) => s.loadWorkspace);
   const startAgent = useAgentStore((s) => s.startAgent);
   const isRunning = useAgentStore((s) => s.getThreadRuntime(workspaceId, threadId).status === "running");
+  const threadTaskStatus = useAgentStore((s) => {
+    const ws = s.workspaces[workspaceId];
+    const thread = ws?.threads.find((t) => t.id === threadId);
+    return thread?.taskStatus;
+  });
   const setCenterPage = useUIStore((s) => s.setCenterPage);
   const selectWorkspace = useWorkspaceStore((s) => s.selectWorkspace);
   const switchThread = useAgentStore((s) => s.switchThread);
   const persistWorkspace = useAgentStore((s) => s.persistWorkspace);
+  const updateThreadTaskStatus = useAgentStore((s) => s.updateThreadTaskStatus);
+
+  // Update selected mode when thread status changes or modeProp changes
+  useEffect(() => {
+    if (modeProp) {
+      setSelectedMode(modeProp);
+    } else if (threadTaskStatus) {
+      setSelectedMode(STATUS_TO_MODE[threadTaskStatus] ?? "agent");
+    }
+  }, [threadTaskStatus, modeProp]);
 
   useEffect(() => {
     if (!workspacePath) {
@@ -219,7 +269,7 @@ export const PopoverChatEditor = ({
   );
 
   const editorRef = useRef<ReturnType<typeof useEditor> | null>(null);
-  const handleSubmit = useCallback(async () => {
+  const handleSubmit = useCallback(async (modeToUse?: AgentMode) => {
     const ed = editorRef.current;
     if (!ed || isRunning) return;
 
@@ -228,9 +278,19 @@ export const PopoverChatEditor = ({
     if (!text) return;
 
     await loadWorkspace(workspaceId);
+
+    const mode: AgentMode | undefined = modeToUse ?? selectedMode ?? modeProp ?? (threadTaskStatus === "planning" ? "plan" : undefined);
+
+    // Update task status based on the mode being used
+    const targetStatus = MODE_OPTIONS.find((o) => o.value === mode)?.status ?? "in_progress";
+    if (targetStatus !== threadTaskStatus) {
+      await updateThreadTaskStatus(workspaceId, threadId, targetStatus);
+    }
+
     await startAgent(workspaceId, text, {
       displayContent: html || undefined,
       threadId,
+      mode,
     });
 
     ed.commands.clearContent();
@@ -241,7 +301,7 @@ export const PopoverChatEditor = ({
       setCenterPage("chat");
     }
     onSent?.();
-  }, [workspaceId, threadId, isRunning, loadWorkspace, startAgent, persistWorkspace, navigateOnSend, selectWorkspace, switchThread, setCenterPage, onSent]);
+  }, [workspaceId, threadId, isRunning, loadWorkspace, startAgent, persistWorkspace, navigateOnSend, selectWorkspace, switchThread, setCenterPage, onSent, threadTaskStatus, selectedMode, modeProp, updateThreadTaskStatus]);
 
   const editor = useEditor(
     {
@@ -293,6 +353,9 @@ export const PopoverChatEditor = ({
 
   const canSubmit = !!workspacePath && !isRunning;
 
+  // Get button style based on SELECTED MODE (not task status)
+  const currentModeLabel = MODE_OPTIONS.find((o) => o.value === selectedMode)?.label ?? "Agent";
+
   return (
     <div className="relative shrink-0 border-t border-foreground/10 p-2">
       <div className="flex items-end gap-1.5">
@@ -311,15 +374,54 @@ export const PopoverChatEditor = ({
             />
           )}
         </div>
-        <Button
-          size="icon-sm"
-          variant="brand"
-          rounded="full"
-          onClick={() => void handleSubmit()}
-          disabled={!canSubmit}
-        >
-          <ArrowUpIcon className="size-4" />
-        </Button>
+        <ButtonGroup>
+          <Button
+            variant={selectedMode === "plan" ? "purple" : selectedMode === "ask" ? "orange" : "brand"}
+            size="icon-sm"
+            rounded="full"
+            onClick={() => void handleSubmit(selectedMode)}
+            disabled={!canSubmit}
+          
+   
+          >
+            <ArrowUpIcon className="size-4" />
+          </Button>
+          <DropdownMenu modal>
+            <DropdownMenuTrigger asChild>
+              <Button
+            variant={selectedMode === "plan" ? "purple" : selectedMode === "ask" ? "orange" : "brand"}
+            size="icon-sm"
+            rounded="full"
+                disabled={!canSubmit}
+                className="border-l border-white/20"
+                aria-label="Select send mode"
+            
+              >
+                <ChevronDownIcon className="size-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+             
+              {MODE_OPTIONS.map((option) => (
+                <DropdownMenuItem
+                  key={option.value}
+                  onClick={() => {
+                    setSelectedMode(option.value);
+                    void handleSubmit(option.value);
+                  }}
+                  className="flex items-start justify-between gap-2"
+                >
+                  <div className="flex flex-col gap-0.5">
+                    <span className="font-medium">{option.label}</span>
+                  </div>
+                  {selectedMode === option.value && (
+                    <CheckmarkSmallIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                  )}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </ButtonGroup>
       </div>
       {isMentionTriggered && mentionProps && (
         <FileMentionList

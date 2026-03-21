@@ -13,6 +13,8 @@ import { deleteTool } from "./delete.js";
 import { readLintsTool } from "./readlints.js";
 import { askQuestionTool } from "./ask-question.js";
 import { delegateTool } from "./delegate.js";
+import { offloadToolOutput } from "../output-offloader.js";
+import { logAgentEvent } from "../logger.js";
 import type { ToolContext, ToolDefinition } from "./tool-types.js";
 
 export type ToolCallMetadata = {
@@ -22,7 +24,11 @@ export type ToolCallMetadata = {
   output: string;
   metadata: Record<string, unknown>;
   title: string;
+  fileRef?: { path: string; originalSize: number };
 };
+
+const TOOLS_TO_FILE_ON_LONG_OUTPUT = new Set<string>(["bash", "grep"]);
+const WRITE_TOOLS = new Set(["bash", "write", "edit", "delete"]);
 
 function wrapTool(
   def: ToolDefinition,
@@ -35,6 +41,13 @@ function wrapTool(
     execute: async (args: unknown) => {
       const toolCallId = ulid();
 
+      logAgentEvent(ctx.logger, "DEBUG", "Tool", "tool_start", {
+        sessionId: ctx.sessionId,
+        toolName: def.id,
+        toolCallId,
+        input: args,
+      });
+
       ctx.onToolStart?.({
         toolName: def.id,
         input: args,
@@ -43,16 +56,71 @@ function wrapTool(
 
       await new Promise((resolve) => setTimeout(resolve, 50));
 
-      const result = await def.execute(args, ctx);
+      if (ctx.requestUserInput && WRITE_TOOLS.has(def.id)) {
+        const approval = await ctx.requestUserInput(def.id, args);
+        if (approval.denied) {
+          logAgentEvent(ctx.logger, "WARN", "Tool", "tool_denied", {
+            sessionId: ctx.sessionId,
+            toolName: def.id,
+            toolCallId,
+            reason: approval.message,
+          });
+          return `Tool denied: ${approval.message ?? "User denied this action"}`;
+        }
+        if (approval.updatedInput) args = approval.updatedInput;
+      }
+
+      let result;
+      try {
+        result = await def.execute(args, ctx);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        const stack = err instanceof Error ? err.stack : undefined;
+        logAgentEvent(ctx.logger, "ERROR", "Tool", "tool_execute_error", {
+          sessionId: ctx.sessionId,
+          toolName: def.id,
+          toolCallId,
+          error: message,
+          stack: stack?.slice(0, 500),
+        });
+        throw err;
+      }
+
+      let finalOutput = result.output;
+      let fileRef: { path: string; originalSize: number } | undefined;
+
+      if (ctx.offloader && TOOLS_TO_FILE_ON_LONG_OUTPUT.has(def.id)) {
+        const processed = await offloadToolOutput(ctx.offloader, def.id, result.output);
+        finalOutput = processed.output;
+        if (processed.fileRef) {
+          fileRef = { path: processed.fileRef.path, originalSize: processed.fileRef.originalSize };
+          logAgentEvent(ctx.logger, "DEBUG", "Tool", "tool_output_offloaded", {
+            sessionId: ctx.sessionId,
+            toolName: def.id,
+            toolCallId,
+            path: processed.fileRef.path,
+            originalSize: processed.fileRef.originalSize,
+          });
+        }
+      }
+
+      logAgentEvent(ctx.logger, "DEBUG", "Tool", "tool_complete", {
+        sessionId: ctx.sessionId,
+        toolName: def.id,
+        toolCallId,
+        outputLength: finalOutput.length,
+      });
+
       onToolCall?.({
         toolName: def.id,
         toolCallId,
         input: args,
-        output: result.output,
-        metadata: result.metadata,
+        output: finalOutput,
+        metadata: { ...result.metadata, fileRef },
         title: result.title,
+        fileRef,
       });
-      return result.output;
+      return finalOutput;
     },
   } as never);
 }
@@ -99,6 +167,8 @@ export function createPlanningToolSet(
   ctx: ToolContext,
   onToolCall?: (meta: ToolCallMetadata) => void,
 ): ToolSet {
+  // Planning mode: exploration/search tools + todo management + questions
+  // No file modifications allowed (no write, edit, delete, bash)
   return mergeMCPTools({
     read: wrapTool(readTool, ctx, onToolCall),
     glob: wrapTool(globTool, ctx, onToolCall),

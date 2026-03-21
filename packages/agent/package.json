@@ -14,6 +14,7 @@
     "@agentide/shared": "workspace:*",
     "@ai-sdk/anthropic": "^3.0.47",
     "@ai-sdk/mcp": "^1.0.16",
+    "@ai-sdk/moonshotai": "^0.0.4",
     "@ai-sdk/openai": "^3.0.35",
     "ai": "^6.0.103",
     "ulid": "^3.0.1",

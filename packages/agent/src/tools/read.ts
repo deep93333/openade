@@ -3,12 +3,49 @@ import { createReadStream } from "fs";
 import * as fs from "fs/promises";
 import * as path from "path";
 import { createInterface } from "readline";
-import type { ToolDefinition, ToolResult } from "./tool-types.js";
+import type { ToolDefinition, ToolResult, ReadCacheEntry } from "./tool-types.js";
 import { truncateOutput } from "./tool-types.js";
+
+function checkReadCache(
+  cache: Map<string, ReadCacheEntry> | undefined,
+  filepath: string,
+  offset?: number,
+  limit?: number,
+): { warning?: string; entry: ReadCacheEntry } {
+  if (!cache) {
+    return { entry: { path: filepath, readCount: 1, lastOffset: offset, lastLimit: limit, firstReadAt: Date.now() } };
+  }
+
+  const existing = cache.get(filepath);
+  if (!existing) {
+    const entry: ReadCacheEntry = { path: filepath, readCount: 1, lastOffset: offset, lastLimit: limit, firstReadAt: Date.now() };
+    cache.set(filepath, entry);
+    return { entry };
+  }
+
+  existing.readCount++;
+  const isSameRange = existing.lastOffset === offset && existing.lastLimit === limit;
+  existing.lastOffset = offset;
+  existing.lastLimit = limit;
+
+  if (existing.readCount >= 3 && isSameRange) {
+    return {
+      warning: `WARNING: You've read this exact file section ${existing.readCount} times. Use your memory of the content instead of re-reading. This wastes tokens.`,
+      entry: existing,
+    };
+  } else if (existing.readCount >= 2 && isSameRange) {
+    return {
+      warning: `Note: You already read this file section. Consider using your memory of the content instead of re-reading.`,
+      entry: existing,
+    };
+  }
+
+  return { entry: existing };
+}
 
 const DEFAULT_LIMIT = 500;
 const MAX_LINE_LENGTH = 2000;
-const MAX_BYTES = 30 * 1024;
+const MAX_BYTES = 50 * 1024;
 
 export const readParameters = z.object({
   file_path: z.string().describe("Absolute path to the file or directory to read"),
@@ -53,7 +90,7 @@ async function isBinaryFile(filepath: string, size: number): Promise<boolean> {
 
 export const readTool: ToolDefinition<typeof readParameters> = {
   id: "read",
-  description: `Read a file (line-numbered) or list a directory. Use absolute paths. For large files, use offset and limit to read only the section you need — avoid reading entire files when possible.`,
+  description: `Read a file (line-numbered) or list a directory. Use absolute paths. For large files, use offset and limit to read only the section you need — avoid reading entire files when possible. DO NOT re-read the same file multiple times.`,
   parameters: readParameters,
   async execute(args, ctx): Promise<ToolResult> {
     let filepath = args.file_path;
@@ -61,6 +98,9 @@ export const readTool: ToolDefinition<typeof readParameters> = {
       filepath = path.resolve(ctx.workspacePath, filepath);
     }
     const title = path.relative(ctx.workspacePath, filepath);
+
+    const cacheResult = checkReadCache(ctx.readCache, filepath, args.offset, args.limit);
+    const duplicateWarning = cacheResult.warning;
 
     let stat;
     try {
@@ -99,7 +139,7 @@ export const readTool: ToolDefinition<typeof readParameters> = {
       const sliced = entries.slice(start, start + limit);
       const truncated = start + sliced.length < entries.length;
 
-      const output = [
+      let output = [
         `<directory path="${filepath}">`,
         sliced.join("\n"),
         truncated
@@ -108,10 +148,14 @@ export const readTool: ToolDefinition<typeof readParameters> = {
         "</directory>",
       ].join("\n");
 
+      if (duplicateWarning) {
+        output = `${duplicateWarning}\n\n${output}`;
+      }
+
       return {
         title,
         output,
-        metadata: { preview: sliced.slice(0, 20).join("\n"), truncated },
+        metadata: { preview: sliced.slice(0, 20).join("\n"), truncated, readCount: cacheResult.entry.readCount },
       };
     }
 
@@ -176,12 +220,17 @@ export const readTool: ToolDefinition<typeof readParameters> = {
     }
     output += "\n</file>";
 
+    if (duplicateWarning) {
+      output = `${duplicateWarning}\n\n${output}`;
+    }
+
     return {
       title,
       output: truncateOutput(output),
       metadata: {
         preview: raw.slice(0, 20).join("\n"),
         truncated,
+        readCount: cacheResult.entry.readCount,
       },
     };
   },

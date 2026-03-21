@@ -1,26 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CheckCircle2, ChevronRightIcon, LoaderCircle } from "lucide-react";
-import { cn } from "@agentide/ui";
-
-type TextShimmerProps = {
-  children: ReactNode;
-  className?: string;
-  duration?: number;
-};
-
-function TextShimmer({ children, className, duration = 1.5 }: TextShimmerProps) {
-  return (
-    <span
-      className={cn("shimmer-text", className)}
-      style={{
-        "--shimmer-duration": `${duration}s`,
-      } as React.CSSProperties}
-    >
-      {children}
-    </span>
-  );
-}
+import { cn, ShimmeringText } from "@agentide/ui";
 
 const ROW_HEIGHT = 24;
 const CONNECTOR_HEIGHT = 8;
@@ -30,6 +11,7 @@ const TIMELINE_WIDTH = 14;
 type InlineToolRowProps = {
   icon: ReactNode;
   label: ReactNode;
+  labelText?: string;
   children?: ReactNode;
   hasDetails?: boolean;
   alwaysShowBody?: boolean;
@@ -42,6 +24,7 @@ type InlineToolRowProps = {
 export const InlineToolRow = ({
   icon,
   label,
+  labelText,
   children,
   hasDetails = false,
   alwaysShowBody = false,
@@ -73,6 +56,18 @@ export const InlineToolRow = ({
     />
   );
 
+  const labelContent =
+    isRunning && labelText ? (
+      <ShimmeringText
+        text={labelText}
+        duration={1.5}
+        repeat={true}
+        className="min-w-0 truncate text-xs"
+      />
+    ) : (
+      <span className="min-w-0 truncate">{label}</span>
+    );
+
   const labelRow = (
     <div
       className="flex w-full min-w-0 items-center gap-1.5 text-xs text-muted-foreground"
@@ -85,10 +80,7 @@ export const InlineToolRow = ({
           className="flex min-w-0 flex-1 items-center gap-1.5 text-left hover:text-foreground transition-colors"
         >
           <span className="flex shrink-0 items-center text-muted-foreground/70">{icon}</span>
-          <span className="flex shrink-0 items-center text-muted-foreground/70">{icon}</span>
-        
-            <TextShimmer className="min-w-0 truncate">{label}</TextShimmer>
-          
+          {labelContent}
           <motion.span
             animate={{ rotate: open ? 90 : 0 }}
             transition={{ duration: 0.15 }}
@@ -100,9 +92,7 @@ export const InlineToolRow = ({
       ) : (
         <>
           <span className="flex shrink-0 items-center text-muted-foreground/70">{icon}</span>
-       
-            <TextShimmer className="min-w-0 truncate">{label}</TextShimmer>
-         
+          {labelContent}
         </>
       )}
     </div>

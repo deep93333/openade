@@ -130,6 +130,8 @@ const SingleToolCall = ({ message, index, total }: { message: AgentMessage; inde
     (message.toolResult !== undefined && message.toolResult !== null) ||
     content.trim().length > 0;
 
+  const labelText = target ? `${label} ${target}` : label;
+
   return (
     <InlineToolRow
       icon={<></>}
@@ -141,6 +143,7 @@ const SingleToolCall = ({ message, index, total }: { message: AgentMessage; inde
           )}
         </span>
       }
+      labelText={labelText}
       hasDetails={hasDetails}
       alwaysShowBody={alwaysShowBody}
       isCompleted={isCompleted}

@@ -6,6 +6,49 @@ import { truncateOutput } from "./tool-types.js";
 const DEFAULT_TIMEOUT = 120_000;
 const MAX_METADATA_OUTPUT = 30_000;
 
+const BLOCKED_PATTERNS: RegExp[] = [
+  /\brm\s+(-\w*\s+)*-\w*r\w*\s+\//,
+  /\bsudo\b/,
+  /\bcurl\b.*\|\s*(ba)?sh/,
+  /\bwget\b.*\|\s*(ba)?sh/,
+  /\beval\b\s*["'`(]/,
+  />\s*\/etc\//,
+  /\bmkfs\b/,
+  /\bdd\b\s+.*of=\//,
+];
+
+const SENSITIVE_ENV_PATTERNS: RegExp[] = [
+  /API_KEY/i,
+  /SECRET/i,
+  /TOKEN/i,
+  /PASSWORD/i,
+  /CREDENTIAL/i,
+  /^AWS_/,
+  /^GITHUB_TOKEN$/,
+  /^NPM_TOKEN$/,
+  /^GH_TOKEN$/,
+  /PRIVATE_KEY/i,
+];
+
+function isBlockedCommand(command: string): string | null {
+  for (const pattern of BLOCKED_PATTERNS) {
+    if (pattern.test(command)) {
+      return `Command blocked for safety: matches pattern ${pattern.source}`;
+    }
+  }
+  return null;
+}
+
+function scrubEnv(): Record<string, string> {
+  const env: Record<string, string> = {};
+  for (const [key, value] of Object.entries(process.env)) {
+    if (value == null) continue;
+    if (SENSITIVE_ENV_PATTERNS.some(p => p.test(key))) continue;
+    env[key] = value;
+  }
+  return env;
+}
+
 function getShell(): string {
   if (process.platform === "win32") return "cmd.exe";
   return process.env.SHELL || "/bin/bash";
@@ -39,13 +82,22 @@ export const bashTool: ToolDefinition<typeof bashParameters> = {
   description: `Run a shell command in the project root. Provide a short description. Set timeout for long-running commands. IMPORTANT: Do NOT use bash for searching file contents (use 'grep' tool instead), finding files (use 'glob' tool instead), or reading files (use 'read' tool instead). Reserve bash for git commands, installs, builds, running scripts, and other system operations.`,
   parameters: bashParameters,
   async execute(args, ctx): Promise<ToolResult> {
+    const blocked = isBlockedCommand(args.command);
+    if (blocked) {
+      return {
+        title: args.description,
+        output: blocked,
+        metadata: { output: blocked, exit: 1, description: args.description },
+      };
+    }
+
     const timeout = args.timeout ?? DEFAULT_TIMEOUT;
     const shell = getShell();
 
     const proc = spawn(args.command, {
       shell,
       cwd: ctx.workspacePath,
-      env: { ...process.env },
+      env: scrubEnv(),
       stdio: ["ignore", "pipe", "pipe"],
       detached: process.platform !== "win32",
     });

@@ -79,6 +79,23 @@ async function hasFileWithExtension(dir: string, extensions: string[]): Promise<
   return false;
 }
 
+async function hasXcodeProject(dir: string): Promise<{ hasProject: boolean; hasWorkspace: boolean }> {
+  try {
+    const entries = await fs.readdir(dir, { withFileTypes: true });
+    let hasProject = false;
+    let hasWorkspace = false;
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        if (entry.name.endsWith(".xcodeproj")) hasProject = true;
+        if (entry.name.endsWith(".xcworkspace")) hasWorkspace = true;
+      }
+    }
+    return { hasProject, hasWorkspace };
+  } catch {
+    return { hasProject: false, hasWorkspace: false };
+  }
+}
+
 // --- Parsers ---
 
 function parseTscOutput(raw: string, workspacePath: string): Diagnostic[] {
@@ -329,6 +346,48 @@ function parseRubocopJson(raw: string, workspacePath: string): Diagnostic[] {
   return diagnostics;
 }
 
+function parseXcodebuildOutput(raw: string, workspacePath: string): Diagnostic[] {
+  const diagnostics: Diagnostic[] = [];
+  for (const line of raw.split("\n")) {
+    // Match error/warning patterns like:
+    // /path/to/file.swift:10:15: error: message
+    // /path/to/file.swift:10:15: warning: message
+    const match = line.match(/^(.+?):(\d+):(\d+):\s*(error|warning):\s*(.+)$/);
+    if (match) {
+      diagnostics.push({
+        file: path.relative(workspacePath, match[1]),
+        line: parseInt(match[2], 10),
+        col: parseInt(match[3], 10),
+        severity: match[4] as "error" | "warning",
+        message: match[5].trim(),
+        source: "xcodebuild",
+      });
+    }
+  }
+  return diagnostics;
+}
+
+function parseSwiftBuildOutput(raw: string, workspacePath: string): Diagnostic[] {
+  const diagnostics: Diagnostic[] = [];
+  for (const line of raw.split("\n")) {
+    // Match Swift compiler output:
+    // /path/to/file.swift:10:15: error: message
+    // /path/to/file.swift:10:15: warning: message
+    const match = line.match(/^(.+?):(\d+):(\d+):\s*(error|warning):\s*(.+)$/);
+    if (match) {
+      diagnostics.push({
+        file: path.relative(workspacePath, match[1]),
+        line: parseInt(match[2], 10),
+        col: parseInt(match[3], 10),
+        severity: match[4] as "error" | "warning",
+        message: match[5].trim(),
+        source: "swift build",
+      });
+    }
+  }
+  return diagnostics;
+}
+
 // --- Linter specs ---
 
 const linters: LinterSpec[] = [
@@ -464,6 +523,29 @@ const linters: LinterSpec[] = [
     }),
     parse: (stdout, _stderr, wp) => parseRubocopJson(stdout, wp),
   },
+  {
+    id: "swift-build",
+    label: "Swift Build",
+    configFiles: ["Package.swift"],
+    markerFiles: [],
+    fileExtensions: [".swift"],
+    buildCommand: () => ({
+      cmd: "swift",
+      args: ["build"],
+    }),
+    parse: (stdout, stderr, wp) => parseSwiftBuildOutput(stdout + "\n" + stderr, wp),
+  },
+  {
+    id: "xcodebuild",
+    label: "Xcode Build",
+    configFiles: [],
+    markerFiles: [".xcodeproj", ".xcworkspace"],
+    buildCommand: () => ({
+      cmd: "xcodebuild",
+      args: ["build", "-quiet"],
+    }),
+    parse: (stdout, stderr, wp) => parseXcodebuildOutput(stdout + "\n" + stderr, wp),
+  },
 ];
 
 async function detectLinters(workspacePath: string): Promise<LinterSpec[]> {
@@ -474,6 +556,8 @@ async function detectLinters(workspacePath: string): Promise<LinterSpec[]> {
   let rustLinterFound = false;
   const goLinterPriority = ["golangci-lint", "go-vet"];
   let goLinterFound = false;
+  const swiftLinterPriority = ["swift-build", "xcodebuild"];
+  let swiftLinterFound = false;
 
   for (const linter of linters) {
     const hasConfig = await anyFileExists(workspacePath, linter.configFiles);
@@ -510,6 +594,26 @@ async function detectLinters(workspacePath: string): Promise<LinterSpec[]> {
         goLinterFound = true;
       } else {
         continue;
+      }
+    }
+
+    if (swiftLinterPriority.includes(linter.id)) {
+      if (swiftLinterFound) continue;
+
+      if (linter.id === "swift-build") {
+        // Package.swift check is already done via hasConfig
+        if (hasConfig && (await commandExists("swift"))) {
+          swiftLinterFound = true;
+        } else {
+          continue;
+        }
+      } else if (linter.id === "xcodebuild") {
+        const { hasProject, hasWorkspace } = await hasXcodeProject(workspacePath);
+        if ((hasProject || hasWorkspace) && (await commandExists("xcodebuild"))) {
+          swiftLinterFound = true;
+        } else {
+          continue;
+        }
       }
     }
 
@@ -558,7 +662,7 @@ export const readLintsParameters = z.object({
 
 export const readLintsTool: ToolDefinition<typeof readLintsParameters> = {
   id: "readlints",
-  description: `Run project linters/type-checkers and return errors/warnings. Auto-detects the project type and available tools (TypeScript, ESLint, Biome, Ruff, Flake8, Pylint, Mypy, Cargo/Clippy, Go Vet, golangci-lint, RuboCop). Use after edits to verify correctness.`,
+  description: `Run project linters/type-checkers and return errors/warnings. Auto-detects the project type and available tools (TypeScript, ESLint, Biome, Ruff, Flake8, Pylint, Mypy, Cargo/Clippy, Go Vet, golangci-lint, RuboCop, Xcode Build, Swift Build). Use after edits to verify correctness.`,
   parameters: readLintsParameters,
   async execute(args, ctx): Promise<ToolResult> {
     const workspacePath = ctx.workspacePath;
@@ -571,7 +675,7 @@ export const readLintsTool: ToolDefinition<typeof readLintsParameters> = {
     if (detected.length === 0) {
       return {
         title: "Lints",
-        output: "No linting tools detected. Ensure the workspace has a supported project configuration (tsconfig.json, eslint config, biome.json, pyproject.toml, Cargo.toml, go.mod, Gemfile, etc.).",
+        output: "No linting tools detected. Ensure the workspace has a supported project configuration (tsconfig.json, eslint config, biome.json, pyproject.toml, Cargo.toml, go.mod, Gemfile, Package.swift, .xcodeproj, etc.).",
         metadata: { diagnosticCount: 0, tools: [] },
       };
     }

@@ -16,6 +16,7 @@ import { ChatEditor } from "./chat-editor";
 import { MessageList } from "./messages";
 import { BranchSwitcher } from "@/components/sidebar/branches";
 import { TokenUsagePopover } from "./chat-editor/usage";
+import { ContextInspectorButton } from "./context-inspector";
 
 const playCompletionSound = (isError = false) => {
   try {
@@ -187,7 +188,12 @@ export const AgentPanel = () => {
           ) : (
             <div />
           )}
-          <TokenUsagePopover />
+          <div className="flex items-center gap-2">
+            <ContextInspectorButton
+              messages={activeThread?.messages ?? []}
+            />
+            <TokenUsagePopover />
+          </div>
         </div>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import type { AgentBackend, AgentBackendStartOptions } from "./agent-backend-types.js";
+import type { AgentBackend, AgentBackendStartOptions } from "./types.js";
 import type { AgentStatus } from "@agentide/shared";
 import { ulid } from "ulid";
 import { createAgentLogger, logAgentEvent, type AgentLogger, type AgentLogWriter } from "./logger.js";
@@ -53,6 +53,7 @@ export function createAgentManager(options: AgentManagerOptions) {
   type StartOptions = {
     prompt: string;
     existingMessages?: import("@agentide/shared").AgentMessage[];
+    activeMemory?: string;
     workspaceId: string;
     workspacePath: string;
     provider?: AgentBackend["provider"];
@@ -71,16 +72,17 @@ export function createAgentManager(options: AgentManagerOptions) {
   return {
     async start(options: StartOptions): Promise<string> {
       const provider: AgentBackend["provider"] = options.provider ?? "claude";
+      logAgentEvent(logger, "DEBUG", "AgentManager", "start resolving backend", { provider });
       const backend = getBackend(provider);
       if (!backend) {
+        logAgentEvent(logger, "ERROR", "AgentManager", "no_backend", { provider, available: [...backends.keys()] });
         throw new Error(`No agent backend for provider: ${provider}`);
       }
 
       const sessionId = ulid();
       const abortController = new AbortController();
 
-      logAgentEvent(logger, "INFO", "Agent", "agent_event", {
-        event: "session_start",
+      logAgentEvent(logger, "INFO", "AgentManager", "session_start", {
         sessionId,
         provider,
         model: options.model,
@@ -100,6 +102,7 @@ export function createAgentManager(options: AgentManagerOptions) {
         workspacePath: options.workspacePath,
         prompt: options.prompt,
         existingMessages: options.existingMessages,
+        activeMemory: options.activeMemory,
         model: options.model,
         mode: options.mode,
         resumeSessionId: options.resumeSessionId,
@@ -122,10 +125,11 @@ export function createAgentManager(options: AgentManagerOptions) {
         },
         (error) => {
           const detail = extractErrorDetail(error);
-          logAgentEvent(logger, "ERROR", "Agent", "agent_event", {
-            event: "backend_start_rejected",
+          const err = error as Error & { stack?: string };
+          logAgentEvent(logger, "ERROR", "AgentManager", "backend_start_rejected", {
             sessionId,
             detail,
+            stack: err.stack?.slice(0, 1000),
           });
           options.onError({ sessionId, error: detail });
           const session = sessions.get(sessionId);
@@ -139,11 +143,16 @@ export function createAgentManager(options: AgentManagerOptions) {
     async stop(sessionId: string): Promise<void> {
       const session = sessions.get(sessionId);
       if (session) {
-        logAgentEvent(logger, "INFO", "Agent", "agent_event", { event: "session_stop", sessionId });
+        logAgentEvent(logger, "INFO", "AgentManager", "session_stop", { sessionId });
         session.abortController.abort();
         session.status = "stopped";
         sessions.delete(sessionId);
-        await session.backend.stop(sessionId).catch(() => {});
+        await session.backend.stop(sessionId).catch((err) => {
+          logAgentEvent(logger, "WARN", "AgentManager", "backend stop failed", {
+            sessionId,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        });
       }
     },
 
