@@ -2,7 +2,6 @@
   import { AgentPanel } from "@/components/agent/panel";
   import { InfoPanel } from "@/components/agent/info-panel";
   import { ToolApprovalBar } from "@/components/agent/approval";
-  import { AgentSkills } from "@/components/agent-skills";
   import { TasksPage } from "@/components/tasks";
   import { WebViewDrawer } from "@/components/web-view/drawer";
   import { AppTopBar } from "@/components/topbar";
@@ -55,9 +54,7 @@
 
     const showPanelGap = hasSecondaryPane || rightPanelOpen;
     const mainContent =
-      centerPage === "skills" ? (
-        <AgentSkills />
-      ) : centerPage === "tasks" ? (
+      centerPage === "tasks" ? (
         <TasksPage />
       ) : (
         <>

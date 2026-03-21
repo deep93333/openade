@@ -3,7 +3,6 @@ import { useWorkspaceStore } from "@/store/workspace";
 import { useAgentStore } from "@/store/agent";
 import { cn, Button, ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@agentide/ui";
 import {
-  IconBook,
   IconExchange,
   IconFiles,
   IconLayoutSidebarRight,
@@ -202,16 +201,6 @@ export function AppTopBar({ left, right, onRemoveWorkspace }: AppTopBarProps) {
         {right}
         <GitStatusBadge />
         <div className="flex flex-row items-center gap-0.5">
-          <Button
-            variant={centerPage === "skills" ? "secondary" : "ghost"}
-            size="sm"
-            onClick={() => setCenterPage("skills")}
-            aria-label="Open skills"
-            title="Skills"
-          >
-            <IconBook stroke={1} className="size-4" />
-            Skills
-          </Button>
           <Button
             variant={centerPage === "tasks" ? "secondary" : "ghost"}
             size="sm"

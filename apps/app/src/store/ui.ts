@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { getElectronAPI } from "@/lib/electron";
 
 export type NavigationView = "files" | "changes";
-export type CenterPage = "chat" | "skills" | "tasks";
+export type CenterPage = "chat" | "tasks";
 export type SecondaryPaneMode = "file" | "diff";
 export type TaskViewMode = "list" | "kanban";
 

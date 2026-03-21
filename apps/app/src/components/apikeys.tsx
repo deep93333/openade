@@ -13,6 +13,7 @@ import {
 } from "@agentide/ui";
 import {
   IconAdjustments,
+  IconBook,
   IconKey,
   IconPlugConnected,
 } from "@tabler/icons-react";
@@ -25,6 +26,7 @@ import {
 import { useChatEditorStore } from "@/store/editor";
 import { MCPSettings } from "./mcp-settings";
 import { ProviderKeyInput } from "./providerkey";
+import { AgentSkills } from "./agent-skills";
 
 type SettingsSection = {
   id: string;
@@ -50,6 +52,12 @@ const SECTIONS: SettingsSection[] = [
     id: "mcp",
     label: "MCP Servers",
     icon: <IconPlugConnected className="size-4" />,
+    group: "Integrations",
+  },
+  {
+    id: "skills",
+    label: "Skills",
+    icon: <IconBook className="size-4" />,
     group: "Integrations",
   },
 ];
@@ -229,6 +237,18 @@ export const ApiKeyDialog = ({
             {activeSection === "mcp" && (
               <div className="flex-1 min-h-0 overflow-hidden p-5">
                 <MCPSettings />
+              </div>
+            )}
+
+            {activeSection === "skills" && (
+              <div className="flex flex-col h-full overflow-hidden">
+                <SectionHeader
+                  title="Skills"
+                  description="Reusable instructions loaded from .cursor/skills and .claude/skills."
+                />
+                <div className="flex-1 min-h-0 overflow-hidden">
+                  <AgentSkills />
+                </div>
               </div>
             )}
           </main>
