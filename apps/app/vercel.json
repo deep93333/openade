@@ -1,0 +1,13 @@
+{
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Permissions-Policy",
+          "value": "local-network-access=*, loopback-network=*, local-network=*"
+        }
+      ]
+    }
+  ]
+}

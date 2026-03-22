@@ -10,8 +10,10 @@ import {
   getStoredAppearance,
   resolveAppearance,
 } from "@/lib/document-theme";
+import { primeLocalNetworkPermission } from "@/lib/prime-local-network-permission";
 
 applyResolvedTheme(resolveAppearance(getStoredAppearance() ?? "dark"));
+primeLocalNetworkPermission();
 
 const root = document.getElementById("root");
 if (!root) throw new Error("Root element not found");

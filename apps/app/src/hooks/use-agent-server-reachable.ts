@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { withAgentFetchInit } from "@/lib/agent-fetch";
 import { getBackendBaseUrl } from "@/lib/backend-url";
 import { isElectron } from "@/lib/electron";
+import { primeLocalNetworkPermission } from "@/lib/prime-local-network-permission";
 
 type CheckMode = "initial" | "retry" | "background";
 
@@ -52,7 +53,10 @@ export function useAgentServerReachable() {
     return () => clearInterval(id);
   }, [ready, baseUrl, runCheck]);
 
-  const recheck = useCallback(() => void runCheck("retry"), [runCheck]);
+  const recheck = useCallback(() => {
+    primeLocalNetworkPermission();
+    void runCheck("retry");
+  }, [runCheck]);
 
   return { ready, checking, backendUrl: baseUrl, recheck };
 }
