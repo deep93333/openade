@@ -1,5 +1,5 @@
 {
-  "name": "@openade/cli",
+  "name": "openade",
   "version": "0.1.0",
   "description": "Clone Openade from GitHub, install dependencies, and start the dev stack",
   "type": "commonjs",
@@ -27,8 +27,5 @@
     "node": ">=20"
   },
   "author": "Openade Contributors",
-  "license": "MIT",
-  "publishConfig": {
-    "access": "public"
-  }
+  "license": "MIT"
 }

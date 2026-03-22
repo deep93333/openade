@@ -218,7 +218,7 @@ function startDevBackground(bunBin, target) {
     `  ${pc.dim("URLs")}       ${pc.cyan(`http://localhost:${appPort}`)} (app)  ${pc.dim(`agent :${serverPort}`)}`,
   );
   console.log(
-    `  ${pc.dim("Foreground")}  ${pc.cyan("npx @openade/cli --foreground")} ${pc.dim("(from repo directory)")}`,
+    `  ${pc.dim("Foreground")}  ${pc.cyan("npx openade --foreground")} ${pc.dim("(from repo directory)")}`,
   );
   console.log();
 }

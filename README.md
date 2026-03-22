@@ -42,18 +42,18 @@ To store thread JSONL and tool spill files **inside** the project again (layout:
 
 ## One command (CLI)
 
-Requires Git, **Node.js 20+** on your PATH, and a published **`@openade/cli`** on npm (or run the bin from a clone — see below).
+Requires Git, **Node.js 20+** on your PATH, and a published **`openade`** CLI on npm (or run the bin from a clone — see below).
 
 ```bash
-npx --yes @openade/cli
+npx --yes openade
 ```
 
-Clones into `./openade`, installs [Bun](https://bun.sh) if needed, runs `bun install` quietly, then starts **`bun run dev` in the background** (logs in `~/.openade/dev-server.log`, PID in `~/.openade/dev-server.pid`). In a normal terminal it opens **[prompts](https://github.com/terkelg/prompts)** for folder name and background vs foreground unless you pass flags. **`--yes` / `-y`** skips prompts (also the default when stdin is not a TTY or `CI` is set). Foreground: `--foreground`. Verbose git/install: `--verbose`. Pass folder on the command line to skip that prompt: `npx --yes @openade/cli my-folder`. Fork: `export OPENADE_REPO=https://github.com/you/openade.git` (or legacy `AGENTIDE_REPO`) then run `npx` again.
+Clones into `./openade`, installs [Bun](https://bun.sh) if needed, runs `bun install` quietly, then starts **`bun run dev` in the background** (logs in `~/.openade/dev-server.log`, PID in `~/.openade/dev-server.pid`). In a normal terminal it opens **[prompts](https://github.com/terkelg/prompts)** for folder name and background vs foreground unless you pass flags. **`--yes` / `-y`** skips prompts (also the default when stdin is not a TTY or `CI` is set). Foreground: `--foreground`. Verbose git/install: `--verbose`. Pass folder on the command line to skip that prompt: `npx --yes openade my-folder`. Fork: `export OPENADE_REPO=https://github.com/you/openade.git` (or legacy `AGENTIDE_REPO`) then run `npx` again.
 
 Global install:
 
 ```bash
-npm install -g @openade/cli
+npm install -g openade
 openade
 ```
 
@@ -69,7 +69,7 @@ If you prefer bash or do not have `npx`:
 curl -fsSL https://tryade.dev/install.sh | bash
 ```
 
-**tryade.dev** also serves `curl …/i | bash`, which runs `npx --yes @openade/cli` when `npx` exists, otherwise downloads `install.sh`. Landing site lives in `apps/tryade` — `bun run dev:tryade` / `bun run build:tryade`. Preview builds: `TRYADE_ORIGIN=https://your-preview.vercel.app bun run build:tryade`.
+**tryade.dev** also serves `curl …/i | bash`, which runs `npx --yes openade` when `npx` exists, otherwise downloads `install.sh`. Landing site lives in `apps/tryade` — `bun run dev:tryade` / `bun run build:tryade`. Preview builds: `TRYADE_ORIGIN=https://your-preview.vercel.app bun run build:tryade`.
 
 **GitHub raw** (same shell script on `main`):
 
