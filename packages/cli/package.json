@@ -1,9 +1,10 @@
 {
-  "name": "openade",
+  "name": "tryade",
   "version": "0.1.0",
   "description": "Clone Openade from GitHub, install dependencies, and start the dev stack",
   "type": "commonjs",
   "bin": {
+    "tryade": "./bin/openade.cjs",
     "openade": "./bin/openade.cjs"
   },
   "files": ["bin"],
@@ -13,7 +14,7 @@
     "picocolors": "^1.1.1",
     "prompts": "^2.4.2"
   },
-  "keywords": ["openade", "ide", "claude", "electron"],
+  "keywords": ["tryade", "openade", "ide", "claude", "electron"],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/deep93333/openade.git",

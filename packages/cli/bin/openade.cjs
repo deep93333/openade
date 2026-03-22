@@ -218,14 +218,14 @@ function startDevBackground(bunBin, target) {
     `  ${pc.dim("URLs")}       ${pc.cyan(`http://localhost:${appPort}`)} (app)  ${pc.dim(`agent :${serverPort}`)}`,
   );
   console.log(
-    `  ${pc.dim("Foreground")}  ${pc.cyan("npx openade --foreground")} ${pc.dim("(from repo directory)")}`,
+    `  ${pc.dim("Foreground")}  ${pc.cyan("npx tryade --foreground")} ${pc.dim("(from repo directory)")}`,
   );
   console.log();
 }
 
 async function main() {
   program
-    .name("openade")
+    .name("tryade")
     .description("Clone Openade, install dependencies, start the dev stack")
     .option("-f, --foreground", "stream dev logs in this terminal (default: background + log file)")
     .option("-v, --verbose", "show git and bun install output")

@@ -11,7 +11,7 @@ chmod +x "$PUBLIC/install.sh"
 printf '%s\n' \
   '#!/usr/bin/env bash' \
   'set -euo pipefail' \
-  'if command -v npx >/dev/null 2>&1 && npx --yes openade "$@"; then' \
+  'if command -v npx >/dev/null 2>&1 && npx --yes tryade "$@"; then' \
   '  exit 0' \
   'fi' \
   'echo "Using shell installer (no npx or CLI not on registry yet)…" >&2' \

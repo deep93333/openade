@@ -5,7 +5,7 @@ const ORIGIN =
     ? window.location.origin
     : "https://tryade.dev";
 
-const CLI_LINE = "npx --yes openade";
+const CLI_LINE = "npx --yes tryade";
 const SHELL_LINE = `curl -fsSL ${ORIGIN}/install.sh | bash`;
 
 export function App() {
@@ -81,7 +81,7 @@ export function App() {
         </p>
 
         <p className="mt-3 text-sm text-slate-500">
-          Publish <code className="font-mono text-slate-600">openade</code> to npm first;
+          Publish <code className="font-mono text-slate-600">tryade</code> to npm first;
           until then run from a clone:{" "}
           <code className="font-mono text-slate-600">node packages/cli/bin/openade.cjs</code>
         </p>
@@ -106,7 +106,7 @@ export function App() {
 
         <p className="mt-6 text-sm font-medium text-slate-500">Global install</p>
         <code className="mt-1 block font-mono text-sm text-slate-400">
-          npm install -g openade && openade
+          npm install -g tryade && tryade
         </code>
 
         <p className="mt-8 text-sm font-medium text-slate-500">Shell only (no npm)</p>
