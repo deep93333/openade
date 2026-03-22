@@ -27,5 +27,8 @@
     "node": ">=20"
   },
   "author": "Openade Contributors",
-  "license": "MIT"
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  }
 }

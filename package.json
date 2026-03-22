@@ -24,7 +24,7 @@
     "format:check": "biome format .",
     "test": "bun run --filter @openade/desktop test && bun run --filter @openade/app test",
     "dev:static": "bun run --filter @openade/shared build && bun run --filter @openade/agent build && bun run --filter @openade/app build && bun run --filter @openade/desktop dev:static",
-    "publish:cli": "npm publish --workspace=@openade/cli --access public"
+    "publish:cli": "npm publish ./packages/cli --access public"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
