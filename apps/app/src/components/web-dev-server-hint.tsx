@@ -68,7 +68,8 @@ export function WebDevServerHint() {
             <span className="text-foreground">Hosted static UI + this machine:</span> build the app with{" "}
             <code className="font-mono">VITE_AGENT_SERVER_URL</code> pointing at this server (e.g.{" "}
             <code className="rounded bg-background/80 px-1 py-0.5 font-mono">{OPENADE_AGENT_DEFAULT_ORIGIN}</code>
-            ). The server allows <code className="font-mono">https://tryade.dev</code> and local dev origins;
+            ). The server allows <code className="font-mono">https://tryade.dev</code>,{" "}
+            <code className="font-mono">https://app.tryade.dev</code>, and local dev origins;
             add more with <code className="font-mono">OPENADE_CORS_ORIGINS</code> (comma-separated) when starting{" "}
             <code className="font-mono">dev:server</code>.
           </p>

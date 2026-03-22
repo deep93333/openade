@@ -44,7 +44,7 @@ To store thread JSONL and tool spill files **inside** the project again (layout:
 
 You can deploy the Vite app (`apps/app`) as **static files** (e.g. tryade.dev or any CDN) and run **`bun run dev:server`** (or full `bun run dev`) on your Mac. The local agent server uses a **fixed default port `42891`** (same idea as Ollama’s default `11434` — predictable, not `PORT`). Override with **`OPENADE_AGENT_PORT`** or legacy **`AGENT_SERVER_PORT`** only if needed; the generic **`PORT`** env var is **not** read for this server. The browser UI calls **`VITE_AGENT_SERVER_URL`** when set at build time; otherwise it defaults to **`http://127.0.0.1:42891`** (see `@openade/shared` `OPENADE_AGENT_DEFAULT_*`).
 
-The agent server sends CORS headers for local Vite ports, **https://tryade.dev**, and **https://www.tryade.dev**. To allow another origin (e.g. your preview URL), start the server with:
+The agent server sends CORS headers for local Vite ports, **https://tryade.dev**, **https://www.tryade.dev**, and **https://app.tryade.dev**. To allow another origin (e.g. your preview URL), start the server with:
 
 ```bash
 OPENADE_CORS_ORIGINS=https://your-app.pages.dev bun run dev:server

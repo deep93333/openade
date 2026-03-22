@@ -20,6 +20,8 @@
   import type { Workspace } from "@openade/shared";
   import { useState } from "react";
   import { WebDevServerHint } from "@/components/web-dev-server-hint";
+  import { AgentServerOfflineOverlay } from "@/components/agent-server-offline-overlay";
+  import { useAgentServerReachable } from "@/hooks/use-agent-server-reachable";
 
   export const AppLayout = () => {
     const [workspaceToRemove, setWorkspaceToRemove] = useState<Workspace | null>(null);
@@ -44,6 +46,9 @@
       globalPendingApproval,
     } = useAppLayout();
 
+    const { ready: serverReady, checking: serverChecking, backendUrl, recheck } =
+      useAgentServerReachable();
+
     const infoPanelOpen = useUIStore((s) => s.infoPanelOpen);
     const setInfoPanelOpen = useUIStore((s) => s.setInfoPanelOpen);
 
@@ -65,6 +70,18 @@
           </div>
         </>
       );
+
+    if (!serverReady) {
+      return (
+        <TooltipProvider>
+          <AgentServerOfflineOverlay
+            checking={serverChecking}
+            backendUrl={backendUrl}
+            onRetry={recheck}
+          />
+        </TooltipProvider>
+      );
+    }
 
     return (
       <TooltipProvider>

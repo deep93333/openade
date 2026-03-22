@@ -7,6 +7,7 @@ const DEFAULT_ORIGINS = [
   "http://localhost:4173",
   "https://tryade.dev",
   "https://www.tryade.dev",
+  "https://app.tryade.dev",
 ];
 
 export function getCorsAllowedOrigins(): string[] {
