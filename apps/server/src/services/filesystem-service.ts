@@ -1,6 +1,6 @@
 import * as fs from "fs/promises";
 import * as path from "path";
-import type { FileTreeNode } from "@agentide/shared";
+import type { FileTreeNode } from "@openade/shared";
 
 const DIRECTORY_TREE_SKIP = new Set([
   ".git", ".svn", ".hg",

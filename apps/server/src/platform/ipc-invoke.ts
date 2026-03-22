@@ -1,15 +1,15 @@
 import * as fs from "node:fs/promises";
 import os from "node:os";
 import * as path from "node:path";
-import { validateMCPServers } from "@agentide/agent";
+import { validateMCPServers } from "@openade/agent";
 import type {
   AgentMessage,
   ChatData,
   Checkpoint,
   GlobalSettings,
   MCPServerConfig,
-} from "@agentide/shared";
-import { IPC } from "@agentide/shared";
+} from "@openade/shared";
+import { IPC } from "@openade/shared";
 import { ulid } from "ulid";
 import { getAgentLogPath } from "../lib/data-paths.js";
 import { assertAllowedFilesystemPath } from "../lib/path-guard.js";
@@ -356,7 +356,7 @@ async function dispatch(channel: string, args: unknown[]): Promise<unknown> {
       const home = os.homedir();
       const cursorSkills = await loadSkillsFromDir(path.join(home, ".cursor", "skills"));
       const claudeSkills = await loadSkillsFromDir(path.join(home, ".claude", "skills"));
-      const byId = new Map<string, import("@agentide/shared").AgentSkillItem>();
+      const byId = new Map<string, import("@openade/shared").AgentSkillItem>();
       for (const s of [...cursorSkills, ...claudeSkills]) {
         if (!byId.has(s.id)) byId.set(s.id, s);
       }

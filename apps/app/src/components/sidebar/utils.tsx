@@ -1,5 +1,5 @@
-import type { AgentStatus, TaskStatus } from "@agentide/shared";
-import type { ChatThread } from "@agentide/shared";
+import type { AgentStatus, TaskStatus } from "@openade/shared";
+import type { ChatThread } from "@openade/shared";
 import {
   IconAlertCircle,
   IconCircle,

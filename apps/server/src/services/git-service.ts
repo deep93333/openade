@@ -3,7 +3,7 @@ import path from "node:path";
 import { existsSync, readFileSync } from "node:fs";
 import { mkdir, rename, unlink } from "node:fs/promises";
 import { simpleGit, type SimpleGit, type StatusResult } from "simple-git";
-import { getAgentideDataDir } from "../lib/data-paths.js";
+import { getOpenadeDataDir } from "../lib/data-paths.js";
 
 function workspaceDataKey(workspacePath: string): string {
   return createHash("sha256").update(path.resolve(workspacePath)).digest("hex").slice(0, 24);
@@ -395,7 +395,7 @@ export class GitService {
   async safeDeleteFiles(workspacePath: string, files: string[]): Promise<void> {
     if (files.length === 0) return;
     const trashDir = path.join(
-      getAgentideDataDir(),
+      getOpenadeDataDir(),
       "checkpoint-trash",
       workspaceDataKey(workspacePath),
     );

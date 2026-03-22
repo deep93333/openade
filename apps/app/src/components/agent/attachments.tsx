@@ -1,6 +1,6 @@
 import React from "react";
-import { ImageAttachment } from "@agentide/shared";
-import { Button, XIcon } from "@agentide/ui";
+import { ImageAttachment } from "@openade/shared";
+import { Button, XIcon } from "@openade/ui";
 import { createImagePreviewUrl } from "@/utils/image-attachment";
 import { cn } from "@/lib/cn";
 

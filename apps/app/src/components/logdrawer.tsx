@@ -15,7 +15,7 @@ import {
   DropdownMenuTrigger,
   FolderIcon,
   RotateIcon,
-} from "@agentide/ui";
+} from "@openade/ui";
 import { getElectronAPI } from "@/lib/electron";
 import { cn } from "@/lib/cn";
 

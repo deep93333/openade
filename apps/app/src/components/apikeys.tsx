@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { PROVIDER_CONFIGS, type ThemeAppearance } from "@agentide/shared";
+import { PROVIDER_CONFIGS, type ThemeAppearance } from "@openade/shared";
 import {
   Button,
   ChevronDownIcon,
@@ -10,7 +10,7 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
-} from "@agentide/ui";
+} from "@openade/ui";
 import {
   IconAdjustments,
   IconBook,

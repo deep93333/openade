@@ -1,4 +1,4 @@
-import type { TaskStatus } from "@agentide/shared";
+import type { TaskStatus } from "@openade/shared";
 import {
   Badge,
   Button,
@@ -8,7 +8,7 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
-} from "@agentide/ui";
+} from "@openade/ui";
 import { IconArchive } from "@tabler/icons-react";
 import { taskStatuses, taskStatusLabels, getTaskStatusIcon } from "./task-utils";
 import type { WorkspaceTask } from "./task-utils";

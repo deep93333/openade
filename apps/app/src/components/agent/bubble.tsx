@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { AgentMessage } from "@agentide/shared";
+import type { AgentMessage } from "@openade/shared";
 import {
   Button,
   CopyIcon,
@@ -13,7 +13,7 @@ import {
   PopoverTrigger,
   Textarea,
   RotateIcon,
-} from "@agentide/ui";
+} from "@openade/ui";
 import { IconCheck, IconInfoCircle, IconPencil } from "@tabler/icons-react";
 import { cn } from "@/lib/cn";
 import { UserMessagePreview } from "./mention-chip";

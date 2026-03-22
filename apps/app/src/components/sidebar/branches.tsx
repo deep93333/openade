@@ -12,11 +12,11 @@ import {
   CommandItem,
   CommandList,
   CommandSeparator,
-} from "@agentide/ui";
+} from "@openade/ui";
 import { IconGitBranch, IconPlus } from "@tabler/icons-react";
 import { useWorkspaceStore } from "@/store/workspace";
 import { useUIStore } from "@/store/ui";
-import type { GitBranch } from "@agentide/shared";
+import type { GitBranch } from "@openade/shared";
 
 type BranchSwitcherProps = {
   workspaceId: string;

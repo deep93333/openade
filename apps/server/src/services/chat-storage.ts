@@ -1,11 +1,11 @@
-import type { AgentMessage, ChatData, ChatThread } from "@agentide/shared";
+import type { AgentMessage, ChatData, ChatThread } from "@openade/shared";
 import { existsSync, readFileSync, unlinkSync, writeFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import { ulid } from "ulid";
-import { getAgentideDataDir } from "../lib/data-paths.js";
+import { getOpenadeDataDir } from "../lib/data-paths.js";
 
 function getChatsDir(): string {
-  const dir = path.join(getAgentideDataDir(), "chats");
+  const dir = path.join(getOpenadeDataDir(), "chats");
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true });
   }

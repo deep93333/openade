@@ -7,7 +7,7 @@ import { getElectronAPI } from "@/lib/electron";
 import { cn } from "@/lib/cn";
 import { Columns2Icon, PlusIcon, SquareIcon, XIcon } from "lucide-react";
 import "@xterm/xterm/css/xterm.css";
-import { Button } from "@agentide/ui";
+import { Button } from "@openade/ui";
 
 function resolveColor(cssVar: string, fallback: string): string {
   if (typeof document === "undefined") return fallback;

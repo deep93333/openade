@@ -1,11 +1,18 @@
-import type { ThemeAppearance } from "@agentide/shared";
+import type { ThemeAppearance } from "@openade/shared";
 
-const STORAGE_KEY = "agentide-appearance";
+const STORAGE_KEY = "openade-appearance";
+const LEGACY_APPEARANCE_KEY = "agentide-appearance";
 
 export function getStoredAppearance(): ThemeAppearance | null {
   try {
-    const r = localStorage.getItem(STORAGE_KEY);
-    if (r === "light" || r === "dark" || r === "system") return r;
+    let r = localStorage.getItem(STORAGE_KEY);
+    if (!r) r = localStorage.getItem(LEGACY_APPEARANCE_KEY);
+    if (r === "light" || r === "dark" || r === "system") {
+      if (!localStorage.getItem(STORAGE_KEY) && localStorage.getItem(LEGACY_APPEARANCE_KEY)) {
+        localStorage.setItem(STORAGE_KEY, r);
+      }
+      return r;
+    }
   } catch {
     //
   }
@@ -15,6 +22,7 @@ export function getStoredAppearance(): ThemeAppearance | null {
 export function setStoredAppearance(value: ThemeAppearance): void {
   try {
     localStorage.setItem(STORAGE_KEY, value);
+    localStorage.removeItem(LEGACY_APPEARANCE_KEY);
   } catch {
     //
   }

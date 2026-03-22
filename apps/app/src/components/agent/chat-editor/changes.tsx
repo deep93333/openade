@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { Button, ChevronDownIcon, Popover, PopoverContent, PopoverTrigger, Textarea } from "@agentide/ui";
+import { Button, ChevronDownIcon, Popover, PopoverContent, PopoverTrigger, Textarea } from "@openade/ui";
 import { IconGitCommit, IconUpload, IconEye, IconLoader } from "@tabler/icons-react";
 import { cn } from "@/lib/cn";
 import { FileName, DiffStats } from "@/components/primitives";

@@ -5,7 +5,7 @@ import type {
   AgentProvider,
   ImageAttachment,
   MCPServerConfig,
-} from "@agentide/shared";
+} from "@openade/shared";
 
 export type ToolApprovalResult =
   | { behavior: "allow"; updatedInput?: unknown }

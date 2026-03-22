@@ -1,4 +1,4 @@
-import { cn } from "@agentide/ui";
+import { cn } from "@openade/ui";
 
 type DiffStatsProps = {
   added: number;

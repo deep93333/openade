@@ -1,4 +1,4 @@
-import type { TaskStatus } from "@agentide/shared";
+import type { TaskStatus } from "@openade/shared";
 import { cn } from "@/lib/cn";
 
 type TaskStatusIconProps = {

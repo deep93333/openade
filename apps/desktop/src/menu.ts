@@ -83,7 +83,7 @@ export const setApplicationMenu = (): void => {
         {
           label: "Learn More",
           click: async () => {
-            await shell.openExternal("https://github.com/agentide/agentide");
+            await shell.openExternal("https://github.com/deep93333/openade");
           },
         },
       ],

@@ -1,21 +1,21 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
-import type { IpcResult } from "@agentide/shared";
+import type { IpcResult } from "@openade/shared";
 import { File, PatchDiff } from "@pierre/diffs/react";
-import { Button, ChevronDownIcon, CircleXIcon, RotateIcon, cn } from "@agentide/ui";
+import { Button, ChevronDownIcon, CircleXIcon, RotateIcon, cn } from "@openade/ui";
 import { IconLoader } from "@tabler/icons-react";
 import { getElectronAPI } from "@/lib/electron";
 import { useWorkspaceStore } from "@/store/workspace";
 import { DiffStats, FileName, basename } from "@/components/primitives";
 
 const DIFF_OPTIONS = {
-  theme: { dark: "agentide-light" as const, light: "agentide-light" as const },
+  theme: { dark: "openade-light" as const, light: "openade-light" as const },
   diffStyle: "unified" as const,
   diffIndicators: "bars" as const,
   disableFileHeader: true,
 };
 
 const FILE_OPTIONS = {
-  theme: { dark: "agentide-light" as const, light: "agentide-light" as const },
+  theme: { dark: "openade-light" as const, light: "openade-light" as const },
   disableFileHeader: true,
 };
 

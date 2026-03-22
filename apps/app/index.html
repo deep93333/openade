@@ -3,13 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AgentIDE</title>
+    <title>Openade</title>
   </head>
   <body class="antialiased">
     <script>
       (() => {
         try {
-          const r = localStorage.getItem("agentide-appearance");
+          const r =
+            localStorage.getItem("openade-appearance") ??
+            localStorage.getItem("agentide-appearance");
           const p = r === "light" || r === "dark" || r === "system" ? r : "dark";
           const dark =
             p === "dark" ||

@@ -1,6 +1,6 @@
 import { useMemo } from "react";
-import type { AgentMessage } from "@agentide/shared";
-import { Button, LlmChatIcon, RotateIcon } from "@agentide/ui";
+import type { AgentMessage } from "@openade/shared";
+import { Button, LlmChatIcon, RotateIcon } from "@openade/ui";
 import { useStickToBottom } from "use-stick-to-bottom";
 import { cn } from "@/lib/cn";
 import { useAgentStore } from "@/store/agent";

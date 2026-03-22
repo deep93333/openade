@@ -6,7 +6,7 @@ import {
   DialogHeader,
   DialogTitle,
   Button,
-} from "@agentide/ui";
+} from "@openade/ui";
 import { useWorkspaceItemContext } from "./context";
 
 export function RemoveWorkspaceDialog() {

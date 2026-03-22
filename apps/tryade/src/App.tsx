@@ -5,16 +5,27 @@ const ORIGIN =
     ? window.location.origin
     : "https://tryade.dev";
 
-const INSTALL_LINE = `curl -fsSL ${ORIGIN}/i | bash`;
+const CLI_LINE = "npx --yes @openade/cli";
+const SHELL_LINE = `curl -fsSL ${ORIGIN}/install.sh | bash`;
 
 export function App() {
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<"cli" | "shell" | null>(null);
 
-  const copy = useCallback(async () => {
+  const copyCli = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(INSTALL_LINE);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      await navigator.clipboard.writeText(CLI_LINE);
+      setCopied("cli");
+      setTimeout(() => setCopied(null), 2000);
+    } catch {
+      //
+    }
+  }, []);
+
+  const copyShell = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(SHELL_LINE);
+      setCopied("shell");
+      setTimeout(() => setCopied(null), 2000);
     } catch {
       //
     }
@@ -51,43 +62,76 @@ export function App() {
           Agent-first IDE
         </p>
         <h1 className="text-balance text-4xl font-semibold tracking-tight text-white md:text-5xl">
-          Install AgentIDE in one command
+          Install Openade in one command
         </h1>
         <p className="mt-5 max-w-xl text-lg leading-relaxed text-slate-400">
-          tryade.dev hosts a short install bootstrap and the full setup script for{" "}
+          Use the <strong className="font-medium text-slate-300">npm CLI</strong> (needs Node 20+
+          and Git). It clones{" "}
           <a
             className="text-slate-300 underline decoration-white/20 underline-offset-4 transition hover:text-emerald-400 hover:decoration-emerald-400/50"
             href="https://github.com/deep93333/openade"
             target="_blank"
             rel="noreferrer"
           >
-            AgentIDE
+            Openade
           </a>
-          — clone the repo, install Bun if needed, and start the dev stack.
+          , installs Bun if missing, runs{" "}
+          <code className="font-mono text-slate-500">bun install</code>, then{" "}
+          <code className="font-mono text-slate-500">bun run dev</code>.
+        </p>
+
+        <p className="mt-3 text-sm text-slate-500">
+          Publish <code className="font-mono text-slate-600">@openade/cli</code> to npm first;
+          until then run from a clone:{" "}
+          <code className="font-mono text-slate-600">node packages/cli/bin/openade.cjs</code>
         </p>
 
         <div className="mt-10 rounded-xl border border-white/10 bg-slate-900/50 p-1 shadow-2xl shadow-emerald-950/20 backdrop-blur-sm">
+          <p className="px-3 pt-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+            Recommended
+          </p>
           <div className="flex items-center justify-between gap-2 rounded-lg bg-[#0c1222] px-4 py-3">
             <code className="min-w-0 flex-1 break-all font-mono text-sm text-emerald-100/95 md:text-[0.95rem]">
-              {INSTALL_LINE}
+              {CLI_LINE}
             </code>
             <button
               type="button"
-              onClick={copy}
+              onClick={copyCli}
               className="shrink-0 rounded-lg bg-emerald-500/15 px-3 py-2 text-sm font-medium text-emerald-400 ring-1 ring-emerald-500/30 transition hover:bg-emerald-500/25"
             >
-              {copied ? "Copied" : "Copy"}
+              {copied === "cli" ? "Copied" : "Copy"}
             </button>
           </div>
         </div>
 
+        <p className="mt-6 text-sm font-medium text-slate-500">Global install</p>
+        <code className="mt-1 block font-mono text-sm text-slate-400">
+          npm install -g @openade/cli && openade
+        </code>
+
+        <p className="mt-8 text-sm font-medium text-slate-500">Shell only (no npm)</p>
+        <div className="mt-2 flex flex-col gap-2 rounded-lg border border-white/5 bg-slate-900/30 p-3 sm:flex-row sm:items-center sm:justify-between">
+          <code className="min-w-0 flex-1 break-all font-mono text-xs text-slate-400 sm:text-sm">
+            {SHELL_LINE}
+          </code>
+          <button
+            type="button"
+            onClick={copyShell}
+            className="shrink-0 rounded-md bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-400 ring-1 ring-white/10 hover:bg-white/10"
+          >
+            {copied === "shell" ? "Copied" : "Copy"}
+          </button>
+        </div>
+        <p className="mt-2 text-xs text-slate-600">
+          Shortcut <code className="font-mono">curl …/i | bash</code> tries{" "}
+          <code className="font-mono">npx</code> first, then falls back to{" "}
+          <code className="font-mono">install.sh</code>.
+        </p>
+
         <p className="mt-4 text-sm text-slate-500">
-          Advanced: full script at{" "}
-          <a className="text-slate-400 hover:text-emerald-400" href={`${ORIGIN}/install.sh`}>
-            /install.sh
-          </a>
-          . Fork? Set <code className="font-mono text-slate-400">AGENTIDE_REPO</code> before running
-          the curl line.
+          Fork? Set <code className="font-mono text-slate-400">OPENADE_REPO</code> (or legacy{" "}
+          <code className="font-mono text-slate-400">AGENTIDE_REPO</code>) in your environment
+          before running the CLI or curl line.
         </p>
 
         <section className="mt-20 border-t border-white/5 pt-16">
@@ -99,11 +143,16 @@ export function App() {
             </li>
             <li className="flex gap-3">
               <span className="text-emerald-500">—</span>
-              Network access (script can install Bun automatically)
+              Node.js 20+ on PATH (for <code className="font-mono text-slate-500">npx</code> and
+              Vite)
             </li>
             <li className="flex gap-3">
               <span className="text-emerald-500">—</span>
-              Claude Code configured for AgentIDE after install
+              Network (CLI can install Bun automatically)
+            </li>
+            <li className="flex gap-3">
+              <span className="text-emerald-500">—</span>
+              Claude Code configured after install
             </li>
           </ul>
         </section>
@@ -123,7 +172,7 @@ export function App() {
       </main>
 
       <footer className="relative border-t border-white/5 py-8 text-center text-sm text-slate-600">
-        AgentIDE is open source. tryade.dev is a convenience mirror for install scripts.
+        Openade is open source. tryade.dev documents install paths; the app runs from your clone.
       </footer>
     </div>
   );

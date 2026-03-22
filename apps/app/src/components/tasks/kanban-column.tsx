@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import type { TaskStatus } from "@agentide/shared";
-import { Badge, Button } from "@agentide/ui";
+import type { TaskStatus } from "@openade/shared";
+import { Badge, Button } from "@openade/ui";
 import { IconArchive, IconPlus } from "@tabler/icons-react";
 import { taskStatusLabels, getTaskStatusIcon } from "./task-utils";
 import type { WorkspaceTask } from "./task-utils";

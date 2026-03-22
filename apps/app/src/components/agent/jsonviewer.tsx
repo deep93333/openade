@@ -1,6 +1,6 @@
 import { useCallback, useRef } from "react";
-import type { AgentMessage } from "@agentide/shared";
-import { Button } from "@agentide/ui";
+import type { AgentMessage } from "@openade/shared";
+import { Button } from "@openade/ui";
 import { useAgentStore } from "@/store/agent";
 import { useWorkspaceStore } from "@/store/workspace";
 

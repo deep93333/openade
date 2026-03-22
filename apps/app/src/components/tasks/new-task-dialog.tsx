@@ -7,7 +7,7 @@ import Placeholder from "@tiptap/extension-placeholder";
 import StarterKit from "@tiptap/starter-kit";
 import type { MentionNodeAttrs } from "@tiptap/extension-mention";
 import type { SuggestionProps } from "@tiptap/suggestion";
-import type { FileTreeNode, TaskStatus } from "@agentide/shared";
+import type { FileTreeNode, TaskStatus } from "@openade/shared";
 import {
   Button,
   ButtonGroup,
@@ -26,7 +26,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
   cn,
-} from "@agentide/ui";
+} from "@openade/ui";
 import { FileMentionList, type FileMentionItem } from "@/components/agent/mentions";
 import { getElectronAPI } from "@/lib/electron";
 import { useAgentStore } from "@/store/agent";
@@ -299,7 +299,7 @@ type NewTaskFormProps = {
   open: boolean;
   workspaces: WorkspaceOption[];
   defaultWorkspaceId: string | null;
-  onCreate: (workspaceId: string, text: string, model?: string, initialStatus?: TaskStatus, provider?: import("@agentide/shared").AgentProvider) => Promise<void>;
+  onCreate: (workspaceId: string, text: string, model?: string, initialStatus?: TaskStatus, provider?: import("@openade/shared").AgentProvider) => Promise<void>;
   onClose: () => void;
 };
 
@@ -477,7 +477,7 @@ export type NewTaskDialogProps = {
   onOpenChange: (open: boolean) => void;
   workspaces: WorkspaceOption[];
   defaultWorkspaceId: string | null;
-  onCreate: (workspaceId: string, text: string, model?: string, initialStatus?: TaskStatus, provider?: import("@agentide/shared").AgentProvider) => Promise<void>;
+  onCreate: (workspaceId: string, text: string, model?: string, initialStatus?: TaskStatus, provider?: import("@openade/shared").AgentProvider) => Promise<void>;
   contentClassName?: string;
   overlayClassName?: string;
   showCloseButton?: boolean;

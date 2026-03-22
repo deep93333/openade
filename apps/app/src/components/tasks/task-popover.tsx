@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import type { ChatThread } from "@agentide/shared";
+import type { ChatThread } from "@openade/shared";
 import {
   Button,
   ChevronDownIcon,
@@ -16,7 +16,7 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@agentide/ui";
+} from "@openade/ui";
 import { TaskErrorActions, TaskErrorNotice } from "./task-error";
 import { PopoverChatEditor } from "@/components/agent/chat-editor";
 import { MessageListPreview } from "@/components/agent/messages";

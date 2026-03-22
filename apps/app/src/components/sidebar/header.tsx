@@ -5,7 +5,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@agentide/ui";
+} from "@openade/ui";
 import { IconFolder, IconPlus, IconDots, IconTrash } from "@tabler/icons-react";
 import { cn } from "@/lib/cn";
 import { useWorkspaceItemContext } from "./context";

@@ -1,4 +1,4 @@
-import type { AgentMessage } from "@agentide/shared";
+import type { AgentMessage } from "@openade/shared";
 
 export type ToolComponentProps = {
   message: AgentMessage;

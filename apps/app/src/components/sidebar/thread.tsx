@@ -1,4 +1,4 @@
-import type { ChatThread, TaskStatus } from "@agentide/shared";
+import type { ChatThread, TaskStatus } from "@openade/shared";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -10,7 +10,7 @@ import {
   ContextMenuSubTrigger,
   ContextMenuTrigger,
   Button,
-} from "@agentide/ui";
+} from "@openade/ui";
 import { useWorkspaceItemContext } from "./context";
 import { threadLabel, getTaskStatusIcon, getTaskStatusLabel, TASK_STATUSES } from "./utils";
 

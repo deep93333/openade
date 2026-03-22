@@ -6,7 +6,7 @@ import {
   DialogHeader,
   DialogTitle,
   Input,
-} from "@agentide/ui";
+} from "@openade/ui";
 import { useWorkspaceStore } from "@/store/workspace";
 import { useUIStore } from "@/store/ui";
 

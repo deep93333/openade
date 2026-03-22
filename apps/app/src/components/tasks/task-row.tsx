@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import type { TaskStatus } from "@agentide/shared";
+import type { TaskStatus } from "@openade/shared";
 import {
   Badge,
   Button,
@@ -9,7 +9,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@agentide/ui";
+} from "@openade/ui";
 import { IconArchive, IconDots, IconFile, IconProgress, IconRobot } from "@tabler/icons-react";
 import { ArrowRightIcon } from "lucide-react";
 import { useAgentActivity } from "@/hooks/use-agent-activity";

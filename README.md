@@ -1,4 +1,4 @@
-# AgentIDE
+# Openade
 
 An open-source, agent-first IDE for running Claude Code in isolated workspaces. Send prompts, stream agent output in real time, and manage multiple project directories from one window.
 
@@ -14,89 +14,74 @@ Inspired by [Conductor](https://conductor.build).
 
 ## Where session data lives
 
-AgentIDE keeps its own files out of the repo by default (tools still read and write normal project files as part of coding tasks).
+Openade keeps its own files out of the repo by default (tools still read and write normal project files as part of coding tasks).
 
-**Agent server** (`bun run dev:server`, web workflow) — default root `~/.agentide-server/` (override with `AGENTIDE_DATA_DIR`):
+**Agent server** (`bun run dev:server`, web workflow) — default root `~/.openade-server/` (override with `OPENADE_DATA_DIR`; `AGENTIDE_DATA_DIR` still works):
 
 - Threads (model JSONL): `…/threads/<workspace-id>/`
 - Large tool-output spill files: `…/context/<workspace-id>/`
 - Checkpoint file snapshots: `…/snapshots/<workspace-id>/<thread-id>/<checkpoint-id>/`
 - Stash for untracked files during checkpoint restore: `…/checkpoint-trash/<workspace-path-hash>/`
 
-**Electron app** — under the app user data directory (e.g. `~/Library/Application Support/<app>/agentide/` on macOS):
+**Electron app** — under the app user data directory (e.g. `~/Library/Application Support/<app>/openade/` on macOS):
 
-- Same idea: `agentide/snapshots/…`, `agentide/checkpoint-trash/…`, plus existing `agentide/chats/` and `config.json`.
+- Same idea: `openade/snapshots/…`, `openade/checkpoint-trash/…`, plus existing `openade/chats/` and `config.json`.
 
 Chat UI state on the server remains `chats/<workspace-id>.json` next to the paths above.
 
-To store thread JSONL and tool spill files **inside** the project again (legacy layout: `.agentide/threads`, `.agentide/context`), set `AGENTIDE_THREADS_IN_WORKSPACE=1`. Old JSONL under the project is still read when no file exists in the new location yet.
+To store thread JSONL and tool spill files **inside** the project again (layout: `.openade/threads`, `.openade/context`), set `OPENADE_THREADS_IN_WORKSPACE=1` (or `AGENTIDE_THREADS_IN_WORKSPACE=1`). JSONL previously under `.agentide/threads` is still read when no file exists in the new location yet.
 
-**Not on disk in the project:** the read tool’s duplicate-read warnings use an in-memory map for that run only. **Outside AgentIDE:** MCP servers, language tooling, and build tools may still create normal caches in the repo (e.g. `node_modules/.cache`, `.turbo`); those are unrelated to AgentIDE’s own storage.
+**Not on disk in the project:** the read tool’s duplicate-read warnings use an in-memory map for that run only. **Outside Openade:** MCP servers, language tooling, and build tools may still create normal caches in the repo (e.g. `node_modules/.cache`, `.turbo`); those are unrelated to Openade’s own storage.
 
 ## Prerequisites
 
 - [Git](https://git-scm.com)
 - [Bun](https://bun.sh) (optional if you use the one-liner below — it can install Bun for you)
 - [Claude Code](https://docs.anthropic.com/en/docs/claude-code) installed and authenticated (CLI or API key)
-- Node.js 18+ (for contributors using npm in some scripts)
+- **Node.js 20.19+** (22 LTS recommended) if `node` is on your PATH — Vite 7 needs it; the install script checks this after cloning
 
-## One command
+## One command (CLI)
 
-From any directory (requires Git; installs [Bun](https://bun.sh) if it is missing).
-
-**tryade.dev** (landing + install scripts, Vite app in `apps/tryade`): `curl -fsSL https://tryade.dev/i | bash` — same installer, easy to share. Develop: `bun run dev:tryade`; build: `bun run build:tryade`. Deploy `apps/tryade/dist` to your host and point the domain at it. For a preview host, build with `TRYADE_ORIGIN=https://your-preview.vercel.app bun run build:tryade` so `/i` fetches `/install.sh` from that origin.
-
-**GitHub raw** (bootstrap → full `scripts/install.sh` on `main`):
+Requires Git, **Node.js 20+** on your PATH, and a published **`@openade/cli`** on npm (or run the bin from a clone — see below).
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/deep93333/openade/main/i | bash
+npx --yes @openade/cli
 ```
 
-Same behavior, canonical script path:
+Clones into `./openade`, installs [Bun](https://bun.sh) if needed, runs `bun install` quietly, then starts **`bun run dev` in the background** (logs in `~/.openade/dev-server.log`, PID in `~/.openade/dev-server.pid`). In a normal terminal it opens **[prompts](https://github.com/terkelg/prompts)** for folder name and background vs foreground unless you pass flags. **`--yes` / `-y`** skips prompts (also the default when stdin is not a TTY or `CI` is set). Foreground: `--foreground`. Verbose git/install: `--verbose`. Pass folder on the command line to skip that prompt: `npx --yes @openade/cli my-folder`. Fork: `export OPENADE_REPO=https://github.com/you/openade.git` (or legacy `AGENTIDE_REPO`) then run `npx` again.
+
+Global install:
+
+```bash
+npm install -g @openade/cli
+openade
+```
+
+**From this repo without publishing:** `node packages/cli/bin/openade.cjs`
+
+Maintainers: `npm run publish:cli` (npm login with access to the `@openade` scope).
+
+## Shell installer (no npm)
+
+If you prefer bash or do not have `npx`:
+
+```bash
+curl -fsSL https://tryade.dev/install.sh | bash
+```
+
+**tryade.dev** also serves `curl …/i | bash`, which runs `npx --yes @openade/cli` when `npx` exists, otherwise downloads `install.sh`. Landing site lives in `apps/tryade` — `bun run dev:tryade` / `bun run build:tryade`. Preview builds: `TRYADE_ORIGIN=https://your-preview.vercel.app bun run build:tryade`.
+
+**GitHub raw** (same shell script on `main`):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/deep93333/openade/main/scripts/install.sh | bash
 ```
-
-This clones into `./openade`, runs `bun install`, then `bun run dev`. Use another folder: add a directory name at the end of the `bash` line (arguments pass through). For a fork:
-
-```bash
-export AGENTIDE_REPO=https://github.com/you/openade.git
-curl -fsSL https://raw.githubusercontent.com/deep93333/openade/main/i | bash
-```
-
-### Even shorter to share
-
-- **After you publish `@agentide/cli`:** `npx @agentide/cli` — no install URL at all.
-- **Link shortener:** point any short link (Bitly, `is.gd`, your own domain) at `https://raw.githubusercontent.com/deep93333/openade/main/i` so people run `curl -fsSL https://your.short/i | bash`.
-- **Custom script URL:** `AGENTIDE_INSTALL_SCRIPT_URL=https://…/install.sh curl -fsSL https://…/i | bash` (forks or mirrors).
-
-(`export` must run in the same shell session before the `curl` line so the piped `bash` inherits it.)
 
 If you already cloned the repo:
 
 ```bash
 ./scripts/install.sh .
 ```
-
-(`cd` into the clone first so `.` resolves to that directory.)
-
-## Install via npm
-
-After `@agentide/cli` is published:
-
-```bash
-npx @agentide/cli
-```
-
-Global install:
-
-```bash
-npm install -g @agentide/cli
-agentide
-```
-
-Maintainers: from the repo root, `npm run publish:cli` (npm login with access to the `@agentide` scope).
 
 ## Quick Start
 
@@ -135,7 +120,7 @@ Electron will open and load the React UI from `http://localhost:3010`. Add a wor
 ## Project Structure
 
 ```
-agentide/
+openade/
 ├── package.json          # Workspace root, scripts, deps
 ├── biome.json            # Formatter (2 spaces, double quotes, semicolons)
 ├── tsconfig.base.json    # Shared TS config

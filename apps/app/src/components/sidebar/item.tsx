@@ -1,8 +1,8 @@
-import type { Workspace } from "@agentide/shared";
+import type { Workspace } from "@openade/shared";
 import {
   Accordion,
   AccordionItem,
-} from "@agentide/ui";
+} from "@openade/ui";
 import { useWorkspaceItem } from "./hook";
 import { WorkspaceItemProvider } from "./context";
 import { WorkspaceItemHeader } from "./header";

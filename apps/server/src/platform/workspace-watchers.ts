@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import { existsSync, watch } from "node:fs";
 import path from "node:path";
-import { IPC } from "@agentide/shared";
+import { IPC } from "@openade/shared";
 import { workspaceManager } from "../services/workspace-manager.js";
 
 const DEBOUNCE_MS = 350;

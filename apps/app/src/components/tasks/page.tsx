@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
-import type { TaskStatus } from "@agentide/shared";
+import type { TaskStatus } from "@openade/shared";
 import { useWorkspaceStore } from "@/store/workspace";
 import { useAgentStore } from "@/store/agent";
 import { useUIStore } from "@/store/ui";
@@ -185,7 +185,7 @@ export const TasksPage = () => {
       text: string,
       model?: string,
       initialStatus?: TaskStatus,
-      provider?: import("@agentide/shared").AgentProvider
+      provider?: import("@openade/shared").AgentProvider
     ) => {
       const threadId = await createTaskThread(workspaceId, text, undefined, model, provider);
       if (initialStatus && threadId) {

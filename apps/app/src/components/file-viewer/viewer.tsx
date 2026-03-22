@@ -1,6 +1,6 @@
 import type { ChangeEvent, KeyboardEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button, ChatBubbleLineIcon, CircleXIcon, Textarea } from "@agentide/ui";
+import { Button, ChatBubbleLineIcon, CircleXIcon, Textarea } from "@openade/ui";
 import { File } from "@pierre/diffs/react";
 import { useFileContextStore } from "@/store/context";
 import { getElectronAPI } from "@/lib/electron";
@@ -128,7 +128,7 @@ export const FileViewer = ({
 
   const fileOptions = useMemo(
     () => ({
-      theme: { dark: "agentide-dark" as const, light: "agentide-dark" as const },
+      theme: { dark: "openade-dark" as const, light: "openade-dark" as const },
       disableFileHeader: true,
     }),
     []

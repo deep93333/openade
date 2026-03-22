@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
-import type { ChatThread } from "@agentide/shared";
+import type { ChatThread } from "@openade/shared";
 import {
   Button,
   Dialog,
@@ -9,7 +9,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@agentide/ui";
+} from "@openade/ui";
 import { IconFile, IconPlayerPlay, IconProgress, IconRobot } from "@tabler/icons-react";
 import { useWorkspaceStore } from "@/store/workspace";
 import { useThreadChangedFiles } from "@/hooks/use-thread-changed-files";

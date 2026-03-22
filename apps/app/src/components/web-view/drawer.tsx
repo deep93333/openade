@@ -8,7 +8,7 @@ import {
   DrawerContent,
   DrawerHeader,
   Input,
-} from "@agentide/ui";
+} from "@openade/ui";
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
@@ -132,9 +132,9 @@ export const WebViewDrawer = ({
     };
 
     const handleConsoleMessage = (e: Electron.ConsoleMessageEvent) => {
-      if (e.message.startsWith("__agentide_")) {
+      if (e.message.startsWith("__openade_")) {
         try {
-          const parsed = JSON.parse(e.message.replace("__agentide_", ""));
+          const parsed = JSON.parse(e.message.replace("__openade_", ""));
           if (parsed.type === "element_selected") {
             setSelectedElement(parsed.data);
           } else if (parsed.type === "inspector_cancel") {
@@ -171,9 +171,9 @@ export const WebViewDrawer = ({
     if (!webview) return;
 
     const handleIpcMessage = (event: Electron.IpcMessageEvent) => {
-      if (event.channel === "__agentide_element_selected__") {
+      if (event.channel === "__openade_element_selected__") {
         setSelectedElement(event.args[0] as ElementInfo);
-      } else if (event.channel === "__agentide_inspector_cancel__") {
+      } else if (event.channel === "__openade_inspector_cancel__") {
         setInspectMode(false);
         setSelectedElement(null);
       }
@@ -199,9 +199,9 @@ export const WebViewDrawer = ({
     if (!open) return;
 
     const handleMessage = (event: MessageEvent) => {
-      if (event.data?.type === "__agentide_element_selected__") {
+      if (event.data?.type === "__openade_element_selected__") {
         setSelectedElement(event.data.data);
-      } else if (event.data?.type === "__agentide_inspector_cancel__") {
+      } else if (event.data?.type === "__openade_inspector_cancel__") {
         setInspectMode(false);
         setSelectedElement(null);
       }

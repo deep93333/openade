@@ -1,4 +1,4 @@
-import type { ChatThread, TaskStatus, Workspace } from "@agentide/shared";
+import type { ChatThread, TaskStatus, Workspace } from "@openade/shared";
 import { useState } from "react";
 import { useWorkspaceStore } from "@/store/workspace";
 import { useAgentStore } from "@/store/agent";

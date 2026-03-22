@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Editor, { type OnMount } from "@monaco-editor/react";
-import type { MCPServerConfig, MCPValidationResult } from "@agentide/shared";
+import type { MCPServerConfig, MCPValidationResult } from "@openade/shared";
 import type { editor as MonacoEditor } from "monaco-editor";
 import {
   Alert,
   AlertDescription,
   Badge,
   Button,
-} from "@agentide/ui";
+} from "@openade/ui";
 import {
   IconAlertTriangle,
   IconCheck,

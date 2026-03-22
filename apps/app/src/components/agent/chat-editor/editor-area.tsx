@@ -1,7 +1,7 @@
 import type { Editor } from "@tiptap/react";
 import { EditorContent } from "@tiptap/react";
-import type { ImageAttachment } from "@agentide/shared";
-import { ImageIcon } from "@agentide/ui";
+import type { ImageAttachment } from "@openade/shared";
+import { ImageIcon } from "@openade/ui";
 import { ImageAttachmentList } from "../attachments";
 import { cn } from "@/lib/cn";
 

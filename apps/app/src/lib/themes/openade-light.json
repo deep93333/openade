@@ -1,7 +1,7 @@
 {
-  "name": "agentide-light",
+  "name": "openade-light",
   "type": "light",
-  "displayName": "AgentIDE Light",
+  "displayName": "Openade Light",
   "colors": {
     "editor.background": "#f8fafc",
     "editor.foreground": "#111111",

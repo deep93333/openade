@@ -1,8 +1,9 @@
-import type { Workspace, GitBranch } from "@agentide/shared";
+import type { Workspace, GitBranch } from "@openade/shared";
 import { create } from "zustand";
 import { getElectronAPI } from "@/lib/electron";
 
-const ACTIVE_WORKSPACE_KEY = "agentide-active-workspace";
+const ACTIVE_WORKSPACE_KEY = "openade-active-workspace";
+const LEGACY_ACTIVE_WORKSPACE_KEY = "agentide-active-workspace";
 
 async function getSavedActiveWorkspaceId(): Promise<string | null> {
   const api = getElectronAPI();
@@ -11,7 +12,18 @@ async function getSavedActiveWorkspaceId(): Promise<string | null> {
     return result.success && result.data ? result.data : null;
   }
   try {
-    return localStorage.getItem(ACTIVE_WORKSPACE_KEY);
+    const v =
+      localStorage.getItem(ACTIVE_WORKSPACE_KEY) ??
+      localStorage.getItem(LEGACY_ACTIVE_WORKSPACE_KEY);
+    if (
+      v &&
+      !localStorage.getItem(ACTIVE_WORKSPACE_KEY) &&
+      localStorage.getItem(LEGACY_ACTIVE_WORKSPACE_KEY)
+    ) {
+      localStorage.setItem(ACTIVE_WORKSPACE_KEY, v);
+      localStorage.removeItem(LEGACY_ACTIVE_WORKSPACE_KEY);
+    }
+    return v;
   } catch {
     return null;
   }
@@ -26,8 +38,10 @@ async function setSavedActiveWorkspaceId(workspaceId: string | null): Promise<vo
   try {
     if (workspaceId) {
       localStorage.setItem(ACTIVE_WORKSPACE_KEY, workspaceId);
+      localStorage.removeItem(LEGACY_ACTIVE_WORKSPACE_KEY);
     } else {
       localStorage.removeItem(ACTIVE_WORKSPACE_KEY);
+      localStorage.removeItem(LEGACY_ACTIVE_WORKSPACE_KEY);
     }
   } catch {
     //

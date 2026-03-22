@@ -1,5 +1,5 @@
 import { getAgentBridge } from "@/lib/agent-bridge";
-import type { AgentModelOption, ImageAttachment } from "@agentide/shared";
+import type { AgentModelOption, ImageAttachment } from "@openade/shared";
 import { create } from "zustand";
 
 const DEFAULT_MODEL_OPTIONS: { value: string; label: string }[] = [

@@ -1,7 +1,7 @@
 {
-  "name": "@agentide/shared",
+  "name": "@openade/shared",
   "version": "1.0.0",
-  "description": "Shared types and utilities for AgentIDE",
+  "description": "Shared types and utilities for Openade",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

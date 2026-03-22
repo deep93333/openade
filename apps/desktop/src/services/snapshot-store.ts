@@ -15,7 +15,7 @@ type RestoreResult = {
 };
 
 function snapshotsBaseDir(): string {
-  return path.join(app.getPath("userData"), "agentide", "snapshots");
+  return path.join(app.getPath("userData"), "openade", "snapshots");
 }
 
 function getSnapshotDir(workspaceId: string, threadId: string, checkpointId: string): string {

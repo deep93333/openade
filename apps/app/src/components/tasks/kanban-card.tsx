@@ -1,6 +1,6 @@
   import { useCallback, useState } from "react";
   import { motion, AnimatePresence } from "framer-motion";
-  import type { TaskStatus } from "@agentide/shared";
+  import type { TaskStatus } from "@openade/shared";
   import {
     Button,
     ShimmeringText,
@@ -14,7 +14,7 @@
     PopoverContent,
     PopoverTrigger,
     cn,
-  } from "@agentide/ui";
+  } from "@openade/ui";
   import { IconAlertCircle, IconArchive, IconDots, IconFile, IconRobot } from "@tabler/icons-react";
   import { useAgentStore } from "@/store/agent";
   import { useChatEditorStore } from "@/store/editor";

@@ -1,6 +1,6 @@
 import { createMCPClient } from "@ai-sdk/mcp";
 import { Experimental_StdioMCPTransport } from "@ai-sdk/mcp/mcp-stdio";
-import type { MCPServerConfig, MCPValidationResult } from "@agentide/shared";
+import type { MCPServerConfig, MCPValidationResult } from "@openade/shared";
 import type { ToolSet } from "ai";
 import type { MCPToolRuntime } from "./tool-types.js";
 import { logAgentEvent, type AgentLogger } from "../logger.js";

@@ -1,7 +1,7 @@
 import { app } from "electron";
 import { appendFileSync, existsSync, mkdirSync } from "node:fs";
 import path from "node:path";
-import { createFileAgentLogger, type AgentLogger } from "@agentide/agent";
+import { createFileAgentLogger, type AgentLogger } from "@openade/agent";
 
 const LOG_DIR = app?.isPackaged
   ? path.join(app.getPath("userData"), "logs")

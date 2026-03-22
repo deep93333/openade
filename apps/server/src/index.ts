@@ -7,14 +7,14 @@ import {
   generateCommitMessage as generateCommitMessageForBackend,
   generateThreadTitle as generateThreadTitleForBackend,
   refreshModelPricing,
-} from "@agentide/agent";
+} from "@openade/agent";
 import type {
   AgentMessage,
   AgentStartParams,
   CommitMessageParams,
   ThreadTitleParams,
   ToolApprovalResponse,
-} from "@agentide/shared";
+} from "@openade/shared";
 import { Hono } from "hono";
 import { upgradeWebSocket, websocket } from "hono/bun";
 import { cors } from "hono/cors";
@@ -380,7 +380,7 @@ app.post("/api/agent/tool-approval", async (c) => {
 const port = Number(process.env.AGENT_SERVER_PORT ?? process.env.PORT ?? 42891);
 const hostname = "127.0.0.1";
 
-console.log(`[agentide/server] listening on http://${hostname}:${port}`);
+console.log(`[openade/server] listening on http://${hostname}:${port}`);
 
 export default {
   port,

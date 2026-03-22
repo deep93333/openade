@@ -1,6 +1,6 @@
 import * as fs from "fs/promises";
 import * as path from "path";
-import type { AgentSkillItem } from "@agentide/shared";
+import type { AgentSkillItem } from "@openade/shared";
 
 const SKILL_MD = "SKILL.md";
 const frontmatterRe = /^---\s*\n([\s\S]*?)\n---/;

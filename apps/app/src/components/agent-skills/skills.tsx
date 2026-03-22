@@ -12,7 +12,7 @@ import {
   DialogTitle,
   Input,
   SearchIcon,
-} from "@agentide/ui";
+} from "@openade/ui";
 import React, { useState, useEffect } from "react";
 
 type AgentSkillItem = { id: string; name: string; description: string };

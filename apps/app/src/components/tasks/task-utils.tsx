@@ -1,4 +1,4 @@
-import type { ChatThread, TaskStatus } from "@agentide/shared";
+import type { ChatThread, TaskStatus } from "@openade/shared";
 import type { ReactNode } from "react";
 import { TaskStatusIcon } from "./task-status-icon";
 import { normalizeUserMessageContentToText } from "@/utils/normalize-user-message";

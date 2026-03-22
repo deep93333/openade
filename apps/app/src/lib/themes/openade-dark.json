@@ -1,7 +1,7 @@
 {
-  "name": "agentide-dark",
+  "name": "openade-dark",
   "type": "dark",
-  "displayName": "AgentIDE Dark",
+  "displayName": "Openade Dark",
   "colors": {
     "editor.background": "#222",
     "editor.foreground": "#e5e7eb",

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { AgentMessage } from "@agentide/shared";
+import type { AgentMessage } from "@openade/shared";
 import {
   Button,
   Dialog,
@@ -8,7 +8,7 @@ import {
   DialogTitle,
   ChevronDownIcon,
   ChevronRightIcon,
-} from "@agentide/ui";
+} from "@openade/ui";
 import { IconEye } from "@tabler/icons-react";
 import { cn } from "@/lib/cn";
 

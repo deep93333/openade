@@ -60,7 +60,7 @@ export const TextEditorTool = ({ toolInput }: ToolComponentProps) => {
           <PatchDiff
             patch={patch}
             options={{
-              theme: { dark: "agentide-dark", light: "agentide-dark" },
+              theme: { dark: "openade-dark", light: "openade-dark" },
               diffStyle: "unified",
               diffIndicators: "bars",
               disableFileHeader: true,

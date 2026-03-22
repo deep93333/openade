@@ -1,4 +1,4 @@
-import type { ImageAttachment } from "@agentide/shared";
+import type { ImageAttachment } from "@openade/shared";
 
 // Supported image formats as per Claude Code documentation
 const SUPPORTED_IMAGE_TYPES = [

@@ -25,7 +25,7 @@ const iconMap = {
 };
 
 const DIFF_OPTIONS = {
-  theme: { dark: "agentide-dark", light: "agentide-dark" },
+  theme: { dark: "openade-dark", light: "openade-dark" },
   diffStyle: "unified" as const,
   diffIndicators: "bars" as const,
   disableFileHeader: true,

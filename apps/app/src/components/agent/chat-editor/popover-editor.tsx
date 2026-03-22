@@ -15,14 +15,14 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@agentide/ui";
+} from "@openade/ui";
 import { cn } from "@/lib/cn";
 import { FileMentionList, type FileMentionItem } from "../mentions";
 import { useAgentStore } from "@/store/agent";
 import { useWorkspaceStore } from "@/store/workspace";
 import { useUIStore } from "@/store/ui";
 import { getElectronAPI } from "@/lib/electron";
-import type { FileTreeNode, AgentMode, TaskStatus } from "@agentide/shared";
+import type { FileTreeNode, AgentMode, TaskStatus } from "@openade/shared";
 
 const MODE_OPTIONS: { value: AgentMode; label: string; status: TaskStatus; description: string }[] = [
   { value: "ask", label: "Ask", status: "brainstorm", description: "Quick questions without changing status" },

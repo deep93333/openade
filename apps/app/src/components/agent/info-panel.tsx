@@ -9,14 +9,14 @@ import {
   Button,
   Badge,
   cn,
-} from "@agentide/ui";
+} from "@openade/ui";
 import { File } from "@pierre/diffs/react";
-import type { ChatThread } from "@agentide/shared";
+import type { ChatThread } from "@openade/shared";
 import { useAgentStore } from "@/store/agent";
 import { useWorkspaceStore } from "@/store/workspace";
 
 const FILE_OPTIONS = {
-  theme: { dark: "agentide-dark" as const, light: "agentide-dark" as const },
+  theme: { dark: "openade-dark" as const, light: "openade-dark" as const },
   disableFileHeader: true,
   disableLineNumbers: true,
 };

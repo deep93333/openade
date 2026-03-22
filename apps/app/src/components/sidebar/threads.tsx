@@ -1,4 +1,4 @@
-import { AccordionContent } from "@agentide/ui";
+import { AccordionContent } from "@openade/ui";
 import { useWorkspaceItemContext } from "./context";
 import { WorkspaceThreadRow } from "./thread";
 

@@ -16,16 +16,19 @@ import type {
   MCPServerConfig,
   TaskStatus,
   ToolApprovalRequest,
-} from "@agentide/shared";
-import { getProviderForModel } from "@agentide/shared";
+} from "@openade/shared";
+import { getProviderForModel } from "@openade/shared";
 import { create } from "zustand";
 import { useCostStore } from "./cost";
 import { useChatEditorStore } from "./editor";
 import { useWorkspaceStore } from "./workspace";
 
-const CHAT_STORAGE_KEY = "agentide-chat";
-const MODEL_STORAGE_KEY = "agentide-selected-model";
-const PROVIDER_STORAGE_KEY = "agentide-selected-provider";
+const CHAT_STORAGE_KEY = "openade-chat";
+const LEGACY_CHAT_STORAGE_KEY = "agentide-chat";
+const MODEL_STORAGE_KEY = "openade-selected-model";
+const LEGACY_MODEL_STORAGE_KEY = "agentide-selected-model";
+const PROVIDER_STORAGE_KEY = "openade-selected-provider";
+const LEGACY_PROVIDER_STORAGE_KEY = "agentide-selected-provider";
 
 type ThreadRuntime = {
   status: AgentStatus;
@@ -315,10 +318,17 @@ function migrateLegacy(data: {
 
 const loadFromLocalStorage = (workspaceId: string): ChatData => {
   try {
-    const raw = localStorage.getItem(`${CHAT_STORAGE_KEY}-${workspaceId}`);
+    const k = `${CHAT_STORAGE_KEY}-${workspaceId}`;
+    const lk = `${LEGACY_CHAT_STORAGE_KEY}-${workspaceId}`;
+    const raw = localStorage.getItem(k) ?? localStorage.getItem(lk);
     if (!raw) return { threads: [], activeThreadId: "" };
     const parsed = JSON.parse(raw) as Parameters<typeof migrateLegacy>[0];
-    return migrateLegacy(parsed);
+    const data = migrateLegacy(parsed);
+    if (!localStorage.getItem(k) && localStorage.getItem(lk)) {
+      saveToLocalStorage(workspaceId, data);
+      localStorage.removeItem(lk);
+    }
+    return data;
   } catch {
     return { threads: [], activeThreadId: "" };
   }
@@ -337,7 +347,15 @@ const saveToLocalStorage = (workspaceId: string, data: ChatData): void => {
 
 const loadSelectedModel = (): string => {
   try {
-    return localStorage.getItem(MODEL_STORAGE_KEY)?.trim() ?? "";
+    const v =
+      localStorage.getItem(MODEL_STORAGE_KEY)?.trim() ??
+      localStorage.getItem(LEGACY_MODEL_STORAGE_KEY)?.trim() ??
+      "";
+    if (v && !localStorage.getItem(MODEL_STORAGE_KEY) && localStorage.getItem(LEGACY_MODEL_STORAGE_KEY)) {
+      localStorage.setItem(MODEL_STORAGE_KEY, v);
+      localStorage.removeItem(LEGACY_MODEL_STORAGE_KEY);
+    }
+    return v;
   } catch {
     return "";
   }
@@ -346,6 +364,7 @@ const loadSelectedModel = (): string => {
 const saveSelectedModel = (model: string): void => {
   try {
     localStorage.setItem(MODEL_STORAGE_KEY, model);
+    localStorage.removeItem(LEGACY_MODEL_STORAGE_KEY);
   } catch {
     //
   }
@@ -353,8 +372,15 @@ const saveSelectedModel = (model: string): void => {
 
 const loadSelectedProvider = (): AgentProvider => {
   try {
-    const p = localStorage.getItem(PROVIDER_STORAGE_KEY);
-    if (p === "codex" || p === "minimax" || p === "moonshot") return p;
+    const p =
+      localStorage.getItem(PROVIDER_STORAGE_KEY) ?? localStorage.getItem(LEGACY_PROVIDER_STORAGE_KEY);
+    if (p === "codex" || p === "minimax" || p === "moonshot") {
+      if (!localStorage.getItem(PROVIDER_STORAGE_KEY) && localStorage.getItem(LEGACY_PROVIDER_STORAGE_KEY)) {
+        localStorage.setItem(PROVIDER_STORAGE_KEY, p);
+        localStorage.removeItem(LEGACY_PROVIDER_STORAGE_KEY);
+      }
+      return p;
+    }
     return "claude";
   } catch {
     return "claude";
@@ -364,6 +390,7 @@ const loadSelectedProvider = (): AgentProvider => {
 const saveSelectedProvider = (provider: AgentProvider): void => {
   try {
     localStorage.setItem(PROVIDER_STORAGE_KEY, provider);
+    localStorage.removeItem(LEGACY_PROVIDER_STORAGE_KEY);
   } catch {
     //
   }
@@ -1969,7 +1996,7 @@ export const useAgentStore = create<AgentStoreState>()((set, get) => ({
         sdkSessionId: string;
         threadId: string;
         workspaceId?: string;
-        provider?: import("@agentide/shared").AgentProvider;
+        provider?: import("@openade/shared").AgentProvider;
       }) => {
         const workspaceId =
           payload.workspaceId ?? findWorkspaceForThread(get().workspaces, payload.threadId);

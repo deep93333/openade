@@ -1,6 +1,6 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { getAgentideDataDir } from "../lib/data-paths.js";
+import { getOpenadeDataDir } from "../lib/data-paths.js";
 
 export type FileSnapshot = {
   filePath: string;
@@ -15,7 +15,7 @@ type RestoreResult = {
 };
 
 function snapshotsBaseDir(): string {
-  return path.join(getAgentideDataDir(), "snapshots");
+  return path.join(getOpenadeDataDir(), "snapshots");
 }
 
 function getSnapshotDir(workspaceId: string, threadId: string, checkpointId: string): string {

@@ -1,9 +1,9 @@
 {
-  "name": "@agentide/desktop",
+  "name": "@openade/desktop",
   "version": "1.0.0",
   "main": "dist/main.js",
-  "description": "AgentIDE - Open source agent-first IDE powered by Claude Code",
-  "author": "AgentIDE Contributors",
+  "description": "Openade — open source agent-first IDE powered by Claude Code",
+  "author": "Openade Contributors",
   "scripts": {
     "dev": "tsup && NODE_ENV=development electron .",
     "dev:static": "tsup && USE_STATIC_APP=1 NODE_ENV=development electron .",
@@ -27,12 +27,12 @@
     "vitest": "^3.0.0"
   },
   "dependencies": {
-    "@agentide/shared": "workspace:*",
+    "@openade/shared": "workspace:*",
     "fix-path": "^5.0.0",
     "node-pty": "^1.0.0",
     "simple-git": "^3.32.1",
     "ulid": "^3.0.1",
     "zod": "^4.3.6",
-    "@agentide/agent": "workspace:*"
+    "@openade/agent": "workspace:*"
   }
 }

@@ -1,5 +1,5 @@
 {
-  "name": "@agentide/ui",
+  "name": "@openade/ui",
   "version": "0.0.0",
   "private": true,
   "main": "./index.ts",

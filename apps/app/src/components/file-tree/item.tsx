@@ -1,4 +1,4 @@
-import type { FileTreeNode } from "@agentide/shared";
+import type { FileTreeNode } from "@openade/shared";
 import {
   Button,
   ContextMenu,
@@ -7,7 +7,7 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
   cn,
-} from "@agentide/ui";
+} from "@openade/ui";
 import { IconLoader2 } from "@tabler/icons-react";
 import { getElectronAPI } from "@/lib/electron";
 import { useFileContextStore } from "@/store/context";

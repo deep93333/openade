@@ -2,7 +2,7 @@ import { memo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { File } from "@pierre/diffs/react";
-import { proseSmallStyle } from "@agentide/ui";
+import { proseSmallStyle } from "@openade/ui";
 
 type MarkdownMessageProps = {
   content: string;
@@ -10,7 +10,7 @@ type MarkdownMessageProps = {
 };
 
 const FILE_OPTIONS = {
-  theme: { dark: "agentide-dark" as const, light: "agentide-dark" as const },
+  theme: { dark: "openade-dark" as const, light: "openade-dark" as const },
   disableFileHeader: true,
   disableLineNumbers: true,
 };

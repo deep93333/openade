@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { LanguageModel, ToolSet } from "ai";
-import type { MCPServerConfig } from "@agentide/shared";
+import type { MCPServerConfig } from "@openade/shared";
 import type { OffloaderState } from "../output-offloader.js";
 import type { AgentLogger } from "../logger.js";
 

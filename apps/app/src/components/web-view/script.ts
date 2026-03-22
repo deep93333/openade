@@ -1,6 +1,6 @@
 export const getInspectorScript = (enabled: boolean) => `
 (function() {
-  const INSPECTOR_ID = '__agentide_inspector__';
+  const INSPECTOR_ID = '__openade_inspector__';
   
   // Clean up existing inspector
   const existingOverlay = document.getElementById(INSPECTOR_ID);
@@ -15,9 +15,9 @@ export const getInspectorScript = (enabled: boolean) => `
   }
   
   // Clean up event listeners
-  if (window.__agentideInspectorCleanup) {
-    window.__agentideInspectorCleanup();
-    delete window.__agentideInspectorCleanup;
+  if (window.__openadeInspectorCleanup) {
+    window.__openadeInspectorCleanup();
+    delete window.__openadeInspectorCleanup;
   }
   
   if (!${enabled}) return;
@@ -26,17 +26,17 @@ export const getInspectorScript = (enabled: boolean) => `
   const styles = document.createElement('style');
   styles.id = INSPECTOR_ID + '_styles';
   styles.textContent = \`
-    .__agentide_highlight__ {
+    .__openade_highlight__ {
       outline: 2px solid #3b82f6 !important;
       outline-offset: 2px !important;
       background-color: rgba(59, 130, 246, 0.1) !important;
     }
-    .__agentide_selected__ {
+    .__openade_selected__ {
       outline: 2px solid #10b981 !important;
       outline-offset: 2px !important;
       background-color: rgba(16, 185, 129, 0.1) !important;
     }
-    #__agentide_tooltip__ {
+    #__openade_tooltip__ {
       position: fixed;
       z-index: 2147483647;
       background: #1f2937;
@@ -52,17 +52,17 @@ export const getInspectorScript = (enabled: boolean) => `
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    #__agentide_tooltip__ .tag { color: #f472b6; }
-    #__agentide_tooltip__ .class { color: #a5b4fc; }
-    #__agentide_tooltip__ .id { color: #fbbf24; }
-    #__agentide_tooltip__ .react { color: #67e8f9; }
-    #__agentide_tooltip__ .dims { color: #9ca3af; margin-left: 8px; }
+    #__openade_tooltip__ .tag { color: #f472b6; }
+    #__openade_tooltip__ .class { color: #a5b4fc; }
+    #__openade_tooltip__ .id { color: #fbbf24; }
+    #__openade_tooltip__ .react { color: #67e8f9; }
+    #__openade_tooltip__ .dims { color: #9ca3af; margin-left: 8px; }
   \`;
   document.head.appendChild(styles);
   
   // Create tooltip
   const tooltip = document.createElement('div');
-  tooltip.id = '__agentide_tooltip__';
+  tooltip.id = '__openade_tooltip__';
   tooltip.style.display = 'none';
   document.body.appendChild(tooltip);
   
@@ -138,7 +138,7 @@ export const getInspectorScript = (enabled: boolean) => `
       }
       
       if (current.className && typeof current.className === 'string') {
-        const classes = current.className.trim().split(/\\s+/).filter(c => c && !c.startsWith('__agentide'));
+        const classes = current.className.trim().split(/\\s+/).filter(c => c && !c.startsWith('__openade'));
         if (classes.length > 0) {
           selector += '.' + classes.slice(0, 2).map(c => CSS.escape(c)).join('.');
         }
@@ -168,7 +168,7 @@ export const getInspectorScript = (enabled: boolean) => `
     const tagName = element.tagName.toLowerCase();
     const id = element.id || null;
     const classList = element.className && typeof element.className === 'string' 
-      ? element.className.trim().split(/\\s+/).filter(c => c && !c.startsWith('__agentide'))
+      ? element.className.trim().split(/\\s+/).filter(c => c && !c.startsWith('__openade'))
       : [];
     const rect = element.getBoundingClientRect();
     const selector = getUniqueSelector(element);
@@ -262,12 +262,12 @@ export const getInspectorScript = (enabled: boolean) => `
     if (target === tooltip || target.id === INSPECTOR_ID) return;
     
     if (hoveredElement && hoveredElement !== selectedElement) {
-      hoveredElement.classList.remove('__agentide_highlight__');
+      hoveredElement.classList.remove('__openade_highlight__');
     }
     
     hoveredElement = target;
     if (target !== selectedElement) {
-      target.classList.add('__agentide_highlight__');
+      target.classList.add('__openade_highlight__');
     }
     
     updateTooltip(target, e.clientX, e.clientY);
@@ -275,7 +275,7 @@ export const getInspectorScript = (enabled: boolean) => `
   
   function handleMouseLeave() {
     if (hoveredElement && hoveredElement !== selectedElement) {
-      hoveredElement.classList.remove('__agentide_highlight__');
+      hoveredElement.classList.remove('__openade_highlight__');
     }
     hoveredElement = null;
     tooltip.style.display = 'none';
@@ -289,17 +289,17 @@ export const getInspectorScript = (enabled: boolean) => `
     if (target === tooltip || target.id === INSPECTOR_ID) return;
     
     if (selectedElement) {
-      selectedElement.classList.remove('__agentide_selected__');
+      selectedElement.classList.remove('__openade_selected__');
     }
     
     selectedElement = target;
-    target.classList.remove('__agentide_highlight__');
-    target.classList.add('__agentide_selected__');
+    target.classList.remove('__openade_highlight__');
+    target.classList.add('__openade_selected__');
     
     const info = getElementInfo(target);
     
     // Send message via console (picked up by webview console-message event)
-    console.log('__agentide_' + JSON.stringify({
+    console.log('__openade_' + JSON.stringify({
       type: 'element_selected',
       data: info,
     }));
@@ -308,10 +308,10 @@ export const getInspectorScript = (enabled: boolean) => `
   function handleKeyDown(e) {
     if (e.key === 'Escape') {
       if (selectedElement) {
-        selectedElement.classList.remove('__agentide_selected__');
+        selectedElement.classList.remove('__openade_selected__');
         selectedElement = null;
       }
-      console.log('__agentide_' + JSON.stringify({
+      console.log('__openade_' + JSON.stringify({
         type: 'inspector_cancel',
       }));
     }
@@ -322,17 +322,17 @@ export const getInspectorScript = (enabled: boolean) => `
   document.addEventListener('click', handleClick, true);
   document.addEventListener('keydown', handleKeyDown, true);
   
-  window.__agentideInspectorCleanup = function() {
+  window.__openadeInspectorCleanup = function() {
     document.removeEventListener('mousemove', handleMouseMove, true);
     document.removeEventListener('mouseleave', handleMouseLeave, true);
     document.removeEventListener('click', handleClick, true);
     document.removeEventListener('keydown', handleKeyDown, true);
     
     if (hoveredElement) {
-      hoveredElement.classList.remove('__agentide_highlight__');
+      hoveredElement.classList.remove('__openade_highlight__');
     }
     if (selectedElement) {
-      selectedElement.classList.remove('__agentide_selected__');
+      selectedElement.classList.remove('__openade_selected__');
     }
     
     tooltip.remove();

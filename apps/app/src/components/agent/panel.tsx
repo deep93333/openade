@@ -7,7 +7,7 @@ import {
   Alert,
   AlertDescription,
   Button,
-} from "@agentide/ui";
+} from "@openade/ui";
 import { useAgentStore } from "@/store/agent";
 import { useWorkspaceStore } from "@/store/workspace";
 import { useUIStore } from "@/store/ui";

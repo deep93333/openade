@@ -10,14 +10,14 @@
   import { CommandPalette } from "@/components/palette";
   import { ApiKeyDialog } from "@/components/apikeys";
   import { AgentLogDrawer } from "@/components/logdrawer";
-  import { cn, TooltipProvider, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Button } from "@agentide/ui";
+  import { cn, TooltipProvider, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Button } from "@openade/ui";
   import { SecondaryPanePanel } from "./secondary-pane-panel";
   import { RightPanel } from "./right-panel";
   import { useAppLayout } from "./use-app-layout";
   import { CARD_CLASS } from "./constants";
   import { useUIStore } from "@/store/ui";
   import { useWorkspaceStore } from "@/store/workspace";
-  import type { Workspace } from "@agentide/shared";
+  import type { Workspace } from "@openade/shared";
   import { useState } from "react";
 
   export const AppLayout = () => {

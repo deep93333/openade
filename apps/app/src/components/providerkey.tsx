@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import type { ProviderConfig } from "@agentide/shared";
-import { Badge, Button, Input, Label } from "@agentide/ui";
+import type { ProviderConfig } from "@openade/shared";
+import { Badge, Button, Input, Label } from "@openade/ui";
 import { IconChevronDown, IconChevronUp, IconExternalLink } from "@tabler/icons-react";
 import { getElectronAPI } from "@/lib/electron";
 

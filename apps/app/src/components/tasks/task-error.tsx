@@ -7,7 +7,7 @@ import {
   Alert,
   AlertDescription,
   Button,
-} from "@agentide/ui";
+} from "@openade/ui";
 import { IconAlertCircle } from "@tabler/icons-react";
 
 type TaskErrorTone = "compact" | "panel";

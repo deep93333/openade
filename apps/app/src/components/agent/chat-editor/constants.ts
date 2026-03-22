@@ -1,5 +1,5 @@
-import type { AgentMode } from "@agentide/shared";
-import { ChatBubbleLineIcon, LlmChatIcon, TodoListIcon } from "@agentide/ui";
+import type { AgentMode } from "@openade/shared";
+import { ChatBubbleLineIcon, LlmChatIcon, TodoListIcon } from "@openade/ui";
 
 export const AGENT_MODES: {
   value: AgentMode;

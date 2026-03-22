@@ -1,5 +1,5 @@
 import { dialog, ipcMain, shell } from "electron";
-import { IPC } from "@agentide/shared";
+import { IPC } from "@openade/shared";
 import * as fs from "fs/promises";
 import * as os from "os";
 import * as path from "path";
@@ -7,7 +7,7 @@ import { readDirectoryTree, readDirectoryChildren } from "../services/filesystem
 import { loadSkillsFromDir, getSkillContent } from "../services/skills-service";
 import { openFileInExternalEditor } from "../services/editor-service";
 import { getAgentLogPath, getAgentLogDir } from "../services/agent-log";
-import type { AgentSkillItem } from "@agentide/shared";
+import type { AgentSkillItem } from "@openade/shared";
 
 export function registerFilesystemHandlers(): void {
   ipcMain.handle(IPC.DIALOG_SELECT_FOLDER, async () => {

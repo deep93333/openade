@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getElectronAPI } from "@/lib/electron";
 import { useWorkspaceStore } from "@/store/workspace";
-import type { ElectronAPI, GitStagedChange, GitUnstagedChange } from "@agentide/shared";
+import type { ElectronAPI, GitStagedChange, GitUnstagedChange } from "@openade/shared";
 
 export type GitChangedFile = {
   path: string;

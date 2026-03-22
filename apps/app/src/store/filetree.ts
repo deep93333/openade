@@ -1,4 +1,4 @@
-import type { FileTreeNode } from "@agentide/shared";
+import type { FileTreeNode } from "@openade/shared";
 import { create } from "zustand";
 import { getElectronAPI } from "@/lib/electron";
 

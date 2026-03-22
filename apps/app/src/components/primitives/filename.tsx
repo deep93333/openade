@@ -1,4 +1,4 @@
-import { cn } from "@agentide/ui";
+import { cn } from "@openade/ui";
 import { FolderIcon, getFileTypeIcon } from "@/components/file-tree/icons";
 
 export function basename(path: string): string {

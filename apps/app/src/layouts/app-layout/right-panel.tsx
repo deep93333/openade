@@ -1,7 +1,7 @@
 import { Panel, Separator } from "react-resizable-panels";
 import { FileTree } from "@/components/file-tree";
 import { GitChangesPanel } from "@/components/gitpanel";
-import { cn } from "@agentide/ui";
+import { cn } from "@openade/ui";
 import { useUIStore } from "@/store/ui";
 import { PANEL_SEPARATOR_CLASS } from "./constants";
 

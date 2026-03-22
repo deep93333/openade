@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { AgentSkillItem } from "@agentide/shared";
+import type { AgentSkillItem } from "@openade/shared";
 import { getElectronAPI } from "@/lib/electron";
 
 export function useAgentSkills(): AgentSkillItem[] {

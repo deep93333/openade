@@ -11,8 +11,8 @@ import type {
   GitStagedChange,
   GitUnstagedChange,
   IpcResult,
-} from "@agentide/shared";
-import { Button, CircleCheckIcon, PlusIcon, Textarea, cn } from "@agentide/ui";
+} from "@openade/shared";
+import { Button, CircleCheckIcon, PlusIcon, Textarea, cn } from "@openade/ui";
 import {
   IconArrowBackUp,
   IconChevronDown,

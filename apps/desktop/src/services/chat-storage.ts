@@ -1,4 +1,4 @@
-import type { AgentMessage, ChatData, ChatThread } from "@agentide/shared";
+import type { AgentMessage, ChatData, ChatThread } from "@openade/shared";
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { mkdirSync } from "node:fs";
 import path from "node:path";
@@ -7,7 +7,7 @@ import { ulid } from "ulid";
 
 const getChatsDir = (): string => {
   const userData = app.getPath("userData");
-  const dir = path.join(userData, "agentide", "chats");
+  const dir = path.join(userData, "openade", "chats");
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true });
   }

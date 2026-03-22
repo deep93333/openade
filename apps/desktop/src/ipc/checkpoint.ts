@@ -1,5 +1,5 @@
-import { IPC } from "@agentide/shared";
-import type { Checkpoint } from "@agentide/shared";
+import { IPC } from "@openade/shared";
+import type { Checkpoint } from "@openade/shared";
 import { ipcMain } from "electron";
 import { ulid } from "ulid";
 import * as chatStorage from "../services/chat-storage";

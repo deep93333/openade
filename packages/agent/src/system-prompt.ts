@@ -1,5 +1,5 @@
 import os from "os";
-import type { AgentMode } from "@agentide/shared";
+import type { AgentMode } from "@openade/shared";
 import { detectProjectContext } from "./project-context.js";
 
 function buildEnvironmentSection(workspacePath: string): string {

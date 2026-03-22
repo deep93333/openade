@@ -8,7 +8,7 @@ import type {
   GlobalSettings,
   MCPServerConfig,
   ThemeAppearance,
-} from "@agentide/shared";
+} from "@openade/shared";
 
 type AppConfig = {
   activeWorkspaceId: string | null;
@@ -26,7 +26,7 @@ type AppConfig = {
 
 const getConfigPath = (): string => {
   const userData = app.getPath("userData");
-  const dir = path.join(userData, "agentide");
+  const dir = path.join(userData, "openade");
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true });
   }

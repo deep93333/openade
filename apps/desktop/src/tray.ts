@@ -7,7 +7,7 @@ import { createNewTaskWindow } from "./windows/new-task-window";
 let tray: Tray | null = null;
 
 const resolveTrayIconPath = (): string => {
-  const iconName = "agentide.icns";
+  const iconName = "openade.icns";
   const candidates = [
     path.join(process.resourcesPath, "icons", iconName),
     path.join(app.getAppPath(), "src", "icons", iconName),
@@ -27,7 +27,7 @@ export const createTray = (): Tray => {
   }
 
   tray = new Tray(icon);
-  tray.setToolTip("AgentIDE");
+  tray.setToolTip("Openade");
 
   const menu = Menu.buildFromTemplate([
     {
@@ -35,7 +35,7 @@ export const createTray = (): Tray => {
       click: () => createNewTaskWindow(),
     },
     {
-      label: "Open AgentIDE",
+      label: "Openade",
       click: () => createAppWindow(),
     },
     { type: "separator" },

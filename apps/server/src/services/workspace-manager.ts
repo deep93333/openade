@@ -1,12 +1,12 @@
-import type { Workspace } from "@agentide/shared";
+import type { Workspace } from "@openade/shared";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { ulid } from "ulid";
-import { getAgentideDataDir } from "../lib/data-paths.js";
+import { getOpenadeDataDir } from "../lib/data-paths.js";
 import { gitService } from "./git-service.js";
 
 function getStoragePath(): string {
-  const dir = getAgentideDataDir();
+  const dir = getOpenadeDataDir();
   return path.join(dir, "workspaces.json");
 }
 

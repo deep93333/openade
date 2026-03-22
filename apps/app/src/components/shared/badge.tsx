@@ -1,5 +1,5 @@
-import type { TaskStatus } from "@agentide/shared";
-import { Badge } from "@agentide/ui";
+import type { TaskStatus } from "@openade/shared";
+import { Badge } from "@openade/ui";
 import { cn } from "@/lib/cn";
 
 type TaskStatusBadgeProps = {

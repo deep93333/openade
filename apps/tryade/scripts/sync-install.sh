@@ -11,7 +11,11 @@ chmod +x "$PUBLIC/install.sh"
 printf '%s\n' \
   '#!/usr/bin/env bash' \
   'set -euo pipefail' \
-  "URL=\"\${AGENTIDE_INSTALL_SCRIPT_URL:-$ORIGIN/install.sh}\"" \
+  'if command -v npx >/dev/null 2>&1 && npx --yes @openade/cli "$@"; then' \
+  '  exit 0' \
+  'fi' \
+  'echo "Using shell installer (no npx or CLI not on registry yet)…" >&2' \
+  "URL=\"\${OPENADE_INSTALL_SCRIPT_URL:-\${AGENTIDE_INSTALL_SCRIPT_URL:-$ORIGIN/install.sh}}\"" \
   'curl -fsSL "$URL" | bash -s -- "$@"' \
   > "$PUBLIC/i"
 chmod +x "$PUBLIC/i"

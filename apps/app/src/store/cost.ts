@@ -1,11 +1,22 @@
 import { create } from "zustand";
 
-const COST_STORAGE_KEY = "agentide-total-cost";
+const COST_STORAGE_KEY = "openade-total-cost";
+const LEGACY_COST_STORAGE_KEY = "agentide-total-cost";
 
 const loadCostFromStorage = (): number => {
   try {
-    const raw = localStorage.getItem(COST_STORAGE_KEY);
-    return raw ? parseFloat(raw) || 0 : 0;
+    const raw =
+      localStorage.getItem(COST_STORAGE_KEY) ?? localStorage.getItem(LEGACY_COST_STORAGE_KEY);
+    const n = raw ? parseFloat(raw) || 0 : 0;
+    if (
+      raw &&
+      !localStorage.getItem(COST_STORAGE_KEY) &&
+      localStorage.getItem(LEGACY_COST_STORAGE_KEY)
+    ) {
+      localStorage.setItem(COST_STORAGE_KEY, String(n));
+      localStorage.removeItem(LEGACY_COST_STORAGE_KEY);
+    }
+    return n;
   } catch {
     return 0;
   }
@@ -14,6 +25,7 @@ const loadCostFromStorage = (): number => {
 const saveCostToStorage = (totalCost: number): void => {
   try {
     localStorage.setItem(COST_STORAGE_KEY, totalCost.toString());
+    localStorage.removeItem(LEGACY_COST_STORAGE_KEY);
   } catch {
     // ignore
   }

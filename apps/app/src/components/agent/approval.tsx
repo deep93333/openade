@@ -1,5 +1,5 @@
-import type { ToolApprovalRequest } from "@agentide/shared";
-import { Button, Input } from "@agentide/ui";
+import type { ToolApprovalRequest } from "@openade/shared";
+import { Button, Input } from "@openade/ui";
 import { ChevronLeft, ChevronRight, Check } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useAgentStore } from "@/store/agent";

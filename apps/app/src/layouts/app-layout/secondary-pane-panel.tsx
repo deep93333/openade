@@ -2,7 +2,7 @@ import { Panel, Separator } from "react-resizable-panels";
 import type { SecondaryPaneMode } from "@/store/ui";
 import { FileViewer } from "@/components/file-viewer";
 import { DiffViewer } from "@/components/diff";
-import { cn } from "@agentide/ui";
+import { cn } from "@openade/ui";
 import { CARD_CLASS, PANEL_SEPARATOR_CLASS } from "./constants";
 
 type SecondaryPanePanelProps = {

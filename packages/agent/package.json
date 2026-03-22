@@ -1,7 +1,7 @@
 {
-  "name": "@agentide/agent",
+  "name": "@openade/agent",
   "version": "1.0.0",
-  "description": "Agent backend and tools for AgentIDE",
+  "description": "Agent backend and tools for Openade",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -11,7 +11,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@agentide/shared": "workspace:*",
+    "@openade/shared": "workspace:*",
     "@ai-sdk/anthropic": "^3.0.47",
     "@ai-sdk/mcp": "^1.0.16",
     "@ai-sdk/moonshotai": "^0.0.4",
@@ -22,6 +22,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@types/node": "^22.10.0",
     "typescript": "~5.8.3"
   },
   "files": ["dist"]

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { TaskStatus } from "@agentide/shared";
+import type { TaskStatus } from "@openade/shared";
 import { NewTaskDialog } from "./new-task-dialog";
 import { useWorkspaceStore } from "@/store/workspace";
 import { useAgentStore } from "@/store/agent";
@@ -24,7 +24,7 @@ export const NewTaskWindow = () => {
     text: string,
     model?: string,
     initialStatus?: TaskStatus,
-    provider?: import("@agentide/shared").AgentProvider
+    provider?: import("@openade/shared").AgentProvider
   ) => {
     await loadWorkspace(workspaceId);
     const threadId = await createTaskThread(workspaceId, text, undefined, model, provider);

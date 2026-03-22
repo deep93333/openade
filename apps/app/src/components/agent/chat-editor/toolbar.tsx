@@ -8,7 +8,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
   StopIcon,
-} from "@agentide/ui";
+} from "@openade/ui";
 import { IconPaperclip } from "@tabler/icons-react";
 import { useAgentStore } from "@/store/agent";
 import { useChatEditorStore } from "@/store/editor";

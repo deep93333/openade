@@ -1,5 +1,5 @@
-import { IPC } from "@agentide/shared";
-import type { ApiKeyProvider, AuthMethod, ChatData } from "@agentide/shared";
+import { IPC } from "@openade/shared";
+import type { ApiKeyProvider, AuthMethod, ChatData } from "@openade/shared";
 import { contextBridge, ipcRenderer } from "electron";
 
 contextBridge.exposeInMainWorld("electronAPI", {
@@ -36,9 +36,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
   },
   settings: {
     get: () => ipcRenderer.invoke(IPC.SETTINGS_GET),
-    set: (settings: import("@agentide/shared").GlobalSettings) =>
+    set: (settings: import("@openade/shared").GlobalSettings) =>
       ipcRenderer.invoke(IPC.SETTINGS_SET, settings),
-    validateMcpServers: (servers: import("@agentide/shared").MCPServerConfig[]) =>
+    validateMcpServers: (servers: import("@openade/shared").MCPServerConfig[]) =>
       ipcRenderer.invoke(IPC.SETTINGS_VALIDATE_MCP_SERVERS, servers),
   },
   chat: {
@@ -52,7 +52,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
       threadId: string,
       messageId: string,
       updates: Partial<
-        Pick<import("@agentide/shared").AgentMessage, "content" | "planContent" | "reviewContent">
+        Pick<import("@openade/shared").AgentMessage, "content" | "planContent" | "reviewContent">
       >
     ) => ipcRenderer.invoke(IPC.CHAT_UPDATE_MESSAGE, workspaceId, threadId, messageId, updates),
   },

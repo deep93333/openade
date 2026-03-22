@@ -396,7 +396,7 @@ export class GitService {
     if (files.length === 0) return;
     const trashDir = path.join(
       app.getPath("userData"),
-      "agentide",
+      "openade",
       "checkpoint-trash",
       workspaceDataKey(workspacePath),
     );

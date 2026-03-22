@@ -1,4 +1,4 @@
-import type { AgentMode } from "@agentide/shared";
+import type { AgentMode } from "@openade/shared";
 import { cn } from "@/lib/cn";
 import { useAgentStore } from "@/store/agent";
 import { AGENT_MODES } from "./constants";

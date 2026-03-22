@@ -9,7 +9,7 @@ import {
   DialogBody,
   Input,
   Label,
-} from "@agentide/ui";
+} from "@openade/ui";
 import { IconFolder, IconPlus, IconLink } from "@tabler/icons-react";
 import { useWorkspaceStore } from "@/store/workspace";
 import { getElectronAPI, isElectron } from "@/lib/electron";

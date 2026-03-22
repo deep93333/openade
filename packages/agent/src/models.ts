@@ -3,7 +3,7 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createMinimax } from "vercel-minimax-ai-provider";
 import { createMoonshotAI } from "@ai-sdk/moonshotai";
-import type { AgentProvider } from "@agentide/shared";
+import type { AgentProvider } from "@openade/shared";
 
 export type LlmProvider = "anthropic" | "openai" | "minimax" | "moonshot";
 

@@ -67,7 +67,12 @@ export async function loadThread(
   const primary = getThreadJsonlPath(workspacePath, workspaceId, threadId);
   const fromPrimary = await readJsonlMessages(primary);
   if (fromPrimary.length > 0) return fromPrimary;
-  if (threadsStoredInWorkspace()) return [];
+  if (threadsStoredInWorkspace()) {
+    const legacyWs = getLegacyThreadJsonlPath(workspacePath, threadId);
+    const fromLegacyWs = await readJsonlMessages(legacyWs);
+    if (fromLegacyWs.length > 0) return fromLegacyWs;
+    return [];
+  }
   const legacy = getLegacyThreadJsonlPath(workspacePath, threadId);
   return readJsonlMessages(legacy);
 }
@@ -84,13 +89,20 @@ export async function threadExists(
   } catch {
     //
   }
-  if (!threadsStoredInWorkspace()) {
+  if (threadsStoredInWorkspace()) {
     try {
       await fs.access(getLegacyThreadJsonlPath(workspacePath, threadId));
       return true;
     } catch {
       //
     }
+    return false;
+  }
+  try {
+    await fs.access(getLegacyThreadJsonlPath(workspacePath, threadId));
+    return true;
+  } catch {
+    //
   }
   return false;
 }

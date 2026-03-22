@@ -1,6 +1,6 @@
 import { getBackendBaseUrl } from "@/lib/backend-url";
 import { createWebElectronAPI } from "@/lib/web-electron-api";
-import type { ElectronAPI, WindowWithElectronAPI } from "@agentide/shared";
+import type { ElectronAPI, WindowWithElectronAPI } from "@openade/shared";
 
 let webElectronApi: ElectronAPI | null = null;
 

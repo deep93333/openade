@@ -1,5 +1,5 @@
 {
-  "name": "@agentide/server",
+  "name": "@openade/server",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -8,8 +8,8 @@
     "start": "bun run src/index.ts"
   },
   "dependencies": {
-    "@agentide/agent": "workspace:*",
-    "@agentide/shared": "workspace:*",
+    "@openade/agent": "workspace:*",
+    "@openade/shared": "workspace:*",
     "hono": "^4.11.3",
     "simple-git": "^3.32.1",
     "ulid": "^3.0.1"

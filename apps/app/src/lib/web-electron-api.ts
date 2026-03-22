@@ -14,8 +14,8 @@ import type {
   MCPServerConfig,
   MCPValidationResult,
   Workspace,
-} from "@agentide/shared";
-import { IPC } from "@agentide/shared";
+} from "@openade/shared";
+import { IPC } from "@openade/shared";
 
 async function platformInvoke(
   baseUrl: string,

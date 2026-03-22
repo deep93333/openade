@@ -8,7 +8,7 @@ import {
   CommandItem,
   CommandSeparator,
   CommandShortcut,
-} from "@agentide/ui";
+} from "@openade/ui";
 import {
   IconMessagePlus,
   IconGitBranch,

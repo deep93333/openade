@@ -28,7 +28,7 @@ import {
   estimateConversationTokens,
   RETRY_MAX_ATTEMPTS,
 } from "./token-utils.js";
-import type { AgentMessage, AgentMode, CommitMessageParams, ThreadTitleParams } from "@agentide/shared";
+import type { AgentMessage, AgentMode, CommitMessageParams, ThreadTitleParams } from "@openade/shared";
 import { createAgentLogger, logAgentEvent } from "./logger.js";
 import { initOffloader } from "./output-offloader.js";
 import type {

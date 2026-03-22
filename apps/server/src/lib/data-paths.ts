@@ -2,8 +2,11 @@ import { existsSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import os from "node:os";
 
-export function getAgentideDataDir(): string {
-  const dir = process.env.AGENTIDE_DATA_DIR ?? path.join(os.homedir(), ".agentide-server");
+export function getOpenadeDataDir(): string {
+  const raw =
+    process.env.OPENADE_DATA_DIR?.trim() || process.env.AGENTIDE_DATA_DIR?.trim();
+  const dir =
+    raw && raw.length > 0 ? raw : path.join(os.homedir(), ".openade-server");
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true });
   }
@@ -11,5 +14,5 @@ export function getAgentideDataDir(): string {
 }
 
 export function getAgentLogPath(): string {
-  return path.join(getAgentideDataDir(), "agent.log");
+  return path.join(getOpenadeDataDir(), "agent.log");
 }

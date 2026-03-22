@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import type { FileTreeNode } from "@agentide/shared";
+import type { FileTreeNode } from "@openade/shared";
 import { getElectronAPI } from "@/lib/electron";
 import { useWorkspaceStore } from "@/store/workspace";
 

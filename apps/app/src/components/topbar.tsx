@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useWorkspaceStore } from "@/store/workspace";
 import { useAgentStore } from "@/store/agent";
-import { cn, Button, ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@agentide/ui";
+import { cn, Button, ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@openade/ui";
 import {
   IconExchange,
   IconFiles,
@@ -14,7 +14,7 @@ import { useUIStore } from "@/store/ui";
 import { CreateWorkspaceDialog } from "./sidebar/project";
 import type { ReactNode } from "react";
 import { useGitStatus } from "@/hooks/use-git-changes";
-import type { Workspace } from "@agentide/shared";
+import type { Workspace } from "@openade/shared";
 
 type AppTopBarProps = {
   left?: ReactNode;
@@ -178,7 +178,7 @@ export function AppTopBar({ left, right, onRemoveWorkspace }: AppTopBarProps) {
           </div>
         ) : (
           <div className="flex min-w-0 flex-1 items-center gap-2">
-            <span className="shrink-0 text-sm font-semibold text-foreground">AgentIDE</span>
+            <span className="shrink-0 text-sm font-semibold text-foreground">Openade</span>
             <Button
               variant="bordered"
               size="sm"

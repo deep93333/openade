@@ -18,7 +18,7 @@ export default defineConfig({
   dts: false,
   bundle: true,
   platform: "node",
-  noExternal: ["@agentide/agent", "@agentide/shared"],
+  noExternal: ["@openade/agent", "@openade/shared"],
   esbuildOptions(options) {
     options.platform = "node";
     options.external = [...(options.external || []), "electron", "node-pty"];

@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { AgentMessage } from "@agentide/shared";
+import type { AgentMessage } from "@openade/shared";
 
 export type ThreadChangedFile = {
   path: string;

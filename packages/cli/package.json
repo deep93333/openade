@@ -1,13 +1,19 @@
 {
-  "name": "@agentide/cli",
+  "name": "@openade/cli",
   "version": "0.1.0",
-  "description": "Clone AgentIDE from GitHub, install dependencies, and start the dev stack",
+  "description": "Clone Openade from GitHub, install dependencies, and start the dev stack",
   "type": "commonjs",
   "bin": {
-    "agentide": "./bin/agentide.cjs"
+    "openade": "./bin/openade.cjs"
   },
   "files": ["bin"],
-  "keywords": ["agentide", "ide", "claude", "electron"],
+  "dependencies": {
+    "commander": "^13.1.0",
+    "ora": "^8.2.0",
+    "picocolors": "^1.1.1",
+    "prompts": "^2.4.2"
+  },
+  "keywords": ["openade", "ide", "claude", "electron"],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/deep93333/openade.git",
@@ -18,8 +24,8 @@
   },
   "homepage": "https://github.com/deep93333/openade#readme",
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
-  "author": "AgentIDE Contributors",
+  "author": "Openade Contributors",
   "license": "MIT"
 }

@@ -4,10 +4,10 @@ import type {
   GlobalSettings,
   MCPServerConfig,
   ThemeAppearance,
-} from "@agentide/shared";
+} from "@openade/shared";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { getAgentideDataDir } from "../lib/data-paths.js";
+import { getOpenadeDataDir } from "../lib/data-paths.js";
 
 type AppConfig = {
   activeWorkspaceId: string | null;
@@ -34,7 +34,7 @@ const DEFAULT_CONFIG: AppConfig = {
 };
 
 function getConfigPath(): string {
-  return path.join(getAgentideDataDir(), "config.json");
+  return path.join(getOpenadeDataDir(), "config.json");
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

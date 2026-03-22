@@ -1,4 +1,4 @@
-import type { TaskStatus } from "@agentide/shared";
+import type { TaskStatus } from "@openade/shared";
 import {
   Select,
   SelectContent,
@@ -9,7 +9,7 @@ import {
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuTrigger,
-} from "@agentide/ui";
+} from "@openade/ui";
 import { TaskStatusBadge, getTaskStatusLabel } from "./badge";
 
 type TaskStatusSelectorProps = {

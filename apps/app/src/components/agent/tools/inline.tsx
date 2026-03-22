@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CheckCircle2, ChevronRightIcon, LoaderCircle } from "lucide-react";
-import { cn, ShimmeringText } from "@agentide/ui";
+import { cn, ShimmeringText } from "@openade/ui";
 
 const ROW_HEIGHT = 24;
 const CONNECTOR_HEIGHT = 8;

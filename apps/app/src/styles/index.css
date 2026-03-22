@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import "@agentide/ui/theme.css";
+@import "@openade/ui/theme.css";
 @source "../../../../packages/ui/**/*.{js,ts,jsx,tsx}";
 @source "../**/*.{js,ts,jsx,tsx}";
 

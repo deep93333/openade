@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { IPC } from "@agentide/shared";
+import { IPC } from "@openade/shared";
 
 const {
   handlers,

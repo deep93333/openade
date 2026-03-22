@@ -1,6 +1,6 @@
 import { ipcMain } from "electron";
-import { IPC } from "@agentide/shared";
-import type { AgentMessage, ChatData } from "@agentide/shared";
+import { IPC } from "@openade/shared";
+import type { AgentMessage, ChatData } from "@openade/shared";
 import * as chatStorage from "../services/chat-storage";
 import { workspaceManager } from "../services/workspace-manager";
 import { gitService } from "../services/git-service";

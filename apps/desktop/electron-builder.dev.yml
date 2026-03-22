@@ -1,5 +1,5 @@
-appId: com.agentide.app.dev
-productName: AgentIDE Dev
+appId: com.openade.app.dev
+productName: Openade Dev
 
 asar: true
 asarUnpack:
@@ -30,7 +30,7 @@ mac:
         - arm64
   artifactName: "${productName}-${version}-${arch}.${ext}"
   type: development
-  icon: src/icons/agentide.icns
+  icon: src/icons/openade.icns
   hardenedRuntime: true
   gatekeeperAssess: false
   entitlements: entitlements.plist

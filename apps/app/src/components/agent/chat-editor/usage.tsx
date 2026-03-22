@@ -1,4 +1,4 @@
-import { Button, Popover, PopoverContent, PopoverTrigger } from "@agentide/ui";
+import { Button, Popover, PopoverContent, PopoverTrigger } from "@openade/ui";
 import { useAgentStore } from "@/store/agent";
 import { useWorkspaceStore } from "@/store/workspace";
 import { IconChartBar } from "@tabler/icons-react";

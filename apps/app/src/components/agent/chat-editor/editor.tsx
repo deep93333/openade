@@ -12,7 +12,7 @@ import { useSkillHint } from "@/hooks/use-skill-hint";
 import { useThreadChangedFiles } from "@/hooks/use-thread-changed-files";
 import { useGitUnstagedChanges } from "@/hooks/use-git-changes";
 import { filesToImageAttachments } from "@/utils/image-attachment";
-import { ArrowUpIcon, Button, ImageIcon, StopIcon } from "@agentide/ui";
+import { ArrowUpIcon, Button, ImageIcon, StopIcon } from "@openade/ui";
 import { useAgentStore } from "@/store/agent";
 import { useWorkspaceStore } from "@/store/workspace";
 import { useChatEditorStore } from "@/store/editor";
@@ -23,7 +23,7 @@ import { EditorArea } from "./editor-area";
 import { ChangedFilesBar } from "./changes";
 import { EmbeddedToolbar } from "./toolbar";
 
-import type { AgentMessage, AgentMode } from "@agentide/shared";
+import type { AgentMessage, AgentMode } from "@openade/shared";
 import type { ChatEditorProps } from "./types";
 
 const CHAT_PLACEHOLDER = "Send a message to the agent...";

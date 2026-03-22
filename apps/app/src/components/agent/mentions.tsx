@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Button, BookIcon } from "@agentide/ui";
+import { Button, BookIcon } from "@openade/ui";
 import { cn } from "@/lib/cn";
 import { FileName } from "@/components/primitives";
 

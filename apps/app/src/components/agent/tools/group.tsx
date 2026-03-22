@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import type { AgentMessage } from "@agentide/shared";
+import type { AgentMessage } from "@openade/shared";
 import {
   File,
   Folder,

@@ -1,4 +1,4 @@
-import type { Checkpoint, ChatThread } from "@agentide/shared";
+import type { Checkpoint, ChatThread } from "@openade/shared";
 
 export const getCheckpointForMessage = (
   thread: ChatThread | null | undefined,

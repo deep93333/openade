@@ -1,4 +1,4 @@
-import type { Workspace } from "@agentide/shared";
+import type { Workspace } from "@openade/shared";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { mkdirSync } from "node:fs";
 import path from "node:path";
@@ -8,7 +8,7 @@ import { gitService } from "./git-service";
 
 const getStoragePath = (): string => {
   const userData = app.getPath("userData");
-  const dir = path.join(userData, "agentide");
+  const dir = path.join(userData, "openade");
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true });
   }

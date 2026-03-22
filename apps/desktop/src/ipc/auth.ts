@@ -1,7 +1,7 @@
 import { ipcMain } from "electron";
-import { validateMCPServers } from "@agentide/agent";
-import { IPC } from "@agentide/shared";
-import type { ApiKeyProvider, GlobalSettings, MCPServerConfig } from "@agentide/shared";
+import { validateMCPServers } from "@openade/agent";
+import { IPC } from "@openade/shared";
+import type { ApiKeyProvider, GlobalSettings, MCPServerConfig } from "@openade/shared";
 import * as configStorage from "../services/config-storage";
 
 export function registerAuthHandlers(): void {

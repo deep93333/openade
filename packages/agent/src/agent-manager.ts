@@ -1,5 +1,5 @@
 import type { AgentBackend, AgentBackendStartOptions } from "./types.js";
-import type { AgentStatus } from "@agentide/shared";
+import type { AgentStatus } from "@openade/shared";
 import { ulid } from "ulid";
 import { createAgentLogger, logAgentEvent, type AgentLogger, type AgentLogWriter } from "./logger.js";
 
@@ -52,16 +52,16 @@ export function createAgentManager(options: AgentManagerOptions) {
 
   type StartOptions = {
     prompt: string;
-    existingMessages?: import("@agentide/shared").AgentMessage[];
+    existingMessages?: import("@openade/shared").AgentMessage[];
     activeMemory?: string;
     workspaceId: string;
     workspacePath: string;
     provider?: AgentBackend["provider"];
     model?: string;
-    mode?: import("@agentide/shared").AgentMode;
+    mode?: import("@openade/shared").AgentMode;
     resumeSessionId?: string;
-    imageAttachments?: import("@agentide/shared").ImageAttachment[];
-    mcpServers?: import("@agentide/shared").MCPServerConfig[];
+    imageAttachments?: import("@openade/shared").ImageAttachment[];
+    mcpServers?: import("@openade/shared").MCPServerConfig[];
     canUseTool?: AgentBackendStartOptions["canUseTool"];
     onMessage: AgentBackendStartOptions["onMessage"];
     onResult: AgentBackendStartOptions["onResult"];

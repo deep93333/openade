@@ -14,7 +14,7 @@ import type {
   ThreadTitleParams,
   ToolApprovalRequest,
   ToolApprovalResponse,
-} from "@agentide/shared";
+} from "@openade/shared";
 
 function toWsUrl(httpBase: string): string {
   const u = new URL(httpBase);
