@@ -15,11 +15,13 @@ import type {
   ThreadTitleParams,
   ToolApprovalResponse,
 } from "@openade/shared";
+import { OPENADE_AGENT_DEFAULT_PORT } from "@openade/shared";
 import { Hono } from "hono";
 import { upgradeWebSocket, websocket } from "hono/bun";
 import { cors } from "hono/cors";
 import type { WSContext } from "hono/ws";
 import { ulid } from "ulid";
+import { getCorsAllowedOrigins } from "./lib/cors-origins.js";
 import { invokeIpc } from "./platform/ipc-invoke.js";
 import { setWorkspaceWatchBroadcast, syncWorkspaceWatchers } from "./platform/workspace-watchers.js";
 
@@ -123,12 +125,7 @@ const app = new Hono();
 app.use(
   "*",
   cors({
-    origin: [
-      "http://127.0.0.1:3010",
-      "http://localhost:3010",
-      "http://127.0.0.1:5173",
-      "http://localhost:5173",
-    ],
+    origin: getCorsAllowedOrigins(),
     allowMethods: ["GET", "POST", "OPTIONS"],
     allowHeaders: ["Content-Type"],
   })
@@ -377,7 +374,15 @@ app.post("/api/agent/tool-approval", async (c) => {
   return c.json({ ok: true });
 });
 
-const port = Number(process.env.AGENT_SERVER_PORT ?? process.env.PORT ?? 42891);
+function resolveAgentListenPort(): number {
+  const raw =
+    process.env.OPENADE_AGENT_PORT?.trim() || process.env.AGENT_SERVER_PORT?.trim();
+  if (!raw) return OPENADE_AGENT_DEFAULT_PORT;
+  const n = Number.parseInt(raw, 10);
+  return Number.isFinite(n) && n > 0 && n < 65536 ? n : OPENADE_AGENT_DEFAULT_PORT;
+}
+
+const port = resolveAgentListenPort();
 const hostname = "127.0.0.1";
 
 console.log(`[openade/server] listening on http://${hostname}:${port}`);

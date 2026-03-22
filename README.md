@@ -40,6 +40,18 @@ To store thread JSONL and tool spill files **inside** the project again (layout:
 - [Claude Code](https://docs.anthropic.com/en/docs/claude-code) installed and authenticated (CLI or API key)
 - **Node.js 20.19+** (22 LTS recommended) if `node` is on your PATH — Vite 7 needs it; the install script checks this after cloning
 
+## Static web UI + local agent server
+
+You can deploy the Vite app (`apps/app`) as **static files** (e.g. tryade.dev or any CDN) and run **`bun run dev:server`** (or full `bun run dev`) on your Mac. The local agent server uses a **fixed default port `42891`** (same idea as Ollama’s default `11434` — predictable, not `PORT`). Override with **`OPENADE_AGENT_PORT`** or legacy **`AGENT_SERVER_PORT`** only if needed; the generic **`PORT`** env var is **not** read for this server. The browser UI calls **`VITE_AGENT_SERVER_URL`** when set at build time; otherwise it defaults to **`http://127.0.0.1:42891`** (see `@openade/shared` `OPENADE_AGENT_DEFAULT_*`).
+
+The agent server sends CORS headers for local Vite ports, **https://tryade.dev**, and **https://www.tryade.dev**. To allow another origin (e.g. your preview URL), start the server with:
+
+```bash
+OPENADE_CORS_ORIGINS=https://your-app.pages.dev bun run dev:server
+```
+
+(`AGENTIDE_CORS_ORIGINS` is accepted as a legacy alias.) Use HTTPS page → `http://127.0.0.1:…` only in browsers that allow it (most allow localhost); if WebSockets fail, try the UI on `http://localhost` for local testing.
+
 ## One command (CLI)
 
 Requires Git, **Node.js 20+** on your PATH, and a published **`tryade`** CLI on npm (or run the bin from a clone — see below). Install docs and shell fallback live at [tryade.dev](https://tryade.dev). The unscoped name `openade` is blocked by npm as too similar to `openai`; the short name `ade` is often unavailable.

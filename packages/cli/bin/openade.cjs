@@ -207,7 +207,10 @@ function startDevBackground(bunBin, target) {
   }
   child.unref();
   const appPort = process.env.VITE_APP_PORT || "3010";
-  const serverPort = process.env.AGENT_SERVER_PORT || process.env.PORT || "42891";
+  const serverPort =
+    process.env.OPENADE_AGENT_PORT?.trim() ||
+    process.env.AGENT_SERVER_PORT?.trim() ||
+    "42891";
   console.log();
   console.log(pc.green(pc.bold("Openade is running in the background.")));
   console.log(`  ${pc.dim("Workspace")}  ${target}`);

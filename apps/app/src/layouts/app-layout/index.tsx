@@ -19,6 +19,7 @@
   import { useWorkspaceStore } from "@/store/workspace";
   import type { Workspace } from "@openade/shared";
   import { useState } from "react";
+  import { WebDevServerHint } from "@/components/web-dev-server-hint";
 
   export const AppLayout = () => {
     const [workspaceToRemove, setWorkspaceToRemove] = useState<Workspace | null>(null);
@@ -69,6 +70,7 @@
       <TooltipProvider>
         <div className="flex h-screen w-full min-w-0 flex-col overflow-hidden bg-secondary dark:bg-background">
           <AppTopBar onRemoveWorkspace={setWorkspaceToRemove} />
+          <WebDevServerHint />
           <div className="light-theme-island flex min-h-0 min-w-0 gap-1 flex-1 flex-row overflow-hidden">
             <Group orientation="horizontal" className="min-h-0 min-w-0 gap-1.5 px-1.5 pb-1.5 flex-1 gap-0">
               <Panel id="main" minSize={360}>
