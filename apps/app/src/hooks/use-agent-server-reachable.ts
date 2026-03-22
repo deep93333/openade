@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { withAgentFetchInit } from "@/lib/agent-fetch";
 import { getBackendBaseUrl } from "@/lib/backend-url";
 import { isElectron } from "@/lib/electron";
 
@@ -6,7 +7,7 @@ type CheckMode = "initial" | "retry" | "background";
 
 async function probeHealth(baseUrl: string): Promise<boolean> {
   try {
-    const res = await fetch(`${baseUrl}/api/health`, { method: "GET" });
+    const res = await fetch(`${baseUrl}/api/health`, withAgentFetchInit({ method: "GET" }));
     if (!res.ok) return false;
     const j = (await res.json()) as { ok?: unknown };
     return j.ok === true;

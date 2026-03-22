@@ -18,10 +18,9 @@ import type {
 import { OPENADE_AGENT_DEFAULT_PORT } from "@openade/shared";
 import { Hono } from "hono";
 import { upgradeWebSocket, websocket } from "hono/bun";
-import { cors } from "hono/cors";
 import type { WSContext } from "hono/ws";
 import { ulid } from "ulid";
-import { getCorsAllowedOrigins } from "./lib/cors-origins.js";
+import { corsWithPrivateNetworkAccess } from "./lib/cors-with-private-network.js";
 import { invokeIpc } from "./platform/ipc-invoke.js";
 import { setWorkspaceWatchBroadcast, syncWorkspaceWatchers } from "./platform/workspace-watchers.js";
 
@@ -122,14 +121,7 @@ const pendingToolApprovals = new Map<string, PendingApproval>();
 
 const app = new Hono();
 
-app.use(
-  "*",
-  cors({
-    origin: getCorsAllowedOrigins(),
-    allowMethods: ["GET", "POST", "OPTIONS"],
-    allowHeaders: ["Content-Type"],
-  })
-);
+app.use("*", corsWithPrivateNetworkAccess());
 
 app.get("/api/health", (c) => c.json({ ok: true }));
 

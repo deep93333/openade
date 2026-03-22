@@ -1,3 +1,4 @@
+import { withAgentFetchInit } from "@/lib/agent-fetch";
 import { getBackendBaseUrl } from "@/lib/backend-url";
 import { getElectronAPI } from "@/lib/electron";
 import type {
@@ -122,11 +123,14 @@ function createHttpAgentBridge(baseUrl: string): AgentBridgeApi {
   }
 
   async function postJson<T>(path: string, body: unknown): Promise<T> {
-    const res = await fetch(`${baseUrl}${path}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    const res = await fetch(
+      `${baseUrl}${path}`,
+      withAgentFetchInit({
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      })
+    );
     return res.json() as Promise<T>;
   }
 
@@ -143,12 +147,12 @@ function createHttpAgentBridge(baseUrl: string): AgentBridgeApi {
     stop: (sessionId) => postJson<IpcResult>("/api/agent/stop", { sessionId }),
 
     status: () =>
-      fetch(`${baseUrl}/api/agent/status`).then(
+      fetch(`${baseUrl}/api/agent/status`, withAgentFetchInit()).then(
         (r) => r.json() as Promise<IpcResult<{ status: AgentStatus; sessionId?: string }>>
       ),
 
     getModels: () =>
-      fetch(`${baseUrl}/api/agent/models`).then(
+      fetch(`${baseUrl}/api/agent/models`, withAgentFetchInit()).then(
         (r) => r.json() as Promise<IpcResult<AgentModelOption[]>>
       ),
 
