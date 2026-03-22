@@ -5,6 +5,7 @@ import { isElectron } from "@/lib/electron";
 type AgentServerOfflineOverlayProps = {
   checking: boolean;
   backendUrl: string;
+  manualConnectRequired: boolean;
   onRetry: () => void;
 };
 
@@ -20,6 +21,7 @@ function isLoopbackBackendUrl(url: string): boolean {
 export function AgentServerOfflineOverlay({
   checking,
   backendUrl,
+  manualConnectRequired,
   onRetry,
 }: AgentServerOfflineOverlayProps) {
   const showChromeLnaHint =
@@ -40,28 +42,37 @@ export function AgentServerOfflineOverlay({
             </p>
             {showChromeLnaHint && (
               <p className="text-sm text-muted-foreground">
-                If this never finishes, Chrome may be blocking loopback from this HTTPS origin until you allow local
-                access for this site (lock icon → site settings), then use Retry below once it appears.
+                If this never finishes, Chrome may be blocking loopback from this HTTPS origin until
+                you allow local access for this site (lock icon → site settings), then use Retry
+                below once it appears.
               </p>
             )}
           </>
         ) : (
           <>
-            <h1 className="text-lg font-semibold text-foreground">Agent server unreachable</h1>
+            <h1 className="text-lg font-semibold text-foreground">
+              {manualConnectRequired ? "Connect to local agent server" : "Agent server unreachable"}
+            </h1>
             <p className="text-sm text-muted-foreground">
               This app needs the local Openade agent API at{" "}
-              <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">{backendUrl}</code>.
-              Start it from your project clone (e.g.{" "}
-              <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">bun run dev:server</code>
-              ), confirm <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">VITE_AGENT_SERVER_URL</code>{" "}
+              <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">{backendUrl}</code>
+              . Start it on this machine from your project clone (e.g.{" "}
+              <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
+                bun run dev:server
+              </code>
+              ), confirm{" "}
+              <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
+                VITE_AGENT_SERVER_URL
+              </code>{" "}
               matches if you use a static build, and check CORS if the UI is on another origin.
             </p>
             {showChromeLnaHint && (
               <p className="text-sm text-muted-foreground">
-                <span className="text-foreground">Chrome / Edge:</span> this page must be allowed to reach your device
-                (loopback). Use Retry after allowing access. If requests stay blocked, open the site lock icon → Site
-                settings → allow local / loopback access for this site (wording varies by version), or reset the
-                permission and reload.
+                <span className="text-foreground">Chrome / Edge:</span> this hosted UI can use your
+                localhost backend, but the browser must allow loopback access for this site first.
+                Click the button below to trigger the check. If Chrome keeps blocking it, open the
+                site lock icon → Site settings and allow local or loopback access for this site,
+                then try again.
               </p>
             )}
           </>
@@ -69,7 +80,7 @@ export function AgentServerOfflineOverlay({
       </div>
       {!checking && (
         <Button type="button" onClick={onRetry}>
-          Retry connection
+          {manualConnectRequired ? "Connect to localhost" : "Retry connection"}
         </Button>
       )}
     </div>

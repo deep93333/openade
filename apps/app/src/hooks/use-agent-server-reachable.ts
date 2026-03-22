@@ -17,10 +17,23 @@ async function probeHealth(baseUrl: string): Promise<boolean> {
   }
 }
 
+function requiresManualLoopbackConnect(baseUrl: string): boolean {
+  if (isElectron()) return false;
+  if (typeof window === "undefined" || window.location.protocol !== "https:") return false;
+  try {
+    const { hostname } = new URL(baseUrl);
+    const h = hostname.toLowerCase();
+    return h === "localhost" || h === "127.0.0.1" || h === "[::1]" || h === "::1";
+  } catch {
+    return false;
+  }
+}
+
 export function useAgentServerReachable() {
-  const [ready, setReady] = useState(() => isElectron());
-  const [checking, setChecking] = useState(() => !isElectron());
   const baseUrl = getBackendBaseUrl();
+  const manualConnectRequired = requiresManualLoopbackConnect(baseUrl);
+  const [ready, setReady] = useState(() => isElectron());
+  const [checking, setChecking] = useState(() => !isElectron() && !manualConnectRequired);
 
   const runCheck = useCallback(
     async (mode: CheckMode) => {
@@ -43,20 +56,24 @@ export function useAgentServerReachable() {
       setChecking(false);
       return;
     }
+    if (manualConnectRequired) {
+      setReady(false);
+      setChecking(false);
+      return;
+    }
     void runCheck("initial");
-  }, [baseUrl, runCheck]);
+  }, [baseUrl, manualConnectRequired, runCheck]);
 
   useEffect(() => {
-    if (isElectron()) return;
-    const ms = ready ? 30000 : 2500;
-    const id = setInterval(() => void runCheck("background"), ms);
+    if (isElectron() || !ready) return;
+    const id = setInterval(() => void runCheck("background"), 30000);
     return () => clearInterval(id);
-  }, [ready, baseUrl, runCheck]);
+  }, [ready, runCheck]);
 
   const recheck = useCallback(() => {
     primeLocalNetworkPermission();
     void runCheck("retry");
   }, [runCheck]);
 
-  return { ready, checking, backendUrl: baseUrl, recheck };
+  return { ready, checking, backendUrl: baseUrl, manualConnectRequired, recheck };
 }
