@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { getElectronAPI } from "@/lib/electron";
+import { isElectron } from "@/lib/electron";
 import {
   applyResolvedTheme,
   getStoredAppearance,
@@ -9,6 +10,7 @@ import {
 
 export function ThemeSync() {
   useEffect(() => {
+    if (!isElectron()) return;
     const api = getElectronAPI();
     if (!api?.settings) return;
     let cancelled = false;
