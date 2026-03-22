@@ -98,7 +98,7 @@ function TaskThreadPreview({ thread, workspaceId, workspacePath, currentModel, o
 
   return (
     <div className="flex h-[32rem] w-full min-h-0 flex-col overflow-hidden">
-      <div className="shrink-0 border-b border-foreground/10 px-3 py-2 flex items-center justify-between gap-2">
+      <div className="shrink-0 border-b border-foreground/5 px-3 py-2 flex items-center justify-between gap-2">
         <span className="text-xs font-medium text-muted-foreground">Thread preview</span>
         <div className="flex items-center gap-1">
           {isRunning && (
@@ -116,7 +116,7 @@ function TaskThreadPreview({ thread, workspaceId, workspacePath, currentModel, o
         </div>
       </div>
       {runtime.error ? (
-        <div className="shrink-0 border-b border-red-500/15 p-3">
+        <div className="shrink-0 p-3">
           <TaskErrorNotice error={runtime.error} tone="compact" actions={<TaskErrorActions error={runtime.error} />} />
         </div>
       ) : null}
@@ -259,7 +259,7 @@ export function TaskPreviewPopover({
         sideOffset={12}
         align={align}
         side="right"
-        className="w-[26rem] bg-secondary mb-8 max-w-[90vw] overflow-hidden p-0"
+        className="w-[26rem] bg-background mb-8 max-w-[90vw] overflow-hidden p-0"
       >
         <TaskThreadPreview
           thread={threadData}

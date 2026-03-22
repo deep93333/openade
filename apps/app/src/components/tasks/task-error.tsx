@@ -123,13 +123,13 @@ export function TaskErrorNotice({
   const details = getTaskErrorDetails(error);
 
   return (
-    <Alert className="border-none p-0 bg-secondary rounded-lg shadow-card">
+    <Alert className="border-none p-0 bg-tertiary rounded-lg">
       <Accordion type="single" collapsible className="w-full">
         <AccordionItem value="details" className="border-none">
           <div className="flex items-center gap-2 px-2 py-1.5">
             <AccordionTrigger className="flex-1 min-w-0 py-0 hover:no-underline">
               <span className="truncate text-xs font-medium flex items-center gap-2">
-                <IconAlertCircle className="size-3.5 text-rose-400" />
+                <IconAlertCircle className="size-3.5 text-foreground" />
                 {details.title}</span>
             </AccordionTrigger>
             <div className="flex shrink-0 items-center gap-1">{actions}</div>

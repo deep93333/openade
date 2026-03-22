@@ -3,6 +3,7 @@ import { useWorkspaceStore } from "@/store/workspace";
 import { useAgentStore } from "@/store/agent";
 import { cn, Button, ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@openade/ui";
 import {
+  IconArrowLeft,
   IconExchange,
   IconFiles,
   IconLayoutSidebarRight,
@@ -102,8 +103,6 @@ export function AppTopBar({ left, right, onRemoveWorkspace }: AppTopBarProps) {
   const setActiveView = useUIStore((s) => s.setActiveView);
   const rightPanelOpen = useUIStore((s) => s.rightPanelOpen);
   const setRightPanelOpen = useUIStore((s) => s.setRightPanelOpen);
-  const webViewOpen = useUIStore((s) => s.webView.open);
-  const openWebView = useUIStore((s) => s.openWebView);
   const centerPage = useUIStore((s) => s.centerPage);
   const setCenterPage = useUIStore((s) => s.setCenterPage);
 
@@ -111,6 +110,8 @@ export function AppTopBar({ left, right, onRemoveWorkspace }: AppTopBarProps) {
   const agentWorkspaces = useAgentStore((s) => s.workspaces);
   const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
   const selectWorkspace = useWorkspaceStore((s) => s.selectWorkspace);
+
+  const isSettingsPage = centerPage === "settings";
 
   const handleSelectWorkspace = async (id: string) => {
     if (id === activeWorkspaceId) return;
@@ -121,7 +122,21 @@ export function AppTopBar({ left, right, onRemoveWorkspace }: AppTopBarProps) {
   return (
     <div className="flex h-10 draggable shrink-0 items-center justify-between gap-2 px-2 drag-region">
       <div className="flex min-w-0 flex-1 items-center gap-2">
-        {workspaces.length > 0 ? (
+        {isSettingsPage ? (
+          <div className="flex items-center gap-1.5 not-draggable">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setCenterPage("chat")}
+              aria-label="Back"
+              title="Back"
+              className="gap-1"
+            >
+              <IconArrowLeft stroke={1.5} className="size-4" />
+              Back
+            </Button>
+          </div>
+        ) : workspaces.length > 0 ? (
           <div className=" flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto scrollbar-none">
             <div className="flex flex-row not-draggable rounded-md items-center gap-0.5">
               {workspaces.map((ws) => {
@@ -180,9 +195,8 @@ export function AppTopBar({ left, right, onRemoveWorkspace }: AppTopBarProps) {
           <div className="flex min-w-0 flex-1 items-center gap-2">
             <span className="shrink-0 text-sm font-semibold text-foreground">Openade</span>
             <Button
-              variant="bordered"
+              variant="secondary"
               size="sm"
-              rounded="full"
               onClick={() => setIsDialogOpen(true)}
               aria-label="Add workspace"
               title="Add workspace"
@@ -197,71 +211,73 @@ export function AppTopBar({ left, right, onRemoveWorkspace }: AppTopBarProps) {
         {left != null && <div className="not-draggable shrink-0">{left}</div>}
       </div>
 
-      <div className="not-draggable shrink-0 flex flex-row items-center gap-1">
-        {right}
-        <GitStatusBadge />
-        <div className="flex flex-row items-center gap-0.5">
-          <Button
-            variant={centerPage === "tasks" ? "secondary" : "ghost"}
-            size="sm"
-            onClick={() => setCenterPage("tasks")}
-            aria-label="Open tasks"
-            title="Tasks"
-          >
-            <IconList stroke={1} className="size-4" />
-            Tasks
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => useUIStore.getState().setApiKeyDialogOpen(true)}
-            aria-label="Open settings"
-            title="Settings"
-          >
-            <IconSettings2 stroke={1} className="size-4" />
-            Settings
-          </Button>
+      {!isSettingsPage && (
+        <div className="not-draggable shrink-0 flex flex-row items-center gap-1">
+          {right}
+          <GitStatusBadge />
+          <div className="flex flex-row items-center gap-0.5">
+            <Button
+              variant={centerPage === "tasks" ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setCenterPage("tasks")}
+              aria-label="Open tasks"
+              title="Tasks"
+            >
+              <IconList stroke={1} className="size-4" />
+              Tasks
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setCenterPage("settings")}
+              aria-label="Open settings"
+              title="Settings"
+            >
+              <IconSettings2 stroke={1} className="size-4" />
+              Settings
+            </Button>
+          </div>
+          <div className="flex flex-row items-center gap-0.5">
+            <Button
+              variant={rightPanelOpen && activeView === "files" ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => {
+                setActiveView("files");
+                setRightPanelOpen(true);
+              }}
+              aria-label="Open files sidebar"
+              title="Files"
+              className="gap-1"
+            >
+              <IconFiles stroke={1} className="size-4" />
+              Files
+            </Button>
+            <Button
+              variant={rightPanelOpen && activeView === "changes" ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => {
+                setActiveView("changes");
+                setRightPanelOpen(true);
+              }}
+              aria-label="Open git changes"
+              title="Changes"
+              className="gap-1"
+            >
+              <IconExchange stroke={1} className="size-4" />
+              Changes
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => setRightPanelOpen(!rightPanelOpen)}
+              aria-label={rightPanelOpen ? "Hide sidebar" : "Show sidebar"}
+              title={rightPanelOpen ? "Hide sidebar" : "Show sidebar"}
+            >
+              <IconLayoutSidebarRight stroke={1} className="size-4" />
+            </Button>
+          </div>
         </div>
-        <div className="flex flex-row items-center gap-0.5">
-          <Button
-            variant={rightPanelOpen && activeView === "files" ? "secondary" : "ghost"}
-            size="sm"
-            onClick={() => {
-              setActiveView("files");
-              setRightPanelOpen(true);
-            }}
-            aria-label="Open files sidebar"
-            title="Files"
-            className="gap-1"
-          >
-            <IconFiles stroke={1} className="size-4" />
-            Files
-          </Button>
-          <Button
-            variant={rightPanelOpen && activeView === "changes" ? "secondary" : "ghost"}
-            size="sm"
-            onClick={() => {
-              setActiveView("changes");
-              setRightPanelOpen(true);
-            }}
-            aria-label="Open git changes"
-            title="Changes"
-            className="gap-1"
-          >
-            <IconExchange stroke={1} className="size-4" />
-            Changes
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={() => setRightPanelOpen(!rightPanelOpen)}
-            aria-label={rightPanelOpen ? "Hide sidebar" : "Show sidebar"}
-            title={rightPanelOpen ? "Hide sidebar" : "Show sidebar"}
-          >
-            <IconLayoutSidebarRight stroke={1} className="size-4" />
-          </Button>
-        </div>
-      </div>
+      )}
 
       <CreateWorkspaceDialog isOpen={isDialogOpen} onClose={() => setIsDialogOpen(false)} />
     </div>

@@ -340,7 +340,7 @@ const DEFAULT_CONTEXT_WINDOW = 200_000;
           onClick={isBrainstormTask ? () => handleBrainstormDialogOpenChange(true) : undefined}
           className={cn(
             "group super-ellipse cursor-pointer  ring-1 ring-foreground/10 rounded-xl bg-background px-2 py-2 transition-all active:cursor-grabbing opacity-90 hover:scale-100 hover:opacity-100",
-            previewOpen && "ring-2 ring-accent ring-offset-4 ring-offset-background opacity-100"
+            previewOpen && "ring-2 ring-foreground/20 ring-offset-secondary opacity-100"
           )}
         >
           <div className="flex flex-col gap-1.5">

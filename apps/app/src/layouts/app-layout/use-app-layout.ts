@@ -22,10 +22,7 @@ export function useAppLayout() {
   const setSecondaryPaneOpen = useUIStore((s) => s.setSecondaryPaneOpen);
   const setWebViewOpen = useUIStore((s) => s.setWebViewOpen);
   const webView = useUIStore((s) => s.webView);
-  const apiKeyDialogOpen = useUIStore((s) => s.apiKeyDialogOpen);
-  const setApiKeyDialogOpen = useUIStore((s) => s.setApiKeyDialogOpen);
   const checkApiKey = useUIStore((s) => s.checkApiKey);
-  const hasApiKey = useUIStore((s) => s.hasApiKey);
   const agentLogDrawerOpen = useUIStore((s) => s.agentLogDrawerOpen);
   const setAgentLogDrawerOpen = useUIStore((s) => s.setAgentLogDrawerOpen);
 
@@ -88,10 +85,6 @@ export function useAppLayout() {
     setSecondaryPaneOpen,
     setWebViewOpen,
     webView,
-    apiKeyDialogOpen,
-    setApiKeyDialogOpen,
-    checkApiKey,
-    hasApiKey,
     agentLogDrawerOpen,
     setAgentLogDrawerOpen,
     globalPendingApproval,

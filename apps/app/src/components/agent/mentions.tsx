@@ -193,7 +193,7 @@ export const FileMentionList = ({
     <div
       ref={listRef}
       className={cn(
-        "absolute max-h-[280px] w-[350px] overflow-x-hidden rounded-xl bg-background p-1 shadow-popover",
+        "absolute max-h-[280px] w-[350px] overflow-x-hidden rounded-xl bg-background p-1",
         zIndexClassName || "z-[var(--z-drawer)]"
       )}
       style={{

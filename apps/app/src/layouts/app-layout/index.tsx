@@ -7,9 +7,10 @@ import { WebViewDrawer } from "@/components/web-view/drawer";
 import { AppTopBar } from "@/components/topbar";
 import { BranchSwitcher } from "@/components/sidebar/branches";
 import { CreateBranchDialog } from "@/components/sidebar/branch";
+import { WorkspaceCreateScreen } from "@/components/sidebar/project";
 import { CommandPalette } from "@/components/palette";
-import { ApiKeyDialog } from "@/components/apikeys";
 import { AgentLogDrawer } from "@/components/logdrawer";
+import { SettingsPage } from "@/components/settings-page";
 import {
   cn,
   TooltipProvider,
@@ -62,6 +63,7 @@ export const AppLayout = () => {
 function ConnectedAppLayout() {
   const [workspaceToRemove, setWorkspaceToRemove] = useState<Workspace | null>(null);
   const deleteWorkspace = useWorkspaceStore((s) => s.deleteWorkspace);
+  const workspaceCount = useWorkspaceStore((s) => s.workspaces.length);
   const fetchModelOptions = useChatEditorStore((s) => s.fetchModelOptions);
 
   const {
@@ -74,10 +76,6 @@ function ConnectedAppLayout() {
     setSecondaryPaneOpen,
     setWebViewOpen,
     webView,
-    apiKeyDialogOpen,
-    setApiKeyDialogOpen,
-    checkApiKey,
-    hasApiKey,
     agentLogDrawerOpen,
     setAgentLogDrawerOpen,
     globalPendingApproval,
@@ -85,10 +83,20 @@ function ConnectedAppLayout() {
 
   const infoPanelOpen = useUIStore((s) => s.infoPanelOpen);
   const setInfoPanelOpen = useUIStore((s) => s.setInfoPanelOpen);
+  const hasWorkspaces = workspaceCount > 0;
 
   useEffect(() => {
+    if (!hasWorkspaces) return;
     void fetchModelOptions();
-  }, [fetchModelOptions]);
+  }, [fetchModelOptions, hasWorkspaces]);
+
+  if (!hasWorkspaces) {
+    return (
+      <TooltipProvider>
+        <WorkspaceCreateScreen />
+      </TooltipProvider>
+    );
+  }
 
   const handleConfirmRemoveWorkspace = async () => {
     if (!workspaceToRemove) return;
@@ -98,7 +106,9 @@ function ConnectedAppLayout() {
 
   const showPanelGap = hasSecondaryPane || rightPanelOpen;
   const mainContent =
-    centerPage === "tasks" ? (
+    centerPage === "settings" ? (
+      <SettingsPage />
+    ) : centerPage === "tasks" ? (
       <TasksPage />
     ) : (
       <>
@@ -110,9 +120,8 @@ function ConnectedAppLayout() {
 
   return (
     <TooltipProvider>
-      <div className="flex h-screen w-full min-w-0 flex-col overflow-hidden bg-secondary dark:bg-background">
+      <div className="flex h-screen w-full min-w-0 flex-col overflow-hidden bg-quaternary dark:bg-background">
         <AppTopBar onRemoveWorkspace={setWorkspaceToRemove} />
-        <WebDevServerHint />
         <div className="light-theme-island flex min-h-0 min-w-0 gap-1 flex-1 flex-row overflow-hidden">
           <Group
             orientation="horizontal"
@@ -186,11 +195,6 @@ function ConnectedAppLayout() {
             </div>
           </div>
         )}
-        <ApiKeyDialog
-          open={apiKeyDialogOpen}
-          onOpenChange={setApiKeyDialogOpen}
-          onSaved={() => checkApiKey()}
-        />
         <AgentLogDrawer open={agentLogDrawerOpen} onOpenChange={setAgentLogDrawerOpen} />
         <InfoPanel open={infoPanelOpen} onOpenChange={setInfoPanelOpen} />
       </div>

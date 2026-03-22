@@ -357,7 +357,7 @@ export const PopoverChatEditor = ({
   const currentModeLabel = MODE_OPTIONS.find((o) => o.value === selectedMode)?.label ?? "Agent";
 
   return (
-    <div className="relative shrink-0 border-t border-foreground/10 p-2">
+    <div className="relative shrink-0 border-t border-foreground/5 p-2">
       <div className="flex items-end gap-1.5">
         <div
           className="flex min-w-0 flex-1 items-center"
@@ -376,9 +376,8 @@ export const PopoverChatEditor = ({
         </div>
         <ButtonGroup>
           <Button
-            variant={selectedMode === "plan" ? "purple" : selectedMode === "ask" ? "orange" : "brand"}
+            variant={selectedMode === "plan" ? "purple" : selectedMode === "ask" ? "default" : "brand"}
             size="icon-sm"
-            rounded="full"
             onClick={() => void handleSubmit(selectedMode)}
             disabled={!canSubmit}
           
@@ -389,9 +388,8 @@ export const PopoverChatEditor = ({
           <DropdownMenu modal>
             <DropdownMenuTrigger asChild>
               <Button
-            variant={selectedMode === "plan" ? "purple" : selectedMode === "ask" ? "orange" : "brand"}
+            variant={selectedMode === "plan" ? "purple" : selectedMode === "ask" ? "default" : "brand"}
             size="icon-sm"
-            rounded="full"
                 disabled={!canSubmit}
                 className="border-l border-white/20"
                 aria-label="Select send mode"

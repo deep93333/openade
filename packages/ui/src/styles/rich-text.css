@@ -1,0 +1,232 @@
+.rich-text {
+  font-size: var(--text-base);
+  line-height: 24px;
+  font-weight: 450;
+  font-optical-sizing: auto;
+  color: color-mix(in oklch, var(--color-foreground) 82%, transparent);
+}
+
+.rich-text :is(h1, h2, h3, h4, h5, h6) {
+  
+  line-height: 1.55;
+}
+
+.rich-text h1 {
+  font-size: var(--text-lg);
+  font-weight: 500;
+  color: var(--color-foreground);
+  margin: 2rem 0 0.75rem;
+}
+
+.rich-text h2 {
+  font-size: var(--text-md);
+  font-weight: 500;
+  color: var(--color-foreground);
+  margin: 1.75rem 0 0.625rem;
+}
+
+.rich-text h3 {
+  font-size: var(--text-md);
+  font-weight: 500;
+  line-height: 1.5;
+  color: color-mix(in oklch, var(--color-foreground) 92%, transparent);
+  margin: 1.5rem 0 0.5rem;
+}
+
+.rich-text h4 {
+  font-size: var(--text-base);
+  font-weight: 500;
+  color: color-mix(in oklch, var(--color-foreground) 88%, transparent);
+  margin: 1.25rem 0 0.375rem;
+}
+
+.rich-text h5 {
+  font-size: var(--text-base);
+  font-weight: 500;
+  color: color-mix(in oklch, var(--color-foreground) 80%, transparent);
+  margin: 1rem 0 0.25rem;
+}
+
+.rich-text h6 {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-muted-foreground);
+  margin: 1rem 0 0.25rem;
+}
+
+.rich-text p {
+  margin-bottom: 1rem;
+  line-height: 24px;
+  color: inherit;
+}
+
+.rich-text ul {
+  padding-left: 1rem;
+  margin-bottom: 1rem;
+  list-style-type: disc;
+}
+
+.rich-text ol {
+  padding-left: 1rem;
+  margin-bottom: 1rem;
+  list-style-type: decimal;
+}
+
+.rich-text li {
+  font-size: var(--text-base);
+  line-height: 1.7;
+  color: inherit;
+  margin-bottom: 0.4rem;
+}
+
+.rich-text li::marker {
+  color: color-mix(in oklch, var(--color-foreground) 30%, transparent);
+}
+
+.rich-text strong {
+  font-weight: 500;
+  color: var(--color-foreground);
+}
+
+.rich-text em {
+  font-style: italic;
+}
+
+.rich-text a {
+  color: var(--color-muted-foreground);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-decoration-color: color-mix(in oklch, var(--color-foreground) 13%, transparent);
+  transition: color 0.15s, text-decoration-color 0.15s;
+}
+
+.rich-text a:hover {
+  color: var(--color-foreground);
+  text-decoration-color: color-mix(in oklch, var(--color-foreground) 40%, transparent);
+}
+
+.rich-text code {
+  font-size: var(--text-sm);
+  font-family: var(--font-mono);
+  background: color-mix(in oklch, var(--color-foreground) 4%, transparent);
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  color: color-mix(in oklch, var(--color-foreground) 70%, transparent);
+}
+
+.rich-text pre {
+  font-size: var(--text-xs);
+  line-height: 1.6;
+  font-family: var(--font-mono);
+  background: color-mix(in oklch, var(--color-foreground) 3%, transparent);
+  border-radius: 0.5rem;
+  padding: 0.875rem 1rem;
+  margin: 1rem 0;
+  border: 1px solid color-mix(in oklch, var(--color-foreground) 6%, transparent);
+  overflow-x: auto;
+}
+
+.rich-text pre code {
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  font-size: 1em;
+}
+
+.rich-text blockquote {
+  position: relative;
+  border-left: none;
+  padding-left: 1.125rem;
+  margin: 1.25rem 0;
+  color: color-mix(in oklch, var(--color-foreground) 50%, transparent);
+  font-style: normal;
+}
+
+.rich-text blockquote::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background-color: color-mix(in oklch, var(--color-foreground) 10%, transparent);
+  border-radius: 9999px;
+}
+
+.rich-text hr {
+  margin: 1.75rem 0;
+  border-color: color-mix(in oklch, var(--color-foreground) 6%, transparent);
+}
+
+.rich-text mark {
+  background: var(--color-highlight-bg);
+  color: var(--color-highlight-foreground);
+  border-radius: 0.25rem;
+  padding: 0.125rem 0.25rem;
+}
+
+.rich-text table {
+  width: 100%;
+  font-size: var(--text-sm);
+  margin: 1rem 0;
+  border-collapse: collapse;
+}
+
+.rich-text th {
+  text-align: left;
+  font-weight: 550;
+  color: color-mix(in oklch, var(--color-foreground) 70%, transparent);
+  padding-bottom: 0.5rem;
+  padding-right: 1rem;
+  border-bottom: 1px solid color-mix(in oklch, var(--color-foreground) 10%, transparent);
+}
+
+.rich-text td {
+  padding: 0.5rem 1rem 0.5rem 0;
+  color: color-mix(in oklch, var(--color-foreground) 70%, transparent);
+  border-bottom: 1px solid color-mix(in oklch, var(--color-foreground) 6%, transparent);
+  vertical-align: top;
+}
+
+.rich-text tr:last-child td {
+  border-bottom: 0;
+}
+
+.rich-text > *:first-child {
+  margin-top: 0;
+}
+
+.rich-text > *:last-child {
+  margin-bottom: 0;
+}
+
+/* ─── Compact variant (chat, changelog, previews) ─── */
+
+.rich-text-compact {
+  font-size: var(--text-base);
+  line-height: 1.65;
+}
+
+.rich-text-compact h1 {
+  font-size: var(--text-md);
+  margin: 1.5rem 0 0.5rem;
+}
+
+.rich-text-compact h2 {
+  font-size: 15px;
+  margin: 1.25rem 0 0.5rem;
+}
+
+.rich-text-compact h3 {
+  font-size: var(--text-base);
+  margin: 1rem 0 0.375rem;
+}
+
+.rich-text-compact p {
+  margin-bottom: 0.875rem;
+}
+
+.rich-text-compact li {
+  font-size: var(--text-base);
+  margin-bottom: 0.35rem;
+}

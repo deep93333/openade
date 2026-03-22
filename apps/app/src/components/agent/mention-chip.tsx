@@ -90,7 +90,7 @@ function looksLikeFilePath(label: string, id: string): boolean {
 
 export function MentionChip({ label, id = "", mentionType, className }: MentionChipProps) {
   const chipClass = cn(
-    "inline-flex items-center gap-0.5 rounded shadow-card bg-quaternary px-1 py-0.2 text-muted-foreground font-medium align-baseline",
+    "inline-flex items-center gap-0.5 rounded bg-quaternary px-1 py-0.2 text-foreground font-medium align-baseline",
     className
   );
 
@@ -135,7 +135,7 @@ export function UserMessagePreview({ content, className }: { content: string; cl
     return <span className={cn("whitespace-pre-wrap wrap-break-word", className)}>{parts[0].value}</span>;
   }
   return (
-    <span className={cn("whitespace-pre-wrap wrap-break-word", className)}>
+    <span className={cn("whitespace-pre-wrap text-foreground! wrap-break-word", className)}>
       {parts.map((p, i) =>
         p.type === "text" ? (
           <span key={i}>{p.value}</span>

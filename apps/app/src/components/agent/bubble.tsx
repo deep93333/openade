@@ -83,20 +83,16 @@ function formatTokens(n: number): string {
 
 function MessageUsageFooter({
   message,
-  copyAction,
 }: {
   message: AgentMessage;
-  copyAction?: {
-    onCopy: () => void;
-    copied: boolean;
-  };
+
 }) {
   const input = message.inputTokens ?? 0;
   const output = message.outputTokens ?? 0;
   const cost = message.costUsd ?? 0;
   const hasUsage = input > 0 || output > 0 || cost > 0;
 
-  if (!hasUsage && !copyAction) return null;
+  if (!hasUsage ) return null;
 
   return (
     <div className="mt-1.5 flex items-center gap-3 text-[11px] text-muted-foreground">
@@ -112,17 +108,7 @@ function MessageUsageFooter({
           ${cost < 0.01 ? cost.toFixed(4) : cost.toFixed(3)}
         </span>
       )}
-      {copyAction && (
-        <Button
-          size="icon-sm"
-          variant="ghost"
-          className="h-6 w-6 text-muted-foreground"
-          onClick={copyAction.onCopy}
-          aria-label={copyAction.copied ? "Copied" : "Copy markdown"}
-        >
-          {copyAction.copied ? <IconCheck className="size-3.5" /> : <CopyIcon className="size-3.5" />}
-        </Button>
-      )}
+     
     </div>
   );
 }
@@ -318,7 +304,7 @@ function UserMessageContextPopover({ message }: { message: AgentMessage }) {
   const contextInfo = message.contextInfo;
   if (!contextInfo) {
     return (
-      <span className="text-[10px] text-muted-foreground/50 px-2 py-0.5">
+      <span className="text-[10px] text-muted-foreground px-2 py-0.5">
         (no context info)
       </span>
     );
@@ -353,8 +339,7 @@ function UserMessageContextPopover({ message }: { message: AgentMessage }) {
           <span>{contextInfo.previousMessages} msgs</span>
           {tokenDisplay && (
             <>
-              <span className="text-muted-foreground/40">|</span>
-              <span className="text-orange-400">{tokenDisplay}</span>
+              <span className="text-muted-foreground">{tokenDisplay}</span>
             </>
           )}
         </button>
@@ -479,7 +464,7 @@ export const MessageBubble = ({ message, messageIndex, isPreview = false }: Mess
           "rounded-lg super-ellipse py-1 text-sm leading-relaxed flex-1 min-w-0",
           isPreview ? "max-w-full break-words" : "max-w-2xl",
           isUser
-            ? "bg-foreground/10 px-3 !text-white [&_[data-type=mention]]:font-medium [&_[data-type=mention]]:text-accent-foreground"
+            ? "bg-tertiary px-3 !text-white [&_[data-type=mention]]:font-medium [&_[data-type=mention]]:text-foreground"
             : "bg-transparent w-full px-0 py-0 text-foreground [&_[data-type=mention]]:font-medium [&_[data-type=mention]]:text-accent-foreground"
         )}
       >
@@ -488,7 +473,6 @@ export const MessageBubble = ({ message, messageIndex, isPreview = false }: Mess
             <div className="min-w-0 flex-1">
               <UserMessagePreview content={message.content} />
             </div>
-            <UserMessageContextPopover message={message} />
           </div>
         ) : (
           <div className="py-1">

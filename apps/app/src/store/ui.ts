@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { getElectronAPI } from "@/lib/electron";
 
 export type NavigationView = "files" | "changes";
-export type CenterPage = "chat" | "tasks";
+export type CenterPage = "chat" | "tasks" | "settings";
 export type SecondaryPaneMode = "file" | "diff";
 export type TaskViewMode = "list" | "kanban";
 
@@ -34,9 +34,7 @@ type UIStoreState = {
   openCreateBranchDialog: (workspaceId: string, query?: string) => void;
   closeCreateBranchDialog: () => void;
 
-  apiKeyDialogOpen: boolean;
   hasApiKey: boolean;
-  setApiKeyDialogOpen: (open: boolean) => void;
   checkApiKey: () => Promise<void>;
 
   openDiffViewer: (path: string, staged?: boolean) => void;
@@ -103,9 +101,7 @@ export const useUIStore = create<UIStoreState>()((set) => ({
   closeCreateBranchDialog: () =>
     set({ createBranchDialog: { open: false, workspaceId: null, query: null } }),
 
-  apiKeyDialogOpen: false,
   hasApiKey: false,
-  setApiKeyDialogOpen: (open) => set({ apiKeyDialogOpen: open }),
   checkApiKey: async () => {
     const api = getElectronAPI();
     if (!api?.auth) return;
@@ -116,7 +112,7 @@ export const useUIStore = create<UIStoreState>()((set) => ({
       (method === "api_key" && hasKey) || (method === "claude_login" && cliLoggedIn);
     set({ hasApiKey: isConfigured });
     if (!isConfigured) {
-      set({ apiKeyDialogOpen: true });
+      set({ centerPage: "settings" });
     }
   },
 
