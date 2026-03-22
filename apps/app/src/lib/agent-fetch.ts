@@ -18,6 +18,6 @@ export function withAgentFetchInit(init?: RequestInit): RequestInit {
   }
   return {
     ...init,
-    targetAddressSpace: "local",
+    targetAddressSpace: "loopback",
   } as RequestInit;
 }
